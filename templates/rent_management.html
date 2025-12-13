@@ -225,9 +225,11 @@
                     minute: '2-digit'
                 });
 
+                const truckColor = getTruckColor(roomEntry.truck_number);
+
                 return `
                     <tr class="border-b border-gray-200 hover:bg-purple-50">
-                        <td class="p-2 font-bold">${roomEntry.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${roomEntry.truck_number}</td>
                         <td class="p-2">${customerName}</td>
                         <td class="p-2">${customerPhone}</td>
                         <td class="p-2">${roomEntry.room_no}</td>
@@ -361,9 +363,10 @@
                                         month: '2-digit',
                                         year: 'numeric'
                                     });
+                                    const truckColor = getTruckColor(re.truck_number);
                                     return `
                                         <tr class="border-b border-gray-200">
-                                            <td class="p-2 font-bold">${re.truck_number}</td>
+                                            <td class="p-2 font-bold ${truckColor}">${re.truck_number}</td>
                                             <td class="p-2">${re.room_no}</td>
                                             <td class="p-2">${re.floor}</td>
                                             <td class="p-2">${re.quantity}</td>
@@ -378,6 +381,15 @@
             });
 
             contentDiv.innerHTML = html;
+        }
+
+        function getTruckColor(truckNumber) {
+            const numMatch = truckNumber.match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num < 600 ? 'text-green-600' : 'text-orange-600';
+            }
+            return 'text-gray-700';
         }
 
         function goToRent(entryId) {

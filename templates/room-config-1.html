@@ -57,9 +57,24 @@
         .clickable-row:hover {
             background-color: #FEF3C7;
         }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
         .selected-entry {
             background-color: #FDE68A !important;
             border-left: 4px solid #F59E0B;
+        }
+        .floor-btn.selected {
+            background-color: #3B82F6 !important;
+            color: white !important;
+        }
+        .room-btn.selected {
+            background-color: #10B981 !important;
+            color: white !important;
         }
     </style>
 </head>
@@ -98,37 +113,69 @@
                             <p class="text-xs text-gray-600 mt-1" id="selectedEntryDetails"></p>
                         </div>
 
+                        <!-- Room Selection -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Room No *
+                            </label>
+                            <input type="hidden" id="roomNo" required>
+                            <div class="space-y-2">
+                                <!-- Row 1: Room 2 and Room 1 -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" onclick="selectRoom('2')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
+                                        Room 2
+                                    </button>
+                                    <button type="button" onclick="selectRoom('1')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
+                                        Room 1
+                                    </button>
+                                </div>
+                                <!-- Row 2: Gallery (centered) -->
+                                <div class="flex justify-center">
+                                    <button type="button" onclick="selectRoom('G')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 px-8 text-lg font-bold w-1/2">
+                                        Gallery
+                                    </button>
+                                </div>
+                                <!-- Row 3: Room 3 and Room 4 -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" onclick="selectRoom('3')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
+                                        Room 3
+                                    </button>
+                                    <button type="button" onclick="selectRoom('4')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
+                                        Room 4
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Floor Selection (As Building) -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Floor (As Building) *
+                            </label>
+                            <input type="hidden" id="floor" required>
+                            <div class="grid grid-cols-1 gap-2 max-w-xs">
+                                <button type="button" onclick="selectFloor(5)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
+                                    5
+                                </button>
+                                <button type="button" onclick="selectFloor(4)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
+                                    4
+                                </button>
+                                <button type="button" onclick="selectFloor(3)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
+                                    3
+                                </button>
+                                <button type="button" onclick="selectFloor(2)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
+                                    2
+                                </button>
+                                <button type="button" onclick="selectFloor(1)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
+                                    1
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-6 mb-6">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Room No *
-                                </label>
-                                <select id="roomNo" required class="w-full neu-select">
-                                    <option value="">Select Room</option>
-                                    <option value="1">Room 1</option>
-                                    <option value="2">Room 2</option>
-                                    <option value="3">Room 3</option>
-                                    <option value="4">Room 4</option>
-                                    <option value="G">Room G</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Floor *
-                                </label>
-                                <select id="floor" required class="w-full neu-select">
-                                    <option value="">Select Floor</option>
-                                    <option value="1">Floor 1</option>
-                                    <option value="2">Floor 2</option>
-                                    <option value="3">Floor 3</option>
-                                    <option value="4">Floor 4</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Gate No *
+                                    Gate No * <span class="text-gray-500">(gatar no)</span>
                                 </label>
                                 <input
                                     type="text"
@@ -143,14 +190,14 @@
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     Quantity *
                                 </label>
-                                <input
-                                    type="number"
-                                    id="quantity"
-                                    required
-                                    min="1"
-                                    class="w-full neu-input"
-                                    placeholder="Items counted"
-                                >
+                                <!-- Hidden input for form submission -->
+                                <input type="hidden" id="quantity" required min="1">
+                                <!-- Quantity Display (Calculator is below Recent Main Entries) -->
+                                <div class="neu-border bg-blue-50 p-4 text-center">
+                                    <p class="text-sm text-gray-600 mb-1">Current Total</p>
+                                    <p class="text-3xl font-bold text-blue-700" id="totalQuantityDisplay">0</p>
+                                    <p class="text-xs text-gray-500 mt-2">Use calculator below ↓</p>
+                                </div>
                             </div>
                         </div>
 
@@ -227,10 +274,15 @@
             <!-- Right: Recent Main Entries (Unassigned) -->
             <div class="col-span-1">
                 <div class="neu-border bg-white p-6">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-                        <i class="bi bi-inbox"></i>
-                        Recent Main Entries
-                    </h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold flex items-center gap-2">
+                            <i class="bi bi-inbox"></i>
+                            Recent Main Entries
+                        </h2>
+                        <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 border-2 border-black flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto-refresh (5s)
+                        </span>
+                    </div>
                     <p class="text-sm text-gray-600 mb-4">Click an entry to assign to room</p>
                     <div class="overflow-auto" style="max-height: 800px;">
                         <table class="w-full">
@@ -249,6 +301,71 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Quantity Calculator (Below Recent Main Entries, Same Column) -->
+                <div class="mt-6 neu-border bg-white p-6">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                        <i class="bi bi-calculator text-purple-600"></i>
+                        Quantity Calculator
+                    </h2>
+
+                    <!-- Preset Value Buttons -->
+                    <div class="grid grid-cols-5 gap-2 mb-4">
+                        <button type="button" onclick="addQuantity(16)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                            16
+                        </button>
+                        <button type="button" onclick="addQuantity(18)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                            18
+                        </button>
+                        <button type="button" onclick="addQuantity(20)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                            20
+                        </button>
+                        <button type="button" onclick="addQuantity(24)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                            24
+                        </button>
+                        <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-3 text-base font-bold w-full">
+                            Custom
+                        </button>
+                    </div>
+
+                    <!-- Custom Input (Hidden by default) -->
+                    <div id="customInputDiv" class="hidden mb-4">
+                        <div class="flex gap-2">
+                            <input
+                                type="number"
+                                id="customQuantityInput"
+                                min="1"
+                                class="flex-1 border-3 border-black p-2 text-base"
+                                placeholder="Enter custom value"
+                            >
+                            <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-4 text-sm">
+                                <i class="bi bi-plus-circle"></i> Add
+                            </button>
+                            <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-4 text-sm">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selected Values (Chips) -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
+                        <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
+                            <span class="text-sm text-gray-400 self-center">Click values above to add...</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Display -->
+                    <div class="flex justify-between items-center bg-green-50 p-4 border-3 border-green-600 rounded mb-4">
+                        <span class="text-base font-bold">Total Quantity:</span>
+                        <span class="text-3xl font-bold text-green-700" id="totalQuantity">0</span>
+                    </div>
+
+                    <!-- Clear All Button -->
+                    <button type="button" onclick="clearAllQuantities()" class="neu-button bg-red-500 text-white w-full py-2 text-base font-bold">
+                        <i class="bi bi-trash"></i> Clear All Values
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -256,14 +373,110 @@
     <script>
         const token = localStorage.getItem('token');
         let selectedEntry = null;
+        let entriesRefreshInterval = null;
+        let quantityValues = [];
+
+        // Quantity Calculator Functions
+        function addQuantity(value) {
+            if (value && value > 0) {
+                quantityValues.push(value);
+                updateQuantityDisplay();
+            }
+        }
+
+        function showCustomInput() {
+            document.getElementById('customInputDiv').classList.remove('hidden');
+            document.getElementById('customQuantityInput').focus();
+        }
+
+        function hideCustomInput() {
+            document.getElementById('customInputDiv').classList.add('hidden');
+            document.getElementById('customQuantityInput').value = '';
+        }
+
+        function addCustomQuantity() {
+            const customInput = document.getElementById('customQuantityInput');
+            const value = parseInt(customInput.value);
+
+            if (value && value > 0) {
+                addQuantity(value);
+                hideCustomInput();
+            } else {
+                alert('Please enter a valid quantity greater than 0');
+            }
+        }
+
+        function removeQuantity(index) {
+            quantityValues.splice(index, 1);
+            updateQuantityDisplay();
+        }
+
+        function clearAllQuantities() {
+            quantityValues = [];
+            updateQuantityDisplay();
+        }
+
+        function updateQuantityDisplay() {
+            const chipsContainer = document.getElementById('quantityChips');
+            const totalDisplay = document.getElementById('totalQuantity');
+            const totalDisplayInForm = document.getElementById('totalQuantityDisplay');
+            const hiddenInput = document.getElementById('quantity');
+
+            // Calculate total
+            const total = quantityValues.reduce((sum, val) => sum + val, 0);
+
+            // Update total displays
+            totalDisplay.textContent = total;
+            if (totalDisplayInForm) {
+                totalDisplayInForm.textContent = total;
+            }
+
+            // Update hidden input for form submission
+            hiddenInput.value = total;
+
+            // Update chips display
+            if (quantityValues.length === 0) {
+                chipsContainer.innerHTML = '<span class="text-sm text-gray-400 self-center">Click values above to add...</span>';
+            } else {
+                chipsContainer.innerHTML = quantityValues.map((val, index) => `
+                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full text-lg font-bold border-3 border-black">
+                        ${val}
+                        <button type="button" onclick="removeQuantity(${index})" class="hover:bg-red-500 rounded-full p-1 transition-colors" title="Remove">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
 
         // Load data on page load
         window.addEventListener('load', function() {
             loadUnassignedEntries();
             loadRoomEntries();
+            startAutoRefresh();
+        });
+
+        // Start auto-refresh for unassigned entries
+        function startAutoRefresh() {
+            entriesRefreshInterval = setInterval(() => {
+                loadUnassignedEntries();
+            }, 5000); // Refresh every 5 seconds
+        }
+
+        // Stop auto-refresh when leaving page
+        window.addEventListener('beforeunload', function() {
+            if (entriesRefreshInterval) {
+                clearInterval(entriesRefreshInterval);
+            }
         });
 
         async function loadUnassignedEntries() {
+            // Show loading animation
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.classList.add('spin-animation');
+            }
+
             try {
                 const response = await fetch('/api/entries/unassigned', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -279,6 +492,13 @@
                 console.error('Error loading unassigned entries:', error);
                 document.getElementById('unassignedEntriesTableBody').innerHTML =
                     '<tr><td colspan="3" class="text-center p-4 text-red-500">Failed to load entries</td></tr>';
+            } finally {
+                // Stop loading animation
+                if (refreshIcon) {
+                    setTimeout(() => {
+                        refreshIcon.classList.remove('spin-animation');
+                    }, 500);
+                }
             }
         }
 
@@ -290,13 +510,16 @@
                 return;
             }
 
-            tbody.innerHTML = entries.map(entry => `
-                <tr class="border-b border-gray-200 clickable-row" onclick="selectEntry(${entry.id}, '${entry.truck_number}', '${entry.name}', ${entry.expected_quantity})">
-                    <td class="p-2 font-bold">${entry.truck_number}</td>
-                    <td class="p-2">${entry.name}</td>
-                    <td class="p-2">${entry.expected_quantity}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = entries.map(entry => {
+                const truckColor = getTruckColor(entry.truck_number);
+                return `
+                    <tr class="border-b border-gray-200 clickable-row" onclick="selectEntry(${entry.id}, '${entry.truck_number}', '${entry.name}', ${entry.expected_quantity})">
+                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
+                        <td class="p-2">${entry.name}</td>
+                        <td class="p-2">${entry.expected_quantity}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function selectEntry(entryId, truckNumber, name, expectedQty) {
@@ -350,10 +573,11 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+                const truckColor = getTruckColor(entry.truck_number);
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold">${entry.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no}</td>
@@ -449,10 +673,58 @@
             document.getElementById('customRemark').classList.add('hidden');
             selectedEntry = null;
 
+            // Clear room selection
+            document.querySelectorAll('.room-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Clear floor selection
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Clear quantity calculator
+            clearAllQuantities();
+
             // Remove highlighting
             document.querySelectorAll('.clickable-row').forEach(row => {
                 row.classList.remove('selected-entry');
             });
+        }
+
+        function getTruckColor(truckNumber) {
+            const numMatch = truckNumber.match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num < 600 ? 'text-green-600' : 'text-orange-600';
+            }
+            return 'text-gray-700';
+        }
+
+        function selectRoom(roomNumber) {
+            // Update hidden input
+            document.getElementById('roomNo').value = roomNumber;
+
+            // Remove selected class from all buttons
+            document.querySelectorAll('.room-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Add selected class to clicked button
+            event.target.classList.add('selected');
+        }
+
+        function selectFloor(floorNumber) {
+            // Update hidden input
+            document.getElementById('floor').value = floorNumber;
+
+            // Remove selected class from all buttons
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Add selected class to clicked button
+            event.target.classList.add('selected');
         }
 
         function goBack() {

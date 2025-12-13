@@ -50,10 +50,18 @@
             box-shadow: 2px 2px 0 #000;
         }
         .hidden { display: none; }
+        .cursor-pointer { cursor: pointer; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
             <div>
                 <div class="flex items-center gap-3">
@@ -69,78 +77,80 @@
             </button>
         </header>
 
-        <!-- User Details & Entry Form -->
-        <div id="entryForm" class="neu-border bg-white p-6">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                <i class="bi bi-person-check"></i>
-                User Details & Entry
-            </h2>
+        <!-- Main Content Grid: Form (Left) + Recent Room Entries (Right) -->
+        <div class="grid grid-cols-2 gap-8 mb-8">
+            <!-- User Details & Entry Form (Left) -->
+            <div id="entryForm" class="neu-border bg-white p-6">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="bi bi-person-check"></i>
+                    User Details & Entry
+                </h2>
 
-            <div class="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Name *
-                    </label>
-                    <input
-                        type="text"
-                        id="userName"
-                        required
-                        class="w-full neu-input"
-                        placeholder="Enter name"
-                    >
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Village *
-                    </label>
-                    <input
-                        type="text"
-                        id="userVillage"
-                        required
-                        class="w-full neu-input"
-                        placeholder="Enter village"
-                    >
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Phone * <span class="text-sm text-gray-500">(Must be 10 digits)</span>
-                    </label>
-                    <input
-                        type="tel"
-                        id="userPhone"
-                        required
-                        class="w-full neu-input"
-                        placeholder="Enter 10-digit phone number"
-                        maxlength="10"
-                        minlength="10"
-                        pattern="[0-9]{10}"
-                    >
-                    <div id="searchStatus" class="hidden mt-2 p-2 border-2">
-                        <p class="text-sm font-semibold"></p>
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Name *
+                        </label>
+                        <input
+                            type="text"
+                            id="userName"
+                            required
+                            class="w-full neu-input"
+                            placeholder="Enter name"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Village *
+                        </label>
+                        <input
+                            type="text"
+                            id="userVillage"
+                            required
+                            class="w-full neu-input"
+                            placeholder="Enter village"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Phone * <span class="text-sm text-gray-500">(Must be 10 digits)</span>
+                        </label>
+                        <input
+                            type="tel"
+                            id="userPhone"
+                            required
+                            class="w-full neu-input"
+                            placeholder="Enter 10-digit phone number"
+                            maxlength="10"
+                            minlength="10"
+                            pattern="[0-9]{10}"
+                        >
+                        <div id="searchStatus" class="hidden mt-2 p-2 border-2">
+                            <p class="text-sm font-semibold"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            id="userEmail"
+                            class="w-full neu-input"
+                            placeholder="Enter email (optional)"
+                        >
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Email
-                    </label>
-                    <input
-                        type="email"
-                        id="userEmail"
-                        class="w-full neu-input"
-                        placeholder="Enter email (optional)"
-                    >
-                </div>
-            </div>
 
             <form id="entrySubmitForm" onsubmit="submitEntry(event)">
                 <input type="hidden" id="userId" />
 
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Select Category *
                     </label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <label class="neu-border p-4 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors">
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="neu-border p-3 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors">
                             <input
                                 type="radio"
                                 name="truckCategory"
@@ -150,11 +160,11 @@
                                 onchange="updateCategoryInfo()"
                             >
                             <div>
-                                <span class="text-xl font-bold text-green-700">SEED</span>
+                                <span class="text-lg font-bold text-green-700">SEED</span>
                                 <p id="seedCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
                             </div>
                         </label>
-                        <label class="neu-border p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors">
+                        <label class="neu-border p-3 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors">
                             <input
                                 type="radio"
                                 name="truckCategory"
@@ -164,14 +174,14 @@
                                 onchange="updateCategoryInfo()"
                             >
                             <div>
-                                <span class="text-xl font-bold text-orange-700">SELL</span>
+                                <span class="text-lg font-bold text-orange-700">SELL</span>
                                 <p id="sellCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
                             </div>
                         </label>
                     </div>
                 </div>
 
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Expected Quantity *
                     </label>
@@ -180,29 +190,69 @@
                         id="expectedQuantity"
                         required
                         min="1"
+                        max="1500"
                         class="w-full neu-input"
-                        placeholder="Enter quantity"
+                        placeholder="Enter expected quantity (1-1500)"
                         oninput="updateTruckPreview()"
                     >
                 </div>
 
-                <div id="truckPreview" class="mb-6 p-4 bg-blue-50 neu-border hidden">
-                    <p class="text-sm text-gray-600 mb-2">
+                <div id="truckPreview" class="mb-4 p-3 bg-blue-50 neu-border hidden">
+                    <p class="text-sm text-gray-600 mb-1">
                         <i class="bi bi-truck"></i>
                         Truck number preview:
                     </p>
-                    <p class="text-3xl font-bold text-blue-700" id="previewTruckNumber">-</p>
+                    <p class="text-2xl font-bold text-blue-700" id="previewTruckNumber">-</p>
                 </div>
 
-                <div class="flex gap-4">
+                <div class="flex gap-3">
                     <button type="submit" class="neu-button bg-green-500 text-white flex-1">
-                        <i class="bi bi-check-circle"></i> Submit Entry
+                        <i class="bi bi-check-circle"></i> Submit
                     </button>
                     <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
                         <i class="bi bi-x-circle"></i> Reset
                     </button>
                 </div>
             </form>
+            </div>
+
+            <!-- Recent Room Entries (Right) -->
+            <div class="neu-border bg-white p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="bi bi-door-open text-blue-600"></i>
+                        Recent Room Entries
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 neu-border flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto-refresh (5s)
+                        </span>
+                        <span class="text-xs text-gray-600 bg-blue-50 px-2 py-1 neu-border">
+                            <i class="bi bi-hand-index"></i> Click to print
+                        </span>
+                    </div>
+                </div>
+                <div id="recentRoomEntries" class="overflow-auto" style="max-height: 700px;">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2 font-bold">Truck No</th>
+                                <th class="text-left p-2 font-bold">Room</th>
+                                <th class="text-left p-2 font-bold">Floor</th>
+                                <th class="text-left p-2 font-bold">Gate</th>
+                                <th class="text-left p-2 font-bold">Qty</th>
+                                <th class="text-left p-2 font-bold">Date</th>
+                                <th class="text-left p-2 font-bold">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomEntriesTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center p-4 text-gray-500">Loading room entries...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Success Message -->
@@ -220,77 +270,33 @@
             </button>
         </div>
 
-        <!-- Recent Entries Grid -->
-        <div class="mt-8 grid grid-cols-2 gap-8">
-            <!-- Recent Main Entries -->
-            <div class="neu-border bg-white p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold flex items-center gap-2">
-                        <i class="bi bi-clock-history"></i>
-                        Recent Main Entries
-                    </h2>
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-semibold">Show:</label>
-                        <select id="entriesLimit" onchange="changeEntriesLimit()" class="neu-input text-sm p-2">
-                            <option value="10">10 entries</option>
-                            <option value="20">20 entries</option>
-                            <option value="50">50 entries</option>
-                            <option value="100">100 entries</option>
-                            <option value="0">All entries</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="recentEntries" class="overflow-auto" style="max-height: 600px;">
-                    <table class="w-full">
-                        <thead class="sticky top-0 bg-white">
-                            <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold">Truck No</th>
-                                <th class="text-left p-2 font-bold">Name</th>
-                                <th class="text-left p-2 font-bold">Phone</th>
-                                <th class="text-left p-2 font-bold">Village</th>
-                                <th class="text-left p-2 font-bold">Quantity</th>
-                                <th class="text-left p-2 font-bold">Category</th>
-                                <th class="text-left p-2 font-bold">Created</th>
-                            </tr>
-                        </thead>
-                        <tbody id="entriesTableBody">
-                            <tr>
-                                <td colspan="7" class="text-center p-4 text-gray-500">Loading entries...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+        <!-- Recent Main Entries (Bottom) -->
+        <div class="neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="bi bi-clock-history"></i>
+                    Recent Main Entries
+                </h2>
             </div>
-
-            <!-- Recent Room Entries -->
-            <div class="neu-border bg-white p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold flex items-center gap-2">
-                        <i class="bi bi-door-open"></i>
-                        Recent Room Entries
-                    </h2>
-                </div>
-                <div id="recentRoomEntries" class="overflow-auto" style="max-height: 600px;">
-                    <table class="w-full" id="roomEntriesTable">
-                        <thead class="sticky top-0 bg-white">
-                            <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold">Truck No</th>
-                                <th class="text-left p-2 font-bold">Room</th>
-                                <th class="text-left p-2 font-bold">Floor</th>
-                                <th class="text-left p-2 font-bold">Gate</th>
-                                <th class="text-left p-2 font-bold">Remark</th>
-                                <th class="text-left p-2 font-bold">Qty</th>
-                                <th class="text-left p-2 font-bold">Date</th>
-                                <th class="text-left p-2 font-bold">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="roomEntriesTableBody">
-                            <tr>
-                                <td colspan="8" class="text-center p-4 text-gray-500">Loading room entries...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div id="recentEntries" class="overflow-auto" style="max-height: 400px;">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left p-2 font-bold">Truck</th>
+                            <th class="text-left p-2 font-bold">Name</th>
+                            <th class="text-left p-2 font-bold">Phone</th>
+                            <th class="text-left p-2 font-bold">Village</th>
+                            <th class="text-left p-2 font-bold">Qty</th>
+                            <th class="text-left p-2 font-bold">Category</th>
+                            <th class="text-left p-2 font-bold">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entriesTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -307,10 +313,17 @@
         let seedCount = 0;
         let sellCount = 0;
 
+        // Auto-refresh intervals
+        let roomEntriesRefreshInterval = null;
+        let entriesRefreshInterval = null;
+
         // Load recent entries on page load
         window.addEventListener('load', function() {
             loadRecentEntries();
             loadRoomEntries();
+
+            // Start auto-refresh for room entries (every 5 seconds)
+            startAutoRefresh();
 
             // Add auto-search on phone number input
             const phoneInput = document.getElementById('userPhone');
@@ -444,7 +457,13 @@
                 return;
             }
 
-            tbody.innerHTML = entries.map(entry => {
+            // Show only last 15 entries
+            const recentEntries = entries.slice(0, 15);
+
+            tbody.innerHTML = recentEntries.map(entry => {
+                const truckColor = getTruckColor(entry.truck_number);
+                const categoryColor = entry.truck_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
+
                 const date = new Date(entry.created_at);
                 const formattedDate = date.toLocaleString('en-IN', {
                     day: '2-digit',
@@ -454,17 +473,15 @@
                     minute: '2-digit'
                 });
 
-                const categoryColor = entry.truck_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
-
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold">${entry.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
                         <td class="p-2">${entry.name}</td>
                         <td class="p-2">${entry.phone}</td>
                         <td class="p-2">${entry.village || '-'}</td>
                         <td class="p-2">${entry.expected_quantity}</td>
-                        <td class="p-2"><span class="px-2 py-1 rounded font-bold ${categoryColor}">${entry.truck_category.toUpperCase()}</span></td>
-                        <td class="p-2 text-sm">${formattedDate}</td>
+                        <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${categoryColor}">${entry.truck_category.toUpperCase()}</span></td>
+                        <td class="p-2 text-xs">${formattedDate}</td>
                     </tr>
                 `;
             }).join('');
@@ -648,6 +665,10 @@
             radios.forEach(radio => radio.checked = false);
 
             currentUser = null;
+
+            // Refresh the lists
+            loadRecentEntries();
+            loadRoomEntries();
         }
 
         function goBack() {
@@ -655,6 +676,12 @@
         }
 
         async function loadRoomEntries() {
+            // Show loading animation
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.classList.add('spin-animation');
+            }
+
             try {
                 const response = await fetch('/api/room-entries', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -669,7 +696,14 @@
             } catch (error) {
                 console.error('Error loading room entries:', error);
                 document.getElementById('roomEntriesTableBody').innerHTML =
-                    '<tr><td colspan="8" class="text-center p-4 text-red-500">Failed to load room entries</td></tr>';
+                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load room entries</td></tr>';
+            } finally {
+                // Stop loading animation after a short delay
+                if (refreshIcon) {
+                    setTimeout(() => {
+                        refreshIcon.classList.remove('spin-animation');
+                    }, 500);
+                }
             }
         }
 
@@ -677,7 +711,7 @@
             const tbody = document.getElementById('roomEntriesTableBody');
 
             if (roomEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
                 return;
             }
 
@@ -686,27 +720,27 @@
                 const formattedDate = date.toLocaleString('en-IN', {
                     day: '2-digit',
                     month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric'
                 });
+                const truckColor = getTruckColor(entry.truck_number);
 
                 return `
-                    <tr class="border-b border-gray-200 hover:bg-yellow-50">
-                        <td class="p-2 font-bold">${entry.truck_number}</td>
+                    <tr class="border-b border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
+                        onclick="printReceipt(${entry.entry_id}, ${entry.id})"
+                        title="Click to print receipt">
+                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no}</td>
-                        <td class="p-2">${entry.remark || '-'}</td>
-                        <td class="p-2">${entry.quantity}</td>
-                        <td class="p-2 text-sm">${formattedDate}</td>
-                        <td class="p-2">
-                            <div class="flex gap-2">
-                                <button onclick="printReceipt(${entry.entry_id}, ${entry.id})" class="neu-button bg-blue-500 text-white text-xs px-3 py-1">
-                                    <i class="bi bi-printer"></i> Print
+                        <td class="p-2 font-bold">${entry.quantity}</td>
+                        <td class="p-2 text-xs">${formattedDate}</td>
+                        <td class="p-2" onclick="event.stopPropagation()">
+                            <div class="flex gap-1">
+                                <button onclick="printReceipt(${entry.entry_id}, ${entry.id})" class="neu-button bg-blue-500 text-white text-xs px-2 py-1" title="Print Receipt">
+                                    <i class="bi bi-printer"></i>
                                 </button>
-                                <button onclick="goToRent(${entry.entry_id})" class="neu-button bg-green-500 text-white text-xs px-3 py-1">
-                                    <i class="bi bi-cash-coin"></i> Rent
+                                <button onclick="goToRent(${entry.entry_id})" class="neu-button bg-green-500 text-white text-xs px-2 py-1" title="Generate Rent">
+                                    <i class="bi bi-cash-coin"></i>
                                 </button>
                             </div>
                         </td>
@@ -1097,6 +1131,40 @@
                 alert('Error printing receipt: ' + error.message);
             }
         }
+
+        function getTruckColor(truckNumber) {
+            const numMatch = truckNumber.match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num < 600 ? 'text-green-600' : 'text-orange-600';
+            }
+            return 'text-gray-700';
+        }
+
+        // Auto-refresh functions
+        function startAutoRefresh() {
+            // Refresh room entries every 5 seconds
+            roomEntriesRefreshInterval = setInterval(() => {
+                loadRoomEntries();
+            }, 5000);
+
+            // Refresh main entries every 10 seconds
+            entriesRefreshInterval = setInterval(() => {
+                loadRecentEntries();
+            }, 10000);
+        }
+
+        function stopAutoRefresh() {
+            if (roomEntriesRefreshInterval) {
+                clearInterval(roomEntriesRefreshInterval);
+            }
+            if (entriesRefreshInterval) {
+                clearInterval(entriesRefreshInterval);
+            }
+        }
+
+        // Stop auto-refresh when leaving the page
+        window.addEventListener('beforeunload', stopAutoRefresh);
     </script>
 
 </body>

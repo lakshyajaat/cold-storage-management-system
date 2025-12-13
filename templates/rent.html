@@ -361,13 +361,14 @@
             tbody.innerHTML = trucks.map((truck, index) => {
                 const quantity = truck.expected_quantity || 0;
                 const rent = quantity * rentPerItem;
+                const truckColor = getTruckColor(truck.truck_number);
 
                 return `
                     <tr class="border-b border-gray-200">
                         <td class="p-2">
                             <input type="checkbox" class="truck-checkbox" data-index="${index}" onchange="calculateTotal()">
                         </td>
-                        <td class="p-2 font-bold">${truck.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${truck.truck_number}</td>
                         <td class="p-2">${quantity}</td>
                         <td class="p-2">₹${rentPerItem.toFixed(2)}</td>
                         <td class="p-2 font-bold">₹${rent.toFixed(2)}</td>
@@ -378,6 +379,15 @@
             // Select all by default
             document.getElementById('selectAll').checked = true;
             toggleSelectAll();
+        }
+
+        function getTruckColor(truckNumber) {
+            const numMatch = truckNumber.match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num < 600 ? 'text-green-600' : 'text-orange-600';
+            }
+            return 'text-gray-700';
         }
 
         function toggleSelectAll() {
