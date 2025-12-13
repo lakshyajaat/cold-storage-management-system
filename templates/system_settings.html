@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings - Cold Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-gear-fill text-4xl text-blue-600"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold">System Settings</h1>
+                        <p class="text-gray-600">Configure system parameters</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="goBack()" class="neu-button bg-gray-200">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+        </header>
+
+        <div class="neu-border bg-white p-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-currency-rupee"></i>
+                Rent Price Configuration
+            </h2>
+
+            <div class="mb-8 p-4 bg-blue-50 neu-border">
+                <p class="text-sm text-blue-800">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> This setting controls the rent price per item. The total rent is calculated as:
+                    <strong>Number of Items × Rent per Item</strong>
+                </p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Rent per Item (₹)
+                </label>
+                <div class="flex gap-4 items-end">
+                    <div class="flex-1">
+                        <input
+                            type="number"
+                            id="rentPerItem"
+                            min="1"
+                            step="0.01"
+                            class="w-full neu-input"
+                            placeholder="Enter rent per item"
+                        >
+                    </div>
+                    <button onclick="updateRentPerItem()" class="neu-button bg-green-500 text-white">
+                        <i class="bi bi-check-circle"></i> Update
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Current value will be loaded automatically</p>
+            </div>
+
+            <div id="successMessage" class="hidden p-4 bg-green-100 border-3 border-green-600 mb-4">
+                <p class="text-green-800 font-bold">
+                    <i class="bi bi-check-circle-fill"></i> Setting updated successfully!
+                </p>
+            </div>
+
+            <div id="errorMessage" class="hidden p-4 bg-red-100 border-3 border-red-600 mb-4">
+                <p class="text-red-800 font-bold">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <span id="errorText"></span>
+                </p>
+            </div>
+
+            <div class="mt-8 p-6 bg-gray-50 neu-border">
+                <h3 class="font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-info-square"></i>
+                    Last Update Information
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600">Last Updated:</p>
+                        <p class="font-bold" id="lastUpdated">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Updated By User ID:</p>
+                        <p class="font-bold" id="updatedBy">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+
+        // Load settings on page load
+        window.addEventListener('load', loadSettings);
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings/rent_per_item', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load settings');
+                }
+
+                const setting = await response.json();
+                document.getElementById('rentPerItem').value = setting.setting_value;
+
+                const lastUpdated = new Date(setting.updated_at);
+                document.getElementById('lastUpdated').textContent = lastUpdated.toLocaleString('en-IN');
+                document.getElementById('updatedBy').textContent = setting.updated_by_user_id || 'System';
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                showError('Failed to load settings: ' + error.message);
+            }
+        }
+
+        async function updateRentPerItem() {
+            const value = document.getElementById('rentPerItem').value;
+
+            if (!value || parseFloat(value) <= 0) {
+                showError('Please enter a valid rent amount greater than 0');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/rent_per_item', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        setting_value: value
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update setting');
+                }
+
+                showSuccess();
+                // Reload settings to update last updated info
+                setTimeout(loadSettings, 1000);
+            } catch (error) {
+                console.error('Error updating setting:', error);
+                showError('Failed to update setting: ' + error.message);
+            }
+        }
+
+        function showSuccess() {
+            const successEl = document.getElementById('successMessage');
+            const errorEl = document.getElementById('errorMessage');
+
+            errorEl.classList.add('hidden');
+            successEl.classList.remove('hidden');
+
+            setTimeout(() => {
+                successEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        function showError(message) {
+            const successEl = document.getElementById('successMessage');
+            const errorEl = document.getElementById('errorMessage');
+
+            successEl.classList.add('hidden');
+            document.getElementById('errorText').textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>

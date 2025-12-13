@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Neubrutalism</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Neubrutalism Theme */
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #f0f0f0;
+        }
+        .neu-border {
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+        .neu-button {
+            transition: all 0.2s ease;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 black;
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        th, td {
+            border: 2px solid black;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold">Admin Report</h1>
+            <div class="neu-border bg-yellow-300 p-4 rounded-lg">
+                <p class="font-bold">Year: <span id="currentYear"></span></p>
+                <p class="font-bold">Rent Price: <span id="rentPrice">₹160</span></p>
+            </div>
+        </div>
+
+        <!-- Employ Activity Table -->
+        <div class="neu-border bg-pink-200 p-4 rounded-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th>Employ</th>
+                            <th>ID</th>
+                            <th>Reel</th>
+                            <th>Login Time</th>
+                            <th>Logout Time</th>
+                            <th>Date Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="EmployActivityTable">
+                        <!-- JS will populate this -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Employ Permissions Table -->
+        <div class="neu-border bg-blue-200 p-4 rounded-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th>Employ</th>
+                            <th>ID</th>
+                            <th>Role</th>
+                            <th>Group Permission</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="EmployPermissionsTable">
+                        <!-- JS will populate this -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Report Section -->
+        <div class="neu-border bg-green-200 p-4 rounded-lg">
+            <h2 class="text-2xl font-bold mb-4">Report</h2>
+            <div class="flex flex-wrap gap-4 mb-4">
+                <select id="timeRange" class="neu-border neu-button bg-white p-2 rounded">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="neu-border bg-white p-4 rounded">
+                    <h3 class="font-bold">Total Entry</h3>
+                    <p id="totalEntry" class="text-2xl">0</p>
+                </div>
+                <div class="neu-border bg-white p-4 rounded">
+                    <h3 class="font-bold">Due Loading</h3>
+                    <p id="dueLoading" class="text-2xl">0</p>
+                </div>
+                <div class="neu-border bg-white p-4 rounded">
+                    <h3 class="font-bold">Complete Tocan</h3>
+                    <p id="completeTocan" class="text-2xl">0</p>
+                </div>
+                <div class="neu-border bg-white p-4 rounded">
+                    <h3 class="font-bold">Quantity</h3>
+                    <p id="quantity" class="text-2xl">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set current year
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Sample data for Employ activity
+        const EmployActivityData = [
+            { Employ: 'John', id: '001', reel: 'R1', loginTime: '09:00', logoutTime: '17:00', dateStatus: 'Active' },
+            { Employ: 'Jane', id: '002', reel: 'R2', loginTime: '08:30', logoutTime: '16:30', dateStatus: 'Active' }
+        ];
+
+        // Sample data for Employ permissions
+        const EmployPermissionsData = [
+            { Employ: 'John', id: '001', role: 'Admin', groupPermission: 'Full', edit: true },
+            { Employ: 'Jane', id: '002', role: 'Employ', groupPermission: 'Limited', edit: true }
+        ];
+
+        // Populate tables
+        function populateEmployActivityTable() {
+            const tbody = document.getElementById('EmployActivityTable');
+            tbody.innerHTML = EmployActivityData.map(Employ => `
+                <tr>
+                    <td>${Employ.Employ}</td>
+                    <td>${Employ.id}</td>
+                    <td>${Employ.reel}</td>
+                    <td>${Employ.loginTime}</td>
+                    <td>${Employ.logoutTime}</td>
+                    <td>${Employ.dateStatus}</td>
+                </tr>
+            `).join('');
+        }
+
+        function populateEmployPermissionsTable() {
+            const tbody = document.getElementById('EmployPermissionsTable');
+            tbody.innerHTML = EmployPermissionsData.map(Employ => `
+                <tr>
+                    <td>${Employ.Employ}</td>
+                    <td>${Employ.id}</td>
+                    <td>${Employ.role}</td>
+                    <td>${Employ.groupPermission}</td>
+                    <td>
+                        <button class="neu-button bg-yellow-300 px-2 py-1 rounded neu-border">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update report statistics based on time range
+        function updateReportStats() {
+            const timeRange = document.getElementById('timeRange').value;
+            // Simulate different values for different time ranges
+            const multiplier = timeRange === 'day' ? 1 : 
+                             timeRange === 'week' ? 7 : 
+                             timeRange === 'month' ? 30 : 365;
+            
+            document.getElementById('totalEntry').textContent = 100 * multiplier;
+            document.getElementById('dueLoading').textContent = 20 * multiplier;
+            document.getElementById('completeTocan').textContent = 80 * multiplier;
+            document.getElementById('quantity').textContent = 500 * multiplier;
+        }
+
+        // Event listeners
+        document.getElementById('timeRange').addEventListener('change', updateReportStats);
+
+        // Initial population
+        populateEmployActivityTable();
+        populateEmployPermissionsTable();
+        updateReportStats();
+    </script>
+</body>
+</html>

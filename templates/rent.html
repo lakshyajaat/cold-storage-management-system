@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent Payment - Cold Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-cash-coin text-4xl text-green-600"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold">Rent Payment & Invoice</h1>
+                        <p class="text-gray-600">Select trucks and record payment</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="goBack()" class="neu-button bg-gray-200">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+        </header>
+
+        <div id="loadingMessage" class="text-center p-8">
+            <i class="bi bi-hourglass-split text-4xl"></i>
+            <p class="mt-4">Loading customer data...</p>
+        </div>
+
+        <div id="rentContent" style="display: none;">
+            <!-- Customer Info -->
+            <div class="neu-border bg-white p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-person-circle"></i>
+                    Customer Information
+                </h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600">Name</p>
+                        <p class="text-lg font-bold" id="customerName">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Phone</p>
+                        <p class="text-lg font-bold" id="customerPhone">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Village</p>
+                        <p class="text-lg font-bold" id="customerVillage">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Truck Selection -->
+            <div class="neu-border bg-white p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-truck"></i>
+                    Select Trucks for Invoice
+                </h2>
+                <div class="overflow-auto" style="max-height: 400px;">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                </th>
+                                <th class="text-left p-2 font-bold">Truck No</th>
+                                <th class="text-left p-2 font-bold">Quantity</th>
+                                <th class="text-left p-2 font-bold">Rate (₹)</th>
+                                <th class="text-left p-2 font-bold">Rent (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trucksTable">
+                            <tr>
+                                <td colspan="5" class="text-center p-4 text-gray-500">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6 p-4 bg-blue-50 neu-border">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-bold">Total Rent (Selected Trucks):</span>
+                        <span class="text-2xl font-bold text-blue-700" id="totalRent">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="neu-border bg-white p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-wallet2"></i>
+                    Payment Information
+                </h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Amount Received (₹) *
+                        </label>
+                        <input
+                            type="number"
+                            id="amountReceived"
+                            min="0"
+                            step="0.01"
+                            class="w-full neu-input"
+                            placeholder="Enter amount received"
+                            oninput="calculateBalance()"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Balance
+                        </label>
+                        <div class="w-full neu-input bg-gray-100 text-xl font-bold" id="balance">₹0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="neu-border bg-white p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="bi bi-clock-history"></i>
+                        Payment History
+                    </h2>
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <i class="bi bi-arrow-clockwise" id="refreshIcon"></i>
+                        <span>Auto-refreshing every 10s</span>
+                    </div>
+                </div>
+                <div id="paymentHistory" class="overflow-auto" style="max-height: 300px;">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2 font-bold">Date</th>
+                                <th class="text-left p-2 font-bold">Total Rent</th>
+                                <th class="text-left p-2 font-bold">Amount Paid</th>
+                                <th class="text-left p-2 font-bold">Balance</th>
+                                <th class="text-left p-2 font-bold">Employee ID</th>
+                                <th class="text-left p-2 font-bold">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentHistoryBody">
+                            <tr>
+                                <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Generate Invoice Button -->
+            <div class="text-center">
+                <button onclick="generateInvoice()" class="neu-button bg-green-500 text-white text-xl px-12">
+                    <i class="bi bi-file-earmark-text"></i> Generate Invoice & Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Invoice Preview (Hidden, will show in new window) -->
+        <div id="invoicePreview" style="display: none;"></div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const urlParams = new URLSearchParams(window.location.search);
+        const entryId = urlParams.get('entry_id');
+
+        let allTrucks = [];
+        let rentPerItem = 10;
+        let customerData = {};
+        let paymentRefreshInterval = null;
+
+        window.addEventListener('load', loadData);
+
+        // Auto-refresh payment history every 10 seconds
+        function startPaymentHistoryRefresh(phone) {
+            // Clear any existing interval
+            if (paymentRefreshInterval) {
+                clearInterval(paymentRefreshInterval);
+            }
+
+            // Refresh every 10 seconds
+            paymentRefreshInterval = setInterval(() => {
+                loadPaymentHistory(phone);
+            }, 10000);
+        }
+
+        // Stop auto-refresh when leaving page
+        window.addEventListener('beforeunload', () => {
+            if (paymentRefreshInterval) {
+                clearInterval(paymentRefreshInterval);
+            }
+        });
+
+        async function loadData() {
+            try {
+                if (!entryId) {
+                    throw new Error('Missing entry ID');
+                }
+
+                // Fetch entry details
+                const entryResponse = await fetch(`/api/entries/${entryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const entry = await entryResponse.json();
+                customerData = entry;
+
+                // Fetch rent per item from system settings
+                const settingsResponse = await fetch('/api/settings/rent_per_item', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const rentSetting = await settingsResponse.json();
+                rentPerItem = parseFloat(rentSetting.setting_value);
+
+                // Fetch all entries for this phone number
+                const allEntriesResponse = await fetch(`/api/entries`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const allEntries = await allEntriesResponse.json();
+
+                // Filter entries by phone number
+                allTrucks = allEntries.filter(e => e.phone === entry.phone);
+
+                // Display data
+                displayCustomerInfo(entry);
+                displayTrucks(allTrucks);
+                loadPaymentHistory(entry.phone);
+
+                // Start auto-refresh for payment history
+                startPaymentHistoryRefresh(entry.phone);
+
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('rentContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loadingMessage').innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-4xl text-red-500"></i>
+                    <p class="mt-4 text-red-500">Error: ${error.message}</p>
+                    <button onclick="window.history.back()" class="neu-button bg-gray-200 mt-4">Go Back</button>
+                `;
+            }
+        }
+
+        function displayCustomerInfo(entry) {
+            document.getElementById('customerName').textContent = entry.name;
+            document.getElementById('customerPhone').textContent = entry.phone;
+            document.getElementById('customerVillage').textContent = entry.village || 'N/A';
+        }
+
+        async function loadPaymentHistory(phone) {
+            // Show loading indicator
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.style.animation = 'spin 1s linear infinite';
+            }
+
+            try {
+                const response = await fetch(`/api/rent-payments/phone?phone=${phone}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load payment history');
+                }
+
+                const payments = await response.json();
+                displayPaymentHistory(payments);
+            } catch (error) {
+                console.error('Error loading payment history:', error);
+                document.getElementById('paymentHistoryBody').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center p-4 text-gray-500">No payment history found</td>
+                    </tr>
+                `;
+            } finally {
+                // Stop loading indicator
+                if (refreshIcon) {
+                    setTimeout(() => {
+                        refreshIcon.style.animation = 'none';
+                    }, 500);
+                }
+            }
+        }
+
+        function displayPaymentHistory(payments) {
+            const tbody = document.getElementById('paymentHistoryBody');
+
+            if (payments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center p-4 text-gray-500">No payment history yet</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = payments.map(payment => {
+                const date = new Date(payment.payment_date).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const balanceClass = payment.balance < 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+
+                return `
+                    <tr class="border-b border-gray-200">
+                        <td class="p-2">${date}</td>
+                        <td class="p-2">₹${payment.total_rent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td class="p-2">₹${payment.amount_paid.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td class="p-2 ${balanceClass}">₹${payment.balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td class="p-2">#${payment.processed_by_user_id}</td>
+                        <td class="p-2 text-sm">${payment.notes || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function displayTrucks(trucks) {
+            const tbody = document.getElementById('trucksTable');
+
+            tbody.innerHTML = trucks.map((truck, index) => {
+                const quantity = truck.expected_quantity || 0;
+                const rent = quantity * rentPerItem;
+
+                return `
+                    <tr class="border-b border-gray-200">
+                        <td class="p-2">
+                            <input type="checkbox" class="truck-checkbox" data-index="${index}" onchange="calculateTotal()">
+                        </td>
+                        <td class="p-2 font-bold">${truck.truck_number}</td>
+                        <td class="p-2">${quantity}</td>
+                        <td class="p-2">₹${rentPerItem.toFixed(2)}</td>
+                        <td class="p-2 font-bold">₹${rent.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Select all by default
+            document.getElementById('selectAll').checked = true;
+            toggleSelectAll();
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.truck-checkbox').forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            document.querySelectorAll('.truck-checkbox:checked').forEach(checkbox => {
+                const index = parseInt(checkbox.dataset.index);
+                const truck = allTrucks[index];
+                total += (truck.expected_quantity || 0) * rentPerItem;
+            });
+
+            document.getElementById('totalRent').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            calculateBalance();
+        }
+
+        async function calculateBalance() {
+            const totalRent = parseFloat(document.getElementById('totalRent').textContent.replace('₹', '').replace(/,/g, ''));
+            const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
+
+            // Fetch previous payments to calculate cumulative balance
+            let previousTotalPaid = 0;
+            try {
+                const paymentsResponse = await fetch(`/api/rent-payments/phone?phone=${customerData.phone}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (paymentsResponse.ok) {
+                    const previousPayments = await paymentsResponse.json();
+                    // Sum all previous payments
+                    previousTotalPaid = previousPayments.reduce((sum, payment) => sum + payment.amount_paid, 0);
+                }
+            } catch (error) {
+                console.warn('Could not fetch previous payments for balance calculation:', error);
+            }
+
+            // Calculate cumulative balance
+            const totalPaidNow = previousTotalPaid + amountReceived;
+            const balance = totalPaidNow - totalRent;
+
+            const balanceEl = document.getElementById('balance');
+            balanceEl.textContent = '₹' + balance.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+            if (balance < 0) {
+                balanceEl.classList.add('text-red-600');
+                balanceEl.classList.remove('text-green-600');
+            } else {
+                balanceEl.classList.add('text-green-600');
+                balanceEl.classList.remove('text-red-600');
+            }
+        }
+
+        async function generateInvoice() {
+            const selectedTrucks = [];
+            document.querySelectorAll('.truck-checkbox:checked').forEach(checkbox => {
+                const index = parseInt(checkbox.dataset.index);
+                selectedTrucks.push(allTrucks[index]);
+            });
+
+            if (selectedTrucks.length === 0) {
+                alert('Please select at least one truck');
+                return;
+            }
+
+            const amountReceived = parseFloat(document.getElementById('amountReceived').value);
+            if (!amountReceived || amountReceived <= 0) {
+                alert('Please enter amount received');
+                return;
+            }
+
+            // Get employee details from token
+            const employee = getEmployeeFromToken();
+            const employeeName = employee?.email?.split('@')[0] || 'N/A';
+
+            // Calculate total
+            let totalRent = 0;
+            selectedTrucks.forEach(truck => {
+                totalRent += (truck.expected_quantity || 0) * rentPerItem;
+            });
+
+            // Fetch previous payments to calculate cumulative balance
+            let previousTotalPaid = 0;
+            try {
+                const paymentsResponse = await fetch(`/api/rent-payments/phone?phone=${customerData.phone}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (paymentsResponse.ok) {
+                    const previousPayments = await paymentsResponse.json();
+                    // Sum all previous payments
+                    previousTotalPaid = previousPayments.reduce((sum, payment) => sum + payment.amount_paid, 0);
+                }
+            } catch (error) {
+                console.warn('Could not fetch previous payments, starting fresh:', error);
+            }
+
+            // Calculate cumulative balance: (Total Paid + Current Payment) - Total Rent
+            const totalPaidNow = previousTotalPaid + amountReceived;
+            const balance = totalPaidNow - totalRent;
+
+            // Save payment to database
+            try {
+                await savePaymentRecord(customerData, totalRent, amountReceived, balance, selectedTrucks);
+                // Immediately refresh payment history after saving
+                loadPaymentHistory(customerData.phone);
+            } catch (error) {
+                console.error('Error saving payment:', error);
+                if (!confirm('Failed to save payment record. Continue with invoice generation?')) {
+                    return;
+                }
+            }
+
+            // Generate invoice HTML
+            const invoiceDate = new Date().toLocaleString('en-IN');
+
+            const invoiceHTML = generateInvoiceHTML(selectedTrucks, totalRent, amountReceived, balance, employeeName, invoiceDate);
+
+            // Open in new window and print
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(invoiceHTML);
+            printWindow.document.close();
+            printWindow.focus();
+
+            // Auto print after short delay
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        }
+
+        async function savePaymentRecord(customer, totalRent, amountPaid, balance, trucks) {
+            const truckNumbers = trucks.map(t => t.truck_number).join(', ');
+            const response = await fetch('/api/rent-payments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    entry_id: customer.id,
+                    customer_name: customer.name,
+                    customer_phone: customer.phone,
+                    total_rent: totalRent,
+                    amount_paid: amountPaid,
+                    balance: balance,
+                    notes: `Trucks: ${truckNumbers}`
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save payment record');
+            }
+
+            return await response.json();
+        }
+
+        function generateInvoiceHTML(trucks, totalRent, amountReceived, balance, employeeName, invoiceDate) {
+            const trucksRows = trucks.map(truck => {
+                const quantity = truck.expected_quantity || 0;
+                const rent = quantity * rentPerItem;
+                return `
+                    <tr>
+                        <td>${truck.truck_number}</td>
+                        <td>${quantity}</td>
+                        <td>₹${rentPerItem.toFixed(2)}</td>
+                        <td>₹${rent.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rent Invoice</title>
+    <style>
+        @page {
+            size: landscape;
+            margin: 10mm;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 10px; background: white; }
+        .invoice-wrapper { display: flex; flex-direction: column; gap: 15px; }
+        .invoice { border: 2px solid #000; padding: 15px; page-break-after: always; max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+        .header h1 { font-size: 18px; margin-bottom: 3px; }
+        .header p { font-size: 11px; color: #666; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+        .info-label { font-weight: bold; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+        th, td { border: 1px solid #000; padding: 4px; text-align: left; }
+        th { background: #f0f0f0; font-weight: bold; }
+        .totals { margin: 10px 0; }
+        .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #ddd; }
+        .totals-row.total { font-weight: bold; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+        .signature { margin-top: 25px; border-top: 1px solid #000; padding-top: 5px; font-size: 11px; text-align: center; }
+        .footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #000; text-align: center; font-size: 10px; color: #666; }
+        @media print {
+            body { padding: 0; }
+            .invoice { margin-bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-wrapper">
+        <!-- Invoice Copy 1 -->
+        <div class="invoice">
+            <div class="header">
+                <h1>COLD STORAGE - RENT INVOICE</h1>
+                <p>Payment Receipt</p>
+            </div>
+
+            <div>
+                <div class="info-row">
+                    <span class="info-label">Customer:</span>
+                    <span>${customerData.name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span>${customerData.phone}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Village:</span>
+                    <span>${customerData.village || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span>${invoiceDate}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Employee:</span>
+                    <span>${employeeName}</span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Truck No</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Rent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trucksRows}
+                </tbody>
+            </table>
+
+            <div class="totals">
+                <div class="totals-row">
+                    <span>Total Rent:</span>
+                    <span>₹${totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row">
+                    <span>Amount Received:</span>
+                    <span>₹${amountReceived.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row total">
+                    <span>Balance:</span>
+                    <span>₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+            </div>
+
+            <div class="signature">
+                <strong>Customer Signature: ______________________</strong>
+            </div>
+
+            <div class="footer">
+                <p>Thank you for your business!</p>
+            </div>
+        </div>
+
+        <!-- Invoice Copy 2 -->
+        <div class="invoice">
+            <div class="header">
+                <h1>COLD STORAGE - RENT INVOICE</h1>
+                <p>Payment Receipt (Office Copy)</p>
+            </div>
+
+            <div>
+                <div class="info-row">
+                    <span class="info-label">Customer:</span>
+                    <span>${customerData.name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span>${customerData.phone}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Village:</span>
+                    <span>${customerData.village || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span>${invoiceDate}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Employee:</span>
+                    <span>${employeeName}</span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Truck No</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Rent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trucksRows}
+                </tbody>
+            </table>
+
+            <div class="totals">
+                <div class="totals-row">
+                    <span>Total Rent:</span>
+                    <span>₹${totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row">
+                    <span>Amount Received:</span>
+                    <span>₹${amountReceived.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row total">
+                    <span>Balance:</span>
+                    <span>₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </div>
+            </div>
+
+            <div class="signature">
+                <strong>Customer Signature: ______________________</strong>
+            </div>
+
+            <div class="footer">
+                <p>Thank you for your business!</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+        }
+
+        function getEmployeeFromToken() {
+            if (!token) return null;
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (error) {
+                console.error('Error decoding token:', error);
+                return null;
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>

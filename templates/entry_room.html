@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entry Room - Cold Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-box-arrow-in-right text-4xl text-orange-600"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold">Entry Room</h1>
+                        <p class="text-gray-600">Register new entry</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="goBack()" class="neu-button bg-gray-200">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+        </header>
+
+        <!-- User Details & Entry Form -->
+        <div id="entryForm" class="neu-border bg-white p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-person-check"></i>
+                User Details & Entry
+            </h2>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Name *
+                    </label>
+                    <input
+                        type="text"
+                        id="userName"
+                        required
+                        class="w-full neu-input"
+                        placeholder="Enter name"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Village *
+                    </label>
+                    <input
+                        type="text"
+                        id="userVillage"
+                        required
+                        class="w-full neu-input"
+                        placeholder="Enter village"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Phone * <span class="text-sm text-gray-500">(Must be 10 digits)</span>
+                    </label>
+                    <input
+                        type="tel"
+                        id="userPhone"
+                        required
+                        class="w-full neu-input"
+                        placeholder="Enter 10-digit phone number"
+                        maxlength="10"
+                        minlength="10"
+                        pattern="[0-9]{10}"
+                    >
+                    <div id="searchStatus" class="hidden mt-2 p-2 border-2">
+                        <p class="text-sm font-semibold"></p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        id="userEmail"
+                        class="w-full neu-input"
+                        placeholder="Enter email (optional)"
+                    >
+                </div>
+            </div>
+
+            <form id="entrySubmitForm" onsubmit="submitEntry(event)">
+                <input type="hidden" id="userId" />
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Select Category *
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="neu-border p-4 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors">
+                            <input
+                                type="radio"
+                                name="truckCategory"
+                                value="seed"
+                                required
+                                class="mr-2"
+                                onchange="updateCategoryInfo()"
+                            >
+                            <div>
+                                <span class="text-xl font-bold text-green-700">SEED</span>
+                                <p id="seedCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
+                            </div>
+                        </label>
+                        <label class="neu-border p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors">
+                            <input
+                                type="radio"
+                                name="truckCategory"
+                                value="sell"
+                                required
+                                class="mr-2"
+                                onchange="updateCategoryInfo()"
+                            >
+                            <div>
+                                <span class="text-xl font-bold text-orange-700">SELL</span>
+                                <p id="sellCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Expected Quantity *
+                    </label>
+                    <input
+                        type="number"
+                        id="expectedQuantity"
+                        required
+                        min="1"
+                        class="w-full neu-input"
+                        placeholder="Enter quantity"
+                        oninput="updateTruckPreview()"
+                    >
+                </div>
+
+                <div id="truckPreview" class="mb-6 p-4 bg-blue-50 neu-border hidden">
+                    <p class="text-sm text-gray-600 mb-2">
+                        <i class="bi bi-truck"></i>
+                        Truck number preview:
+                    </p>
+                    <p class="text-3xl font-bold text-blue-700" id="previewTruckNumber">-</p>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" class="neu-button bg-green-500 text-white flex-1">
+                        <i class="bi bi-check-circle"></i> Submit Entry
+                    </button>
+                    <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="hidden mt-6 neu-border bg-green-100 p-8">
+            <h3 class="text-2xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                Entry Created Successfully!
+            </h3>
+            <div class="p-6 bg-white neu-border mb-4">
+                <p class="text-lg text-gray-700 mb-2">Auto-Generated Truck Number:</p>
+                <p class="text-4xl font-bold text-green-700" id="assignedTruck"></p>
+            </div>
+            <button onclick="resetForm()" class="neu-button bg-green-500 text-white w-full">
+                <i class="bi bi-plus-circle"></i> Create Another Entry
+            </button>
+        </div>
+
+        <!-- Recent Entries Grid -->
+        <div class="mt-8 grid grid-cols-2 gap-8">
+            <!-- Recent Main Entries -->
+            <div class="neu-border bg-white p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="bi bi-clock-history"></i>
+                        Recent Main Entries
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-semibold">Show:</label>
+                        <select id="entriesLimit" onchange="changeEntriesLimit()" class="neu-input text-sm p-2">
+                            <option value="10">10 entries</option>
+                            <option value="20">20 entries</option>
+                            <option value="50">50 entries</option>
+                            <option value="100">100 entries</option>
+                            <option value="0">All entries</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="recentEntries" class="overflow-auto" style="max-height: 600px;">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2 font-bold">Truck No</th>
+                                <th class="text-left p-2 font-bold">Name</th>
+                                <th class="text-left p-2 font-bold">Phone</th>
+                                <th class="text-left p-2 font-bold">Village</th>
+                                <th class="text-left p-2 font-bold">Quantity</th>
+                                <th class="text-left p-2 font-bold">Category</th>
+                                <th class="text-left p-2 font-bold">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center p-4 text-gray-500">Loading entries...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Room Entries -->
+            <div class="neu-border bg-white p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="bi bi-door-open"></i>
+                        Recent Room Entries
+                    </h2>
+                </div>
+                <div id="recentRoomEntries" class="overflow-auto" style="max-height: 600px;">
+                    <table class="w-full" id="roomEntriesTable">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2 font-bold">Truck No</th>
+                                <th class="text-left p-2 font-bold">Room</th>
+                                <th class="text-left p-2 font-bold">Floor</th>
+                                <th class="text-left p-2 font-bold">Gate</th>
+                                <th class="text-left p-2 font-bold">Remark</th>
+                                <th class="text-left p-2 font-bold">Qty</th>
+                                <th class="text-left p-2 font-bold">Date</th>
+                                <th class="text-left p-2 font-bold">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomEntriesTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center p-4 text-gray-500">Loading room entries...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let currentUser = null;
+
+        // Auto-search timeout
+        let searchTimeout = null;
+        let entriesLimit = 10; // Default to show 10 entries
+
+        // Category counts
+        let seedCount = 0;
+        let sellCount = 0;
+
+        // Load recent entries on page load
+        window.addEventListener('load', function() {
+            loadRecentEntries();
+            loadRoomEntries();
+
+            // Add auto-search on phone number input
+            const phoneInput = document.getElementById('userPhone');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    const phone = e.target.value.trim();
+
+                    // Clear previous timeout
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+
+                    // Clear status
+                    hideSearchStatus();
+
+                    // If phone is empty, clear other fields
+                    if (!phone) {
+                        clearCustomerFields();
+                        return;
+                    }
+
+                    // Only search if phone number looks valid (minimum 10 digits)
+                    if (phone.length >= 10) {
+                        // Debounce: wait 500ms after user stops typing
+                        searchTimeout = setTimeout(() => {
+                            autoSearchPhone(phone);
+                        }, 500);
+                    }
+                });
+            }
+        });
+
+        async function updateCategoryInfo() {
+            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            if (!categoryRadio) return;
+
+            const category = categoryRadio.value;
+
+            // Hide all count displays first
+            document.getElementById('seedCount').classList.add('hidden');
+            document.getElementById('sellCount').classList.add('hidden');
+
+            try {
+                // Fetch count for selected category
+                const response = await fetch(`/api/entries/count?category=${category}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch count');
+                }
+
+                const data = await response.json();
+
+                // Store count in global variable
+                if (category === 'seed') {
+                    seedCount = data.count;
+                    document.getElementById('seedCount').textContent = `Current: ${data.count} | Next number: ${data.next}`;
+                    document.getElementById('seedCount').classList.remove('hidden');
+                } else if (category === 'sell') {
+                    sellCount = data.count;
+                    document.getElementById('sellCount').textContent = `Current: ${data.count} | Next number: ${data.next}`;
+                    document.getElementById('sellCount').classList.remove('hidden');
+                }
+
+                // Update truck preview
+                updateTruckPreview();
+            } catch (error) {
+                console.error('Error fetching category count:', error);
+            }
+        }
+
+        function updateTruckPreview() {
+            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            const quantity = parseInt(document.getElementById('expectedQuantity').value);
+
+            if (!categoryRadio || !quantity || quantity < 1) {
+                document.getElementById('truckPreview').classList.add('hidden');
+                return;
+            }
+
+            const category = categoryRadio.value;
+            let nextNumber;
+            let truckNumber;
+
+            if (category === 'seed') {
+                nextNumber = seedCount + 1;
+                truckNumber = String(nextNumber).padStart(3, '0') + '/' + quantity;
+            } else if (category === 'sell') {
+                nextNumber = 600 + sellCount;
+                truckNumber = nextNumber + '/' + quantity;
+            }
+
+            document.getElementById('previewTruckNumber').textContent = truckNumber;
+            document.getElementById('truckPreview').classList.remove('hidden');
+        }
+
+        function changeEntriesLimit() {
+            const select = document.getElementById('entriesLimit');
+            entriesLimit = parseInt(select.value);
+            loadRecentEntries();
+        }
+
+        async function loadRecentEntries() {
+            try {
+                const response = await fetch('/api/entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load entries');
+                }
+
+                const entries = await response.json();
+
+                // Show entries based on selected limit (0 means all)
+                const entriesToShow = entriesLimit === 0 ? entries : entries.slice(0, entriesLimit);
+                displayRecentEntries(entriesToShow);
+            } catch (error) {
+                console.error('Error loading entries:', error);
+                document.getElementById('entriesTableBody').innerHTML =
+                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load entries</td></tr>';
+            }
+        }
+
+        function displayRecentEntries(entries) {
+            const tbody = document.getElementById('entriesTableBody');
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No entries yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = entries.map(entry => {
+                const date = new Date(entry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const categoryColor = entry.truck_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="p-2 font-bold">${entry.truck_number}</td>
+                        <td class="p-2">${entry.name}</td>
+                        <td class="p-2">${entry.phone}</td>
+                        <td class="p-2">${entry.village || '-'}</td>
+                        <td class="p-2">${entry.expected_quantity}</td>
+                        <td class="p-2"><span class="px-2 py-1 rounded font-bold ${categoryColor}">${entry.truck_category.toUpperCase()}</span></td>
+                        <td class="p-2 text-sm">${formattedDate}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+
+        async function autoSearchPhone(phone) {
+            try {
+                const response = await fetch(`/api/customers/search?phone=${phone}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    // Customer not found - show message and clear fields
+                    showSearchStatus('New customer - please fill in details', 'info');
+                    clearCustomerFields();
+                    return;
+                }
+
+                currentUser = await response.json();
+                displayUserDetails(currentUser);
+                showSearchStatus('Customer found! Details auto-filled.', 'success');
+            } catch (error) {
+                console.error('Error searching customer:', error);
+                showSearchStatus('New customer - please fill in details', 'info');
+                clearCustomerFields();
+            }
+        }
+
+        function clearCustomerFields() {
+            document.getElementById('userName').value = '';
+            document.getElementById('userVillage').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userId').value = '';
+            currentUser = null;
+        }
+
+        function showSearchStatus(message, type) {
+            const statusEl = document.getElementById('searchStatus');
+            const statusText = statusEl.querySelector('p');
+
+            statusText.textContent = message;
+            statusEl.classList.remove('hidden', 'bg-green-100', 'border-green-600', 'text-green-700', 'bg-blue-100', 'border-blue-600', 'text-blue-700');
+
+            if (type === 'success') {
+                statusEl.classList.add('bg-green-100', 'border-green-600');
+                statusText.className = 'text-sm font-semibold text-green-700';
+            } else if (type === 'info') {
+                statusEl.classList.add('bg-blue-100', 'border-blue-600');
+                statusText.className = 'text-sm font-semibold text-blue-700';
+            }
+        }
+
+        function hideSearchStatus() {
+            const statusEl = document.getElementById('searchStatus');
+            statusEl.classList.add('hidden');
+        }
+
+        function displayUserDetails(user) {
+            document.getElementById('userName').value = user.name || '';
+            document.getElementById('userVillage').value = user.village || '';
+            document.getElementById('userEmail').value = user.email || '';
+            document.getElementById('userId').value = user.id;
+        }
+
+        async function submitEntry(event) {
+            event.preventDefault();
+
+            const quantity = parseInt(document.getElementById('expectedQuantity').value);
+
+            // Validate quantity
+            if (quantity < 1) {
+                alert('Quantity must be at least 1');
+                return;
+            }
+
+            // Get values from input fields
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const village = document.getElementById('userVillage').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+
+            // Validate phone number (must be exactly 10 digits)
+            if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+                alert('Phone number must be exactly 10 digits');
+                return;
+            }
+
+            // Validate required fields
+            if (!name || !phone || !village) {
+                alert('Please fill in all required fields (Name, Phone, Village)');
+                return;
+            }
+
+            // Get selected category from radio buttons
+            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            if (!categoryRadio) {
+                alert('Please select a category (SEED or SELL)');
+                return;
+            }
+            const category = categoryRadio.value;
+
+            const entryData = {
+                customer_id: parseInt(document.getElementById('userId').value) || 0,
+                phone: phone,
+                name: name,
+                village: village,
+                expected_quantity: quantity,
+                truck_category: category
+            };
+
+            try {
+                const response = await fetch('/api/entries', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(entryData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const result = await response.json();
+                console.log('Entry created:', result);
+                const truckNumber = result.truck_number || 'AUTO-' + result.id;
+                console.log('Truck number:', truckNumber);
+                showSuccess(truckNumber);
+            } catch (error) {
+                alert('Error creating entry: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('searchError');
+            errorEl.querySelector('p').textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function showSuccess(truckNumber) {
+            console.log('showSuccess called with:', truckNumber);
+            const truckEl = document.getElementById('assignedTruck');
+            const successEl = document.getElementById('successMessage');
+
+            if (truckEl) {
+                truckEl.textContent = truckNumber;
+                console.log('Truck number set to element');
+            }
+
+            if (successEl) {
+                successEl.classList.remove('hidden');
+                console.log('Success message shown');
+                // Scroll to success message
+                successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Reload recent entries and room entries to show the new entry
+            loadRecentEntries();
+            loadRoomEntries();
+        }
+
+        function resetForm() {
+            document.getElementById('userName').value = '';
+            document.getElementById('userVillage').value = '';
+            document.getElementById('userPhone').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('entrySubmitForm').reset();
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('truckPreview').classList.add('hidden');
+            hideSearchStatus();
+
+            // Hide count displays
+            document.getElementById('seedCount').classList.add('hidden');
+            document.getElementById('sellCount').classList.add('hidden');
+
+            // Uncheck all radio buttons
+            const radios = document.querySelectorAll('input[name="truckCategory"]');
+            radios.forEach(radio => radio.checked = false);
+
+            currentUser = null;
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        async function loadRoomEntries() {
+            try {
+                const response = await fetch('/api/room-entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load room entries');
+                }
+
+                const roomEntries = await response.json();
+                displayRoomEntries(roomEntries || []);
+            } catch (error) {
+                console.error('Error loading room entries:', error);
+                document.getElementById('roomEntriesTableBody').innerHTML =
+                    '<tr><td colspan="8" class="text-center p-4 text-red-500">Failed to load room entries</td></tr>';
+            }
+        }
+
+        function displayRoomEntries(roomEntries) {
+            const tbody = document.getElementById('roomEntriesTableBody');
+
+            if (roomEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = roomEntries.map(entry => {
+                const date = new Date(entry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-yellow-50">
+                        <td class="p-2 font-bold">${entry.truck_number}</td>
+                        <td class="p-2">${entry.room_no}</td>
+                        <td class="p-2">${entry.floor}</td>
+                        <td class="p-2">${entry.gate_no}</td>
+                        <td class="p-2">${entry.remark || '-'}</td>
+                        <td class="p-2">${entry.quantity}</td>
+                        <td class="p-2 text-sm">${formattedDate}</td>
+                        <td class="p-2">
+                            <div class="flex gap-2">
+                                <button onclick="printReceipt(${entry.entry_id}, ${entry.id})" class="neu-button bg-blue-500 text-white text-xs px-3 py-1">
+                                    <i class="bi bi-printer"></i> Print
+                                </button>
+                                <button onclick="goToRent(${entry.entry_id})" class="neu-button bg-green-500 text-white text-xs px-3 py-1">
+                                    <i class="bi bi-cash-coin"></i> Rent
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function goToRent(entryId) {
+            window.location.href = `/rent?entry_id=${entryId}`;
+        }
+
+        function goToInvoice(entryId, roomEntryId) {
+            window.location.href = `/loading-invoice?entry_id=${entryId}&room_entry_id=${roomEntryId}`;
+        }
+
+        // Decode JWT to get employee details
+        function getEmployeeFromToken() {
+            if (!token) return null;
+
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                return JSON.parse(jsonPayload);
+            } catch (error) {
+                console.error('Error decoding token:', error);
+                return null;
+            }
+        }
+
+        async function printReceipt(entryId, roomEntryId) {
+            try {
+                // Fetch entry details
+                const entryResponse = await fetch(`/api/entries/${entryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const entry = await entryResponse.json();
+
+                // Fetch room entry details
+                const roomEntryResponse = await fetch(`/api/room-entries/${roomEntryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const roomEntry = await roomEntryResponse.json();
+
+                // Fetch rent rate from system settings
+                let ratePerUnit = 10; // Default fallback
+                try {
+                    const settingsResponse = await fetch('/api/settings/rent_per_item', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (settingsResponse.ok) {
+                        const setting = await settingsResponse.json();
+                        ratePerUnit = parseFloat(setting.setting_value) || 10;
+                    }
+                } catch (error) {
+                    console.warn('Failed to fetch rent rate, using default:', error);
+                }
+
+                // Get employee details from token
+                const employee = getEmployeeFromToken();
+
+                // Calculate rent
+                const grandTotal = roomEntry.quantity * ratePerUnit;
+
+                // Format dates
+                const entryDate = new Date(entry.created_at).toLocaleString('en-IN');
+                const roomEntryDate = new Date(roomEntry.created_at).toLocaleString('en-IN');
+                const printDate = new Date().toLocaleString('en-IN');
+
+                // Create receipt HTML (2 copies side by side)
+                const receiptHTML = `
+                    <div class="receipt">
+                        <div class="header">
+                            <h1>COLD STORAGE</h1>
+                            <p>Entry Receipt</p>
+                        </div>
+
+                        <div class="truck-banner">
+                            ${roomEntry.truck_number}
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-item">
+                                <span class="label">Customer:</span>
+                                <span class="value">${entry.name}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Phone:</span>
+                                <span class="value">${entry.phone}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-item">
+                                <span class="label">Village:</span>
+                                <span class="value">${entry.village || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Category:</span>
+                                <span class="value">${entry.truck_category.toUpperCase()}</span>
+                            </div>
+                        </div>
+
+                        <div class="location-section">
+                            <div class="section-title">STORAGE LOCATION</div>
+                            <div class="location-grid">
+                                <div><strong>Room:</strong> ${roomEntry.room_no}</div>
+                                <div><strong>Floor:</strong> ${roomEntry.floor}</div>
+                                <div><strong>Gate:</strong> ${roomEntry.gate_no}</div>
+                            </div>
+                        </div>
+
+                        <div class="quantity-section">
+                            <div class="quantity-label">Quantity</div>
+                            <div class="quantity-value">${roomEntry.quantity} units</div>
+                        </div>
+
+                        <div class="pricing-section">
+                            <div class="pricing-title">RENT PRICING</div>
+                            <div class="pricing-row">
+                                <span>Rate per Unit:</span>
+                                <span>₹${ratePerUnit.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="pricing-row">
+                                <span>Total Units:</span>
+                                <span>${roomEntry.quantity} units</span>
+                            </div>
+                            <div class="pricing-total">
+                                <span>Grand Total:</span>
+                                <span>₹${grandTotal.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+
+                        <div class="employee-section">
+                            <div><strong>Employee ID:</strong> #${employee?.user_id || 'N/A'}</div>
+                            <div><strong>Role:</strong> ${employee?.role?.toUpperCase() || 'N/A'}</div>
+                            <div class="timestamp">${printDate}</div>
+                        </div>
+
+                        <div class="footer">
+                            ${roomEntry.remark ? '<div class="remark">Note: ' + roomEntry.remark + '</div>' : ''}
+                            <p>This is a computer-generated receipt</p>
+                        </div>
+                    </div>
+                `;
+
+                // Create print window with 2 copies side by side
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Entry Receipt - ${roomEntry.truck_number}</title>
+                        <style>
+                            @page {
+                                size: landscape;
+                                margin: 10mm;
+                            }
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
+                            body {
+                                font-family: 'Arial', sans-serif;
+                                background: white;
+                                padding: 10px;
+                            }
+                            .container {
+                                display: flex;
+                                gap: 10px;
+                                justify-content: center;
+                                align-items: flex-start;
+                            }
+                            .receipt {
+                                width: 48%;
+                                border: 2px solid #000;
+                                padding: 10px;
+                                background: white;
+                                page-break-inside: avoid;
+                            }
+                            .header {
+                                text-align: center;
+                                border-bottom: 2px solid #000;
+                                padding-bottom: 6px;
+                                margin-bottom: 8px;
+                            }
+                            .header h1 {
+                                font-size: 16px;
+                                font-weight: bold;
+                            }
+                            .header p {
+                                font-size: 9px;
+                                color: #666;
+                                margin-top: 3px;
+                            }
+                            .truck-banner {
+                                border: 2px solid #000;
+                                color: #000;
+                                text-align: center;
+                                font-size: 20px;
+                                font-weight: bold;
+                                padding: 8px;
+                                margin-bottom: 8px;
+                                letter-spacing: 1px;
+                                background: white;
+                            }
+                            .info-row {
+                                display: flex;
+                                gap: 6px;
+                                margin-bottom: 6px;
+                            }
+                            .info-item {
+                                flex: 1;
+                                padding: 4px;
+                                border: 1px solid #000;
+                                background: white;
+                            }
+                            .label {
+                                font-size: 7px;
+                                color: #000;
+                                font-weight: bold;
+                                display: block;
+                                text-transform: uppercase;
+                            }
+                            .value {
+                                font-size: 10px;
+                                color: #000;
+                                font-weight: bold;
+                                display: block;
+                                margin-top: 2px;
+                            }
+                            .location-section {
+                                border: 1px solid #000;
+                                padding: 6px;
+                                margin: 8px 0;
+                                background: white;
+                            }
+                            .section-title {
+                                font-size: 9px;
+                                font-weight: bold;
+                                margin-bottom: 4px;
+                                text-align: center;
+                                background: white;
+                                color: #000;
+                                padding: 3px;
+                                border-bottom: 1px solid #000;
+                            }
+                            .location-grid {
+                                display: grid;
+                                grid-template-columns: repeat(3, 1fr);
+                                gap: 4px;
+                                text-align: center;
+                                font-size: 9px;
+                            }
+                            .quantity-section {
+                                border: 2px solid #000;
+                                color: #000;
+                                text-align: center;
+                                padding: 8px;
+                                margin: 8px 0;
+                                background: white;
+                            }
+                            .quantity-label {
+                                font-size: 8px;
+                                margin-bottom: 3px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .quantity-value {
+                                font-size: 20px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .pricing-section {
+                                border: 1px solid #000;
+                                padding: 6px;
+                                margin: 8px 0;
+                                background: white;
+                            }
+                            .pricing-title {
+                                font-size: 9px;
+                                font-weight: bold;
+                                text-align: center;
+                                background: white;
+                                color: #000;
+                                padding: 3px;
+                                margin-bottom: 5px;
+                                border-bottom: 1px solid #000;
+                            }
+                            .pricing-row {
+                                display: flex;
+                                justify-content: space-between;
+                                padding: 3px 5px;
+                                border-bottom: 1px dashed #ccc;
+                                font-size: 9px;
+                            }
+                            .pricing-total {
+                                display: flex;
+                                justify-content: space-between;
+                                padding: 5px;
+                                margin-top: 5px;
+                                background: white;
+                                border: 1px solid #000;
+                                font-size: 11px;
+                                font-weight: bold;
+                            }
+                            .pricing-total span:last-child {
+                                color: #000;
+                                font-size: 12px;
+                            }
+                            .employee-section {
+                                border-top: 1px solid #000;
+                                padding-top: 6px;
+                                margin-top: 8px;
+                                font-size: 8px;
+                                text-align: center;
+                            }
+                            .employee-section div {
+                                margin: 2px 0;
+                            }
+                            .timestamp {
+                                font-size: 7px;
+                                color: #666;
+                                margin-top: 4px;
+                                font-style: italic;
+                            }
+                            .footer {
+                                margin-top: 8px;
+                                padding-top: 6px;
+                                border-top: 1px dashed #999;
+                                text-align: center;
+                                font-size: 7px;
+                                color: #666;
+                            }
+                            .remark {
+                                background: white;
+                                border: 1px solid #000;
+                                padding: 3px;
+                                margin-bottom: 5px;
+                                font-size: 7px;
+                                color: #000;
+                            }
+                            .print-button {
+                                background: #4CAF50;
+                                color: white;
+                                padding: 15px 40px;
+                                border: none;
+                                border-radius: 5px;
+                                font-size: 18px;
+                                cursor: pointer;
+                                margin: 20px auto;
+                                display: block;
+                                font-weight: bold;
+                            }
+                            .print-button:hover {
+                                background: #45a049;
+                            }
+                            @media print {
+                                .print-button { display: none; }
+                                body { padding: 0; }
+                                .container { gap: 10px; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            ${receiptHTML}
+                            ${receiptHTML}
+                        </div>
+
+                        <button class="print-button" onclick="window.print()">
+                            🖨️ Print 2 Receipts
+                        </button>
+                    </body>
+                    </html>
+                `);
+
+                printWindow.document.close();
+                printWindow.focus();
+
+            } catch (error) {
+                console.error('Error printing receipt:', error);
+                alert('Error printing receipt: ' + error.message);
+            }
+        }
+    </script>
+
+</body>
+</html>

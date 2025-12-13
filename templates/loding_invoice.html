@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Storage Invoice</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            padding: 10px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .invoice-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .invoice {
+            background: white;
+            border: 2px solid #000;
+            padding: 20px;
+            page-break-after: always;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .info-value {
+            color: #000;
+        }
+        .section {
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            background: #000;
+            color: white;
+            padding: 5px 8px;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        .total-section {
+            background: #000;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .total-section .label {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .total-section .amount {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        .footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+        .signature {
+            margin-top: 30px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: 2px solid #000;
+            border-radius: 0;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            font-weight: bold;
+            box-shadow: 3px 3px 0 #000;
+        }
+        .btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 #000;
+        }
+        .btn-secondary {
+            background: #666;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .buttons, .btn {
+                display: none;
+            }
+            .invoice {
+                border: 1px solid #000;
+                padding: 15px;
+                margin-bottom: 0;
+            }
+            .invoice-wrapper {
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading">
+            <i class="bi bi-hourglass-split" style="font-size: 48px;"></i>
+            <p>Loading invoice...</p>
+        </div>
+
+        <div id="invoiceContent" style="display: none;">
+            <div class="buttons">
+                <button class="btn" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print Invoice
+                </button>
+                <button class="btn btn-secondary" onclick="window.history.back()">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+            </div>
+
+            <div class="invoice-wrapper">
+                <!-- First Invoice Copy -->
+                <div class="invoice">
+                    <div class="header">
+                        <h1>COLD STORAGE INVOICE</h1>
+                        <p>Payment Receipt</p>
+                    </div>
+
+                    <div class="section">
+                        <div class="info-row">
+                            <span class="info-label">Customer Name:</span>
+                            <span class="info-value" id="customerName1">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value" id="customerPhone1">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Village:</span>
+                            <span class="info-value" id="customerVillage1">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Invoice Date:</span>
+                            <span class="info-value" id="invoiceDate1">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Employee:</span>
+                            <span class="info-value" id="employeeName1">-</span>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">STORAGE ITEMS</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Truck No</th>
+                                    <th>Quantity</th>
+                                    <th>Rate (₹)</th>
+                                    <th>Rent (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTable1">
+                                <tr>
+                                    <td colspan="4" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="total-section">
+                        <div class="label">TOTAL RENT AMOUNT</div>
+                        <div class="amount" id="totalAmount1">₹0</div>
+                    </div>
+
+                    <div class="signature">
+                        <strong>Signature: ___________________</strong>
+                    </div>
+
+                    <div class="footer">
+                        <p><strong>Status:</strong> Ready for Exit</p>
+                        <p style="margin-top: 8px;">This is a computer-generated invoice.</p>
+                    </div>
+                </div>
+
+                <!-- Second Invoice Copy (Duplicate) -->
+                <div class="invoice">
+                    <div class="header">
+                        <h1>COLD STORAGE INVOICE</h1>
+                        <p>Payment Receipt (Copy)</p>
+                    </div>
+
+                    <div class="section">
+                        <div class="info-row">
+                            <span class="info-label">Customer Name:</span>
+                            <span class="info-value" id="customerName2">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value" id="customerPhone2">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Village:</span>
+                            <span class="info-value" id="customerVillage2">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Invoice Date:</span>
+                            <span class="info-value" id="invoiceDate2">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Employee:</span>
+                            <span class="info-value" id="employeeName2">-</span>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">STORAGE ITEMS</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Truck No</th>
+                                    <th>Quantity</th>
+                                    <th>Rate (₹)</th>
+                                    <th>Rent (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTable2">
+                                <tr>
+                                    <td colspan="4" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="total-section">
+                        <div class="label">TOTAL RENT AMOUNT</div>
+                        <div class="amount" id="totalAmount2">₹0</div>
+                    </div>
+
+                    <div class="signature">
+                        <strong>Signature: ___________________</strong>
+                    </div>
+
+                    <div class="footer">
+                        <p><strong>Status:</strong> Ready for Exit</p>
+                        <p style="margin-top: 8px;">This is a computer-generated invoice.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const entryId = urlParams.get('entry_id');
+        const roomEntryId = urlParams.get('room_entry_id');
+
+        // Decode JWT to get employee details
+        function getEmployeeFromToken() {
+            if (!token) return null;
+
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                return JSON.parse(jsonPayload);
+            } catch (error) {
+                console.error('Error decoding token:', error);
+                return null;
+            }
+        }
+
+        async function loadInvoice() {
+            try {
+                if (!entryId || !roomEntryId) {
+                    document.getElementById('loading').innerHTML = `
+                        <i class="bi bi-exclamation-circle" style="font-size: 48px; color: orange;"></i>
+                        <p style="color: orange; font-weight: bold;">Invoice Access Error</p>
+                        <p style="margin-top: 10px;">This page must be accessed by clicking on an entry from the Recent Room Entries table.</p>
+                        <button class="btn" onclick="window.location.href='/entry-room'" style="margin-top: 20px;">
+                            <i class="bi bi-arrow-left"></i> Go to Entry Room
+                        </button>
+                    `;
+                    return;
+                }
+
+                // Fetch entry details
+                const entryResponse = await fetch(`/api/entries/${entryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const entry = await entryResponse.json();
+
+                // Fetch room entry details
+                const roomEntryResponse = await fetch(`/api/room-entries/${roomEntryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const roomEntry = await roomEntryResponse.json();
+
+                // Fetch rent per item from system settings
+                const settingsResponse = await fetch('/api/settings/rent_per_item', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const rentSetting = await settingsResponse.json();
+                const rentPerItem = parseFloat(rentSetting.setting_value);
+
+                // Fetch all entries for this phone number
+                const allEntriesResponse = await fetch(`/api/entries`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const allEntries = await allEntriesResponse.json();
+
+                // Filter entries by phone number
+                const customerEntries = allEntries.filter(e => e.phone === entry.phone);
+
+                // Get employee details
+                const employee = getEmployeeFromToken();
+                const employeeName = employee?.email?.split('@')[0] || 'N/A';
+
+                // Format dates
+                const invoiceDate = new Date().toLocaleString('en-IN');
+
+                // Populate both invoices with same data
+                populateInvoice('1', entry, customerEntries, rentPerItem, invoiceDate, employeeName);
+                populateInvoice('2', entry, customerEntries, rentPerItem, invoiceDate, employeeName);
+
+                // Update status to "Ready for Exit" (2nd last step)
+                await updateEntryStatus(entryId, 'READY', 'Invoice generated - Ready for exit');
+
+                // Show invoice
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('invoiceContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                document.getElementById('loading').innerHTML = `
+                    <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: red;"></i>
+                    <p style="color: red;">Error loading invoice: ${error.message}</p>
+                    <button class="btn btn-secondary" onclick="window.history.back()">Go Back</button>
+                `;
+            }
+        }
+
+        function populateInvoice(suffix, entry, customerEntries, rentPerItem, invoiceDate, employeeName) {
+            // Populate customer info
+            document.getElementById('customerName' + suffix).textContent = entry.name;
+            document.getElementById('customerPhone' + suffix).textContent = entry.phone;
+            document.getElementById('customerVillage' + suffix).textContent = entry.village || 'N/A';
+            document.getElementById('invoiceDate' + suffix).textContent = invoiceDate;
+            document.getElementById('employeeName' + suffix).textContent = employeeName;
+
+            // Populate items table
+            let totalRent = 0;
+            const itemsTableHtml = customerEntries.map(e => {
+                const quantity = e.expected_quantity || 0;
+                const rent = quantity * rentPerItem;
+                totalRent += rent;
+
+                return `
+                    <tr>
+                        <td>${e.truck_number}</td>
+                        <td>${quantity}</td>
+                        <td>₹${rentPerItem.toFixed(2)}</td>
+                        <td>₹${rent.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('itemsTable' + suffix).innerHTML = itemsTableHtml;
+            document.getElementById('totalAmount' + suffix).textContent = '₹' + totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+
+        async function updateEntryStatus(entryId, eventType, notes) {
+            try {
+                await fetch('/api/entry-events', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        entry_id: entryId,
+                        event_type: eventType,
+                        status: 'READY',
+                        notes: notes
+                    })
+                });
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        // Load invoice on page load
+        window.addEventListener('load', loadInvoice);
+    </script>
+</body>
+</html>

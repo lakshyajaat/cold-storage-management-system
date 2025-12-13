@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent Management - Cold Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-receipt-cutoff text-4xl text-purple-600"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold">Rent Management</h1>
+                        <p class="text-gray-600">Search and generate rent invoices</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="goBack()" class="neu-button bg-gray-200">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+        </header>
+
+        <!-- Search Section -->
+        <div class="neu-border bg-white p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-search"></i>
+                Search Customer or Truck
+            </h2>
+
+            <div class="grid grid-cols-2 gap-6 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Search by Phone Number
+                    </label>
+                    <div class="flex gap-2">
+                        <input
+                            type="tel"
+                            id="searchPhone"
+                            class="flex-1 neu-input"
+                            placeholder="Enter phone number"
+                            maxlength="10"
+                        >
+                        <button onclick="searchByPhone()" class="neu-button bg-blue-500 text-white">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Search by Truck Number
+                    </label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="searchTruck"
+                            class="flex-1 neu-input"
+                            placeholder="Enter truck number"
+                        >
+                        <button onclick="searchByTruck()" class="neu-button bg-blue-500 text-white">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="searchResults" class="hidden mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-list-check"></i>
+                    Search Results
+                </h3>
+                <div id="searchResultsContent"></div>
+            </div>
+        </div>
+
+        <!-- Recent Room Entries Section -->
+        <div class="neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-door-open"></i>
+                    Recent Room Entries
+                </h2>
+                <div class="flex gap-2">
+                    <select id="entriesLimit" onchange="changeEntriesLimit()" class="neu-input text-sm p-2">
+                        <option value="10">10 entries</option>
+                        <option value="20">20 entries</option>
+                        <option value="50">50 entries</option>
+                        <option value="100">100 entries</option>
+                        <option value="0">All entries</option>
+                    </select>
+                </div>
+            </div>
+            <div id="recentRoomEntries" class="overflow-auto" style="max-height: 600px;">
+                <table class="w-full" id="roomEntriesTable">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left p-2 font-bold">Truck No</th>
+                            <th class="text-left p-2 font-bold">Customer</th>
+                            <th class="text-left p-2 font-bold">Phone</th>
+                            <th class="text-left p-2 font-bold">Room</th>
+                            <th class="text-left p-2 font-bold">Floor</th>
+                            <th class="text-left p-2 font-bold">Qty</th>
+                            <th class="text-left p-2 font-bold">Date</th>
+                            <th class="text-left p-2 font-bold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomEntriesTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-gray-500">Loading room entries...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let allEntries = [];
+        let allRoomEntries = [];
+        let entriesLimit = 10;
+
+        window.addEventListener('load', function() {
+            loadAllData();
+        });
+
+        async function loadAllData() {
+            try {
+                // Fetch all entries
+                const entriesResponse = await fetch('/api/entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                allEntries = await entriesResponse.json();
+
+                // Fetch all room entries
+                const roomEntriesResponse = await fetch('/api/room-entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                allRoomEntries = await roomEntriesResponse.json();
+
+                displayRoomEntries();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('roomEntriesTableBody').innerHTML =
+                    '<tr><td colspan="8" class="text-center p-4 text-red-500">Failed to load data</td></tr>';
+            }
+        }
+
+        function changeEntriesLimit() {
+            const select = document.getElementById('entriesLimit');
+            entriesLimit = parseInt(select.value);
+            displayRoomEntries();
+        }
+
+        function displayRoomEntries() {
+            const tbody = document.getElementById('roomEntriesTableBody');
+
+            if (allRoomEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
+                return;
+            }
+
+            // Limit entries
+            const entriesToShow = entriesLimit === 0 ? allRoomEntries : allRoomEntries.slice(0, entriesLimit);
+
+            tbody.innerHTML = entriesToShow.map(roomEntry => {
+                // Find matching entry for customer info
+                const entry = allEntries.find(e => e.id === roomEntry.entry_id);
+                const customerName = entry?.name || '-';
+                const customerPhone = entry?.phone || '-';
+
+                const date = new Date(roomEntry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-purple-50">
+                        <td class="p-2 font-bold">${roomEntry.truck_number}</td>
+                        <td class="p-2">${customerName}</td>
+                        <td class="p-2">${customerPhone}</td>
+                        <td class="p-2">${roomEntry.room_no}</td>
+                        <td class="p-2">${roomEntry.floor}</td>
+                        <td class="p-2">${roomEntry.quantity}</td>
+                        <td class="p-2 text-sm">${formattedDate}</td>
+                        <td class="p-2">
+                            <button onclick="goToRent(${roomEntry.entry_id})" class="neu-button bg-green-500 text-white text-xs px-3 py-1">
+                                <i class="bi bi-cash-coin"></i> Rent
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function searchByPhone() {
+            const phone = document.getElementById('searchPhone').value.trim();
+
+            if (!phone) {
+                alert('Please enter a phone number');
+                return;
+            }
+
+            // Find all entries with this phone
+            const matchingEntries = allEntries.filter(e => e.phone.includes(phone));
+
+            if (matchingEntries.length === 0) {
+                showSearchResults('No entries found for phone: ' + phone, []);
+                return;
+            }
+
+            // Find room entries for these entries
+            const matchingRoomEntries = allRoomEntries.filter(re =>
+                matchingEntries.some(e => e.id === re.entry_id)
+            );
+
+            showSearchResults(`Found ${matchingEntries.length} entries for phone: ${phone}`, matchingRoomEntries, matchingEntries);
+        }
+
+        async function searchByTruck() {
+            const truckNumber = document.getElementById('searchTruck').value.trim().toUpperCase();
+
+            if (!truckNumber) {
+                alert('Please enter a truck number');
+                return;
+            }
+
+            // Find room entries with this truck number
+            const matchingRoomEntries = allRoomEntries.filter(re =>
+                re.truck_number.toUpperCase().includes(truckNumber)
+            );
+
+            if (matchingRoomEntries.length === 0) {
+                showSearchResults('No entries found for truck: ' + truckNumber, []);
+                return;
+            }
+
+            // Find corresponding entries
+            const matchingEntries = allEntries.filter(e =>
+                matchingRoomEntries.some(re => re.entry_id === e.id)
+            );
+
+            showSearchResults(`Found ${matchingRoomEntries.length} entries for truck: ${truckNumber}`, matchingRoomEntries, matchingEntries);
+        }
+
+        function showSearchResults(message, roomEntries, entries = []) {
+            const resultsDiv = document.getElementById('searchResults');
+            const contentDiv = document.getElementById('searchResultsContent');
+
+            resultsDiv.classList.remove('hidden');
+
+            if (roomEntries.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="p-4 bg-yellow-50 neu-border">
+                        <p class="text-yellow-800"><i class="bi bi-info-circle"></i> ${message}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by customer (phone)
+            const groupedByPhone = {};
+            roomEntries.forEach(re => {
+                const entry = entries.find(e => e.id === re.entry_id);
+                const phone = entry?.phone || 'Unknown';
+
+                if (!groupedByPhone[phone]) {
+                    groupedByPhone[phone] = {
+                        customer: entry,
+                        roomEntries: []
+                    };
+                }
+                groupedByPhone[phone].roomEntries.push(re);
+            });
+
+            let html = `<div class="p-4 bg-green-50 neu-border mb-4">
+                <p class="text-green-800 font-bold"><i class="bi bi-check-circle"></i> ${message}</p>
+            </div>`;
+
+            Object.keys(groupedByPhone).forEach(phone => {
+                const data = groupedByPhone[phone];
+                const customer = data.customer;
+                const customerRoomEntries = data.roomEntries;
+
+                html += `
+                    <div class="mb-6 neu-border bg-white p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h4 class="text-lg font-bold">${customer?.name || 'Unknown'}</h4>
+                                <p class="text-sm text-gray-600">Phone: ${phone} | Village: ${customer?.village || 'N/A'}</p>
+                            </div>
+                            <button onclick="goToRent(${customer?.id})" class="neu-button bg-purple-500 text-white">
+                                <i class="bi bi-cash-coin"></i> Generate Rent Invoice
+                            </button>
+                        </div>
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-black">
+                                    <th class="text-left p-2">Truck No</th>
+                                    <th class="text-left p-2">Room</th>
+                                    <th class="text-left p-2">Floor</th>
+                                    <th class="text-left p-2">Qty</th>
+                                    <th class="text-left p-2">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${customerRoomEntries.map(re => {
+                                    const date = new Date(re.created_at).toLocaleString('en-IN', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                    });
+                                    return `
+                                        <tr class="border-b border-gray-200">
+                                            <td class="p-2 font-bold">${re.truck_number}</td>
+                                            <td class="p-2">${re.room_no}</td>
+                                            <td class="p-2">${re.floor}</td>
+                                            <td class="p-2">${re.quantity}</td>
+                                            <td class="p-2">${date}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+
+            contentDiv.innerHTML = html;
+        }
+
+        function goToRent(entryId) {
+            window.location.href = `/rent?entry_id=${entryId}`;
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>

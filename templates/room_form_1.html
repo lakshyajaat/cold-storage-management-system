@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Storage Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #baa7a7;
+        }
+        .neu-brutal {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            background: #acb6ac;
+            border: 2px solid #000;
+            box-shadow: 3px 3px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 #000;
+        }
+        .table-header {
+            background: #ff6b6b;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <nav class="flex justify-between items-center mb-8 neu-brutal bg-white p-4">
+        <h1 class="text-2xl font-bold">Cold Storage Management</h1>
+        <div class="space-x-4">
+            <button class="neu-button px-4 py-2">Main Room</button>
+            <button class="neu-brutal-button px-4 py-2 active-tab">Room Entry</button>
+            <button class="neu-button px-4 py-2">Dashboard</button>
+        </div>
+    </nav>
+
+    <div class="neu-brutal bg-white p-6 mb-8">
+        <h2 class="text-xl font-bold mb-6">Room Entry Form</h2>
+        <form id="roomEntryForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block mb-2">Room Number</label>
+                <select class="w-full p-2 neu-brutal" required>
+                    <option value="">Select room no.</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="7">G1</option>
+
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2">Floor Number</label>
+                <select class="w-full p-2 neu-brutal" required>
+                    <option value="">Select floor no 0-4</option>
+                    <option value="1">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2">Gatar Number</label>
+                <input type="text" class="w-full p-2 neu-brutal" required>
+            </div>
+            
+            <div>
+                <label class="block mb-2">Thock Number</label>
+                <input type="text" class="w-full p-2 neu-brutal" required>
+            </div>
+            <div>
+                <label class="block mb-2">Quantity</label>
+                <input type="number" class="w-full p-2 neu-brutal" required>
+            </div>
+            <div class="col-span-full">
+                <label class="block mb-2">Remarks</label>
+                <textarea class="w-full p-2 neu-brutal" rows="3"></textarea>
+            </div>
+            <div class="col-span-full">
+                <button type="submit" class="neu-button px-6 py-2 font-bold">Submit Entry</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="neu-brutal bg-white p-6">
+            <h3 class="text-xl font-bold mb-4">Recent Room Entries</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="table-header">
+                        <tr>
+                            <th class="p-2 text-left">Thock Number</th>
+                            <th class="p-2 text-left">Location</th>
+                            <th class="p-2 text-left">Gatar Numbers</th>
+                            <th class="p-2 text-left">Quantity</th>
+                            <th class="p-2 text-left">Remarks</th>
+                            <th class="p-2 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomEntriesTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="neu-brutal bg-white p-6">
+            <h3 class="text-xl font-bold mb-4">Recent Main Entries</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="table-header">
+                        <tr>
+                            <th class="p-2 text-left">Thock Number</th>
+                            <th class="p-2 text-left">Name</th>
+                            <th class="p-2 text-left">Village</th>
+                            <th class="p-2 text-left">Quantity</th>
+                            <th class="p-2 text-left">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainEntriesTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Form submission handling
+        document.getElementById('roomEntryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data and add to the recent entries table
+            const now = new Date();
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="p-2">Thock{Math.floor(Math.random() * 1000)}</td>
+                <td class="p-2">Room ${document.querySelector('select').value}</td>
+                <td class="p-2">${document.querySelector('input[type="text"]').value}</td>
+                <td class="p-2">${document.querySelector('input[type="number"]').value}</td>
+                <td class="p-2">${document.querySelector('textarea').value}</td>
+                <td class="p-2">${now.toLocaleTimeString()}</td>
+            `;
+            document.getElementById('roomEntriesTable').prepend(newRow);
+            
+            // Reset form
+            this.reset();
+        });
+
+        // Sample data for main entries
+        const sampleMainEntries = [
+            { Thock: '200/45', name: 'John Doe', village: 'Village A', quantity: 100 },
+            { Thock: '1/23', name: 'Jane Smith', village: 'Village B', quantity: 150 }
+        ];
+
+        // Populate main entries table
+        sampleMainEntries.forEach(entry => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="p-2">${entry.Thock}</td>
+                <td class="p-2">${entry.name}</td>
+                <td class="p-2">${entry.village}</td>
+                <td class="p-2">${entry.quantity}</td>
+                <td class="p-2">
+                    <button class="neu-button px-2 py-1">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            `;
+            document.getElementById('mainEntriesTable').appendChild(row);
+        });
+    </script>
+</body>
+</html>

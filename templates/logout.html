@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Logging out...</title>
+    <script>
+        // Clear all stored data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+
+        // Redirect to login
+        window.location.href = '/login';
+    </script>
+</head>
+<body>
+    <p>Logging out...</p>
+</body>
+</html>
