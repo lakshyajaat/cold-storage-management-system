@@ -137,7 +137,7 @@
         // Capitalize first letter of text
         function capitalizeText(text) {
             if (!text || text.length === 0) return text;
-            return text.charAt(0).toUpperCase() + text.slice(1);
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
         }
 
         const token = localStorage.getItem('token');

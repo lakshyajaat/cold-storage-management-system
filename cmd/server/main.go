@@ -35,6 +35,9 @@ func main() {
 	systemSettingRepo := repositories.NewSystemSettingRepository(pool)
 	rentPaymentRepo := repositories.NewRentPaymentRepository(pool)
 	invoiceRepo := repositories.NewInvoiceRepository(pool)
+	loginLogRepo := repositories.NewLoginLogRepository(pool)
+	roomEntryEditLogRepo := repositories.NewRoomEntryEditLogRepository(pool)
+	adminActionLogRepo := repositories.NewAdminActionLogRepository(pool)
 
 	// Initialize services
 	userService := services.NewUserService(userRepo, jwtManager)
@@ -46,15 +49,18 @@ func main() {
 	invoiceService := services.NewInvoiceService(invoiceRepo)
 
 	// Initialize handlers
-	userHandler := handlers.NewUserHandler(userService)
-	authHandler := handlers.NewAuthHandler(userService)
+	userHandler := handlers.NewUserHandler(userService, adminActionLogRepo)
+	authHandler := handlers.NewAuthHandler(userService, loginLogRepo)
 	customerHandler := handlers.NewCustomerHandler(customerService)
 	entryHandler := handlers.NewEntryHandler(entryService)
-	roomEntryHandler := handlers.NewRoomEntryHandler(roomEntryService)
+	roomEntryHandler := handlers.NewRoomEntryHandler(roomEntryService, roomEntryEditLogRepo)
 	entryEventHandler := handlers.NewEntryEventHandler(entryEventRepo)
 	systemSettingHandler := handlers.NewSystemSettingHandler(systemSettingService)
 	rentPaymentHandler := handlers.NewRentPaymentHandler(rentPaymentService)
 	invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
+	loginLogHandler := handlers.NewLoginLogHandler(loginLogRepo)
+	roomEntryEditLogHandler := handlers.NewRoomEntryEditLogHandler(roomEntryEditLogRepo)
+	adminActionLogHandler := handlers.NewAdminActionLogHandler(adminActionLogRepo)
 	pageHandler := handlers.NewPageHandler()
 
 	// Initialize middleware
@@ -62,7 +68,7 @@ func main() {
 	corsMiddleware := middleware.NewCORS(cfg)
 
 	// Create router
-	router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, pageHandler, authMiddleware)
+	router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, adminActionLogHandler, pageHandler, authMiddleware)
 
 	// Wrap router with CORS
 	handler := corsMiddleware(router)

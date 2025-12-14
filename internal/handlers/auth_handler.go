@@ -4,17 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 )
 
 type AuthHandler struct {
-	Service *services.UserService
+	Service        *services.UserService
+	LoginLogRepo   *repositories.LoginLogRepository
 }
 
-func NewAuthHandler(s *services.UserService) *AuthHandler {
-	return &AuthHandler{Service: s}
+func NewAuthHandler(s *services.UserService, loginLogRepo *repositories.LoginLogRepository) *AuthHandler {
+	return &AuthHandler{
+		Service:      s,
+		LoginLogRepo: loginLogRepo,
+	}
 }
 
 // Signup handles user registration
@@ -50,6 +56,36 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log the successful login
+	ipAddress := getIPAddress(r)
+	userAgent := r.UserAgent()
+	if _, err := h.LoginLogRepo.CreateLoginLog(context.Background(), authResp.User.ID, ipAddress, userAgent); err != nil {
+		// Log error but don't fail the login
+		// TODO: Add proper logging
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(authResp)
+}
+
+// getIPAddress extracts the real IP address from the request
+func getIPAddress(r *http.Request) string {
+	// Check X-Forwarded-For header first (for proxies/load balancers)
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		// X-Forwarded-For can contain multiple IPs, take the first one
+		ips := strings.Split(forwarded, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP header
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP != "" {
+		return realIP
+	}
+
+	// Fall back to RemoteAddr
+	return r.RemoteAddr
 }

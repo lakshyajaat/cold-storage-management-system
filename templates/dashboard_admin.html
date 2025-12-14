@@ -203,6 +203,12 @@
     </div>
 
     <script>
+        // Capitalize first letter of text
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+        }
+
         // Check if user is admin and display name
         (function() {
             const userStr = localStorage.getItem('user');
@@ -221,7 +227,7 @@
             // Display admin name
             const nameElement = document.getElementById('adminName');
             if (nameElement) {
-                nameElement.textContent = user.name || user.email || 'Admin';
+                nameElement.textContent = capitalizeText(user.name) || user.email || 'Admin';
             }
         })();
 

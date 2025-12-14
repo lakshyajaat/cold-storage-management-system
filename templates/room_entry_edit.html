@@ -21,14 +21,14 @@
             transform: translate(-2px, -2px);
             box-shadow: 6px 6px 0 #000;
         }
-        .neu-input {
+        .neu-input, .neu-select {
             border: 3px solid #000;
             box-shadow: 4px 4px 0 #000;
             padding: 0.75rem;
             font-size: 1rem;
             transition: all 0.2s ease;
         }
-        .neu-input:focus {
+        .neu-input:focus, .neu-select:focus {
             outline: none;
             transform: translate(-2px, -2px);
             box-shadow: 6px 6px 0 #000;
@@ -61,7 +61,7 @@
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
             <div>
                 <div class="flex items-center gap-3">
@@ -84,27 +84,24 @@
         </div>
 
         <!-- Edit Form -->
-        <div id="editForm" class="hidden neu-border bg-white p-8">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                <i class="bi bi-box-seam"></i>
-                Storage Details
-            </h2>
+        <div id="editForm" class="hidden">
+            <div class="grid grid-cols-3 gap-8">
+                <!-- Left: Edit Form (2 columns) -->
+                <div class="col-span-2">
+                    <div class="neu-border bg-white p-6">
+                        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <i class="bi bi-box-seam"></i>
+                            Storage Details
+                        </h2>
 
-            <!-- Truck Number (Read-only) -->
-            <div class="mb-6 p-4 bg-blue-50 neu-border">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600">Truck Number</p>
-                        <p class="text-2xl font-bold" id="truckNumber">-</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Customer</p>
-                        <p class="text-lg font-bold" id="customerName">-</p>
-                    </div>
-                </div>
-            </div>
+                        <!-- Truck Number (Read-only) -->
+                        <div class="mb-6 p-4 bg-yellow-50 neu-border">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Truck Number:</p>
+                            <p class="text-2xl font-bold" id="truckNumber">-</p>
+                            <p class="text-sm text-gray-600 mt-1" id="customerName">-</p>
+                        </div>
 
-            <form id="roomEntryForm" onsubmit="updateRoomEntry(event)">
+                        <form id="roomEntryForm" onsubmit="updateRoomEntry(event)">
                 <!-- Room and Floor Selection Side by Side -->
                 <div class="grid grid-cols-2 gap-6 mb-6">
                     <!-- Left: Room Selection -->
@@ -167,68 +164,172 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Gatar Number *
-                        </label>
-                        <input
-                            type="text"
-                            id="gateNo"
-                            required
-                            class="w-full neu-input"
-                            placeholder="Enter gate number"
-                        >
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Gatar No *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="gateNo"
+                                    required
+                                    class="w-full neu-input"
+                                    placeholder="Enter gate number"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Quantity *
+                                </label>
+                                <!-- Hidden input for form submission -->
+                                <input type="hidden" id="quantity" required min="1">
+                                <!-- Quantity Display (Calculator is below) -->
+                                <div class="neu-border bg-blue-50 p-4 text-center">
+                                    <p class="text-sm text-gray-600 mb-1">Current Total</p>
+                                    <p class="text-3xl font-bold text-blue-700" id="totalQuantityDisplay">0</p>
+                                    <p class="text-xs text-gray-500 mt-2">Use calculator below ↓</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Remark
+                            </label>
+                            <div class="grid grid-cols-4 gap-4 mb-2">
+                                <label class="neu-border p-3 cursor-pointer hover:bg-red-50 transition-colors">
+                                    <input type="radio" name="remarkType" value="red" class="mr-2">
+                                    <span class="font-bold text-red-600">Red</span>
+                                </label>
+                                <label class="neu-border p-3 cursor-pointer hover:bg-yellow-50 transition-colors">
+                                    <input type="radio" name="remarkType" value="yellow" class="mr-2">
+                                    <span class="font-bold text-yellow-600">Yellow</span>
+                                </label>
+                                <label class="neu-border p-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="radio" name="remarkType" value="white" class="mr-2">
+                                    <span class="font-bold text-gray-600">White</span>
+                                </label>
+                                <label class="neu-border p-3 cursor-pointer hover:bg-blue-50 transition-colors">
+                                    <input type="radio" name="remarkType" value="custom" class="mr-2" onchange="toggleCustomRemark()">
+                                    <span class="font-bold text-blue-600">Custom</span>
+                                </label>
+                            </div>
+                            <input
+                                type="text"
+                                id="customRemark"
+                                class="w-full neu-input hidden"
+                                placeholder="Enter custom remark"
+                            >
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button type="submit" class="neu-button bg-green-500 text-white flex-1">
+                                <i class="bi bi-check-circle"></i> Update Room Entry
+                            </button>
+                            <button type="button" onclick="goBack()" class="neu-button bg-gray-200">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                        </div>
+                        </form>
+
+                        <!-- Success Message -->
+                        <div id="successMessage" class="hidden mt-6 p-4 bg-green-100 border-3 border-green-600">
+                            <p class="text-green-800 font-bold">
+                                <i class="bi bi-check-circle-fill"></i> Room entry updated successfully!
+                            </p>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 border-3 border-red-600">
+                            <p class="text-red-800 font-bold">
+                                <i class="bi bi-exclamation-triangle-fill"></i> <span id="errorText"></span>
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Quantity *
-                        </label>
-                        <input
-                            type="number"
-                            id="quantity"
-                            min="1"
-                            required
-                            class="w-full neu-input"
-                            placeholder="Enter quantity"
-                        >
+                </div>
+
+                <!-- Right Column: Quantity Calculator & Change Logs -->
+                <div class="col-span-1">
+                    <!-- Quantity Calculator -->
+                    <div class="neu-border bg-white p-6 mb-6">
+                        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <i class="bi bi-calculator text-purple-600"></i>
+                            Quantity Calculator
+                        </h2>
+
+                        <!-- Preset Value Buttons -->
+                        <div class="grid grid-cols-5 gap-2 mb-4">
+                            <button type="button" onclick="addQuantity(16)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                                16
+                            </button>
+                            <button type="button" onclick="addQuantity(18)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                                18
+                            </button>
+                            <button type="button" onclick="addQuantity(20)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                                20
+                            </button>
+                            <button type="button" onclick="addQuantity(24)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
+                                24
+                            </button>
+                            <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-3 text-base font-bold w-full">
+                                Custom
+                            </button>
+                        </div>
+
+                        <!-- Custom Input (Hidden by default) -->
+                        <div id="customInputDiv" class="hidden mb-4">
+                            <div class="flex gap-2">
+                                <input
+                                    type="number"
+                                    id="customQuantityInput"
+                                    min="1"
+                                    class="flex-1 border-3 border-black p-2 text-base"
+                                    placeholder="Enter custom value"
+                                >
+                                <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-4 text-sm">
+                                    <i class="bi bi-plus-circle"></i> Add
+                                </button>
+                                <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-4 text-sm">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Values (Chips) -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
+                            <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
+                                <span class="text-sm text-gray-400 self-center">Click values above to add...</span>
+                            </div>
+                        </div>
+
+                        <!-- Total Display -->
+                        <div class="flex justify-between items-center bg-green-50 p-4 border-3 border-green-600 rounded mb-4">
+                            <span class="text-base font-bold">Total Quantity:</span>
+                            <span class="text-3xl font-bold text-green-700" id="totalQuantity">0</span>
+                        </div>
+
+                        <!-- Clear All Button -->
+                        <button type="button" onclick="clearAllQuantities()" class="neu-button bg-red-500 text-white w-full py-2 text-base font-bold">
+                            <i class="bi bi-trash"></i> Clear All Values
+                        </button>
+                    </div>
+
+                    <!-- Change History Logs -->
+                    <div class="neu-border bg-white p-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                            <i class="bi bi-clock-history text-orange-600"></i>
+                            Change History
+                        </h2>
+                        <p class="text-sm text-gray-600 mb-4">Track of edits made to this entry</p>
+                        <div class="overflow-auto" style="max-height: 400px;">
+                            <div id="changeHistoryBody">
+                                <div class="text-center p-4 text-gray-500">Loading...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Remark (Optional)
-                    </label>
-                    <textarea
-                        id="remark"
-                        class="w-full neu-input"
-                        rows="3"
-                        placeholder="Enter any additional notes"
-                    ></textarea>
-                </div>
-
-                <div class="flex gap-4">
-                    <button type="submit" class="neu-button bg-green-500 text-white flex-1">
-                        <i class="bi bi-check-circle"></i> Update Room Entry
-                    </button>
-                    <button type="button" onclick="goBack()" class="neu-button bg-gray-200">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </button>
-                </div>
-            </form>
-
-            <!-- Success Message -->
-            <div id="successMessage" class="hidden mt-6 p-4 bg-green-100 border-3 border-green-600">
-                <p class="text-green-800 font-bold">
-                    <i class="bi bi-check-circle-fill"></i> Room entry updated successfully!
-                </p>
-            </div>
-
-            <!-- Error Message -->
-            <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 border-3 border-red-600">
-                <p class="text-red-800 font-bold">
-                    <i class="bi bi-exclamation-triangle-fill"></i> <span id="errorText"></span>
-                </p>
             </div>
         </div>
     </div>
@@ -255,6 +356,7 @@
         const token = localStorage.getItem('token');
         let roomEntryId = null;
         let roomEntryData = null;
+        let quantityValues = [];
 
         // Get room entry ID from URL
         window.addEventListener('load', function() {
@@ -267,6 +369,95 @@
             }
 
             loadRoomEntry();
+        });
+
+        // Quantity Calculator Functions
+        function addQuantity(value) {
+            if (value && value > 0) {
+                quantityValues.push(value);
+                updateQuantityDisplay();
+            }
+        }
+
+        function showCustomInput() {
+            document.getElementById('customInputDiv').classList.remove('hidden');
+            document.getElementById('customQuantityInput').focus();
+        }
+
+        function hideCustomInput() {
+            document.getElementById('customInputDiv').classList.add('hidden');
+            document.getElementById('customQuantityInput').value = '';
+        }
+
+        function addCustomQuantity() {
+            const customInput = document.getElementById('customQuantityInput');
+            const value = parseInt(customInput.value);
+
+            if (value && value > 0) {
+                addQuantity(value);
+                hideCustomInput();
+            } else {
+                alert('Please enter a valid quantity greater than 0');
+            }
+        }
+
+        function removeQuantity(index) {
+            quantityValues.splice(index, 1);
+            updateQuantityDisplay();
+        }
+
+        function clearAllQuantities() {
+            quantityValues = [];
+            updateQuantityDisplay();
+        }
+
+        function updateQuantityDisplay() {
+            const chipsContainer = document.getElementById('quantityChips');
+            const totalDisplay = document.getElementById('totalQuantity');
+            const totalDisplayInForm = document.getElementById('totalQuantityDisplay');
+            const hiddenInput = document.getElementById('quantity');
+
+            // Calculate total
+            const total = quantityValues.reduce((sum, val) => sum + val, 0);
+
+            // Update total displays
+            totalDisplay.textContent = total;
+            if (totalDisplayInForm) {
+                totalDisplayInForm.textContent = total;
+            }
+
+            // Update hidden input for form submission
+            hiddenInput.value = total;
+
+            // Update chips display
+            if (quantityValues.length === 0) {
+                chipsContainer.innerHTML = '<span class="text-sm text-gray-400 self-center">Click values above to add...</span>';
+            } else {
+                chipsContainer.innerHTML = quantityValues.map((val, index) => `
+                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full text-lg font-bold border-3 border-black">
+                        ${val}
+                        <button type="button" onclick="removeQuantity(${index})" class="hover:bg-red-500 rounded-full p-1 transition-colors" title="Remove">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function toggleCustomRemark() {
+            const customRadio = document.querySelector('input[name="remarkType"][value="custom"]');
+            const customInput = document.getElementById('customRemark');
+
+            if (customRadio && customRadio.checked) {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
+        }
+
+        // Add event listeners to all remark radios
+        document.querySelectorAll('input[name="remarkType"]').forEach(radio => {
+            radio.addEventListener('change', toggleCustomRemark);
         });
 
         async function loadRoomEntry() {
@@ -289,7 +480,8 @@
 
                 if (entryResponse.ok) {
                     const entryData = await entryResponse.json();
-                    document.getElementById('customerName').textContent = entryData.name;
+                    const customerName = entryData.name.charAt(0).toUpperCase() + entryData.name.slice(1).toLowerCase();
+                    document.getElementById('customerName').textContent = customerName;
                 }
 
                 // Populate form
@@ -317,8 +509,25 @@
                 });
 
                 document.getElementById('gateNo').value = roomEntryData.gate_no;
-                document.getElementById('quantity').value = roomEntryData.quantity;
-                document.getElementById('remark').value = roomEntryData.remark || '';
+
+                // Initialize quantity calculator with current quantity
+                if (roomEntryData.quantity > 0) {
+                    quantityValues = [roomEntryData.quantity];
+                    updateQuantityDisplay();
+                }
+
+                // Set remark
+                const remarkValue = roomEntryData.remark || '';
+                if (remarkValue === 'red' || remarkValue === 'yellow' || remarkValue === 'white') {
+                    document.querySelector(`input[name="remarkType"][value="${remarkValue}"]`).checked = true;
+                } else if (remarkValue) {
+                    document.querySelector('input[name="remarkType"][value="custom"]').checked = true;
+                    document.getElementById('customRemark').value = remarkValue;
+                    document.getElementById('customRemark').classList.remove('hidden');
+                }
+
+                // Load change history
+                loadChangeHistory();
 
                 // Show form
                 document.getElementById('loading').style.display = 'none';
@@ -334,15 +543,68 @@
             }
         }
 
+        async function loadChangeHistory() {
+            try {
+                // For now, create a placeholder entry showing the original creation
+                // This will be updated when backend API for change logs is ready
+                const historyBody = document.getElementById('changeHistoryBody');
+
+                const createdDate = new Date(roomEntryData.created_at);
+                const formattedDate = createdDate.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const capitalizedRemark = roomEntryData.remark ?
+                    roomEntryData.remark.charAt(0).toUpperCase() + roomEntryData.remark.slice(1).toLowerCase() : '';
+
+                historyBody.innerHTML = `
+                    <div class="p-3 mb-2 bg-green-50 border-l-4 border-green-600">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-bold text-green-800"><i class="bi bi-plus-circle"></i> Entry Created</span>
+                            <span class="text-xs text-gray-600">${formattedDate}</span>
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            <p>Room: ${roomEntryData.room_no}, Floor: ${roomEntryData.floor}</p>
+                            <p>Gatar: ${roomEntryData.gate_no}, Qty: ${roomEntryData.quantity}</p>
+                            ${capitalizedRemark ? `<p>Remark: ${capitalizedRemark}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="text-center p-4 text-gray-400 text-sm">
+                        <i class="bi bi-info-circle"></i> Edit history will appear here after changes
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading change history:', error);
+                document.getElementById('changeHistoryBody').innerHTML = `
+                    <div class="text-center p-4 text-red-500">Failed to load history</div>
+                `;
+            }
+        }
+
         async function updateRoomEntry(event) {
             event.preventDefault();
+
+            // Get remark from radio buttons
+            let remark = '';
+            const remarkRadio = document.querySelector('input[name="remarkType"]:checked');
+            if (remarkRadio) {
+                if (remarkRadio.value === 'custom') {
+                    remark = document.getElementById('customRemark').value.trim();
+                } else {
+                    remark = remarkRadio.value;
+                }
+            }
 
             const updateData = {
                 room_no: document.getElementById('roomNo').value.trim(),
                 floor: document.getElementById('floor').value.trim(),
                 gate_no: document.getElementById('gateNo').value.trim(),
                 quantity: parseInt(document.getElementById('quantity').value),
-                remark: document.getElementById('remark').value.trim()
+                remark: remark
             };
 
             try {
@@ -363,6 +625,9 @@
                 // Show success message
                 showSuccess();
 
+                // Add change log entry
+                addChangeLogEntry(updateData);
+
                 // Redirect back after 2 seconds
                 setTimeout(() => {
                     goBack();
@@ -371,6 +636,58 @@
             } catch (error) {
                 console.error('Error updating room entry:', error);
                 showError(error.message);
+            }
+        }
+
+        function addChangeLogEntry(updateData) {
+            try {
+                const historyBody = document.getElementById('changeHistoryBody');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const userName = user.name || 'Unknown User';
+                const userId = user.id || '-';
+
+                const now = new Date();
+                const formattedDate = now.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const capitalizedRemark = updateData.remark ?
+                    updateData.remark.charAt(0).toUpperCase() + updateData.remark.slice(1).toLowerCase() : '';
+
+                const changeEntry = document.createElement('div');
+                changeEntry.className = 'p-3 mb-2 bg-blue-50 border-l-4 border-blue-600';
+                changeEntry.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="font-bold text-blue-800"><i class="bi bi-pencil-fill"></i> Entry Updated</span>
+                        <span class="text-xs text-gray-600">${formattedDate}</span>
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <p><strong>Updated by:</strong> ${userName} (ID: ${userId})</p>
+                        <p>Room: ${updateData.room_no}, Floor: ${updateData.floor}</p>
+                        <p>Gatar: ${updateData.gate_no}, Qty: ${updateData.quantity}</p>
+                        ${capitalizedRemark ? `<p>Remark: ${capitalizedRemark}</p>` : ''}
+                    </div>
+                `;
+
+                // Insert at the top (after creation entry if exists)
+                const firstChild = historyBody.firstChild;
+                if (firstChild && firstChild.classList && firstChild.classList.contains('bg-green-50')) {
+                    historyBody.insertBefore(changeEntry, firstChild.nextSibling);
+                } else {
+                    historyBody.insertBefore(changeEntry, firstChild);
+                }
+
+                // Remove the "no changes" message if it exists
+                const noChangesMsg = historyBody.querySelector('.text-gray-400');
+                if (noChangesMsg && noChangesMsg.parentElement) {
+                    noChangesMsg.parentElement.remove();
+                }
+            } catch (error) {
+                console.error('Error adding change log entry:', error);
             }
         }
 

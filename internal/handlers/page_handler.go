@@ -119,3 +119,8 @@ func (h *PageHandler) PaymentReceiptPage(w http.ResponseWriter, r *http.Request)
 func (h *PageHandler) VerifyReceiptPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "verify_receipt.html", nil)
 }
+
+// AdminReportPage serves admin reports and logs page
+func (h *PageHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) {
+	h.templates.ExecuteTemplate(w, "admin_report.html", nil)
+}

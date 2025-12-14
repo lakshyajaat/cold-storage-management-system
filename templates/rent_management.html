@@ -64,10 +64,29 @@
             font-size: 0.875rem;
             font-weight: 600;
         }
+        /* Hide content by default until permission check passes */
+        #mainContent {
+            display: none;
+        }
+        #loadingScreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
-    <div class="max-w-7xl mx-auto">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="max-w-7xl mx-auto">
+        <div class="neu-border bg-white p-8 text-center">
+            <i class="bi bi-hourglass-split text-4xl animate-pulse"></i>
+            <p class="mt-4">Verifying permissions...</p>
+        </div>
+    </div>
+
+    <!-- Main Content (hidden by default) -->
+    <div id="mainContent" class="max-w-7xl mx-auto">
         <!-- Header -->
         <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
             <div>
@@ -223,7 +242,7 @@
         // Capitalize first letter of text (for outputs)
         function capitalizeText(text) {
             if (!text || text.length === 0) return text;
-            return text.charAt(0).toUpperCase() + text.slice(1);
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
         }
 
         // Auto-apply capitalization to all text inputs
@@ -240,6 +259,80 @@
         let allCustomerAccounts = [];
         let currentPaymentCustomer = null;
         let rentPerItem = 0;
+
+        // Decode JWT to get user info
+        function decodeToken() {
+            if (!token) {
+                window.location.href = '/login';
+                return null;
+            }
+
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                return JSON.parse(jsonPayload);
+            } catch (error) {
+                console.error('Error decoding token:', error);
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Check permissions before allowing access
+        async function checkAccountantPermission() {
+            const user = decodeToken();
+            if (!user) return false;
+
+            // Check if user is admin or accountant role
+            if (user.role === 'admin' || user.role === 'accountant') {
+                // Admins and accountants always have access
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                return true;
+            }
+
+            // For employees, check has_accountant_access field from the API
+            if (user.role === 'employee') {
+                try {
+                    const response = await fetch(`/api/users/${user.user_id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to verify permissions');
+                    }
+
+                    const userData = await response.json();
+
+                    // Check if employee has accountant access
+                    if (!userData.has_accountant_access) {
+                        alert('Access denied. You do not have accounting permissions.');
+                        window.location.href = '/dashboard';
+                        return false;
+                    }
+
+                    // Employee has accountant access, show content
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    return true;
+
+                } catch (error) {
+                    console.error('Error verifying permissions:', error);
+                    alert('Access denied. Unable to verify permissions.');
+                    window.location.href = '/dashboard';
+                    return false;
+                }
+            } else {
+                // Unknown role, deny access
+                alert('Access denied. This page is for accountants only.');
+                window.location.href = '/dashboard';
+                return false;
+            }
+        }
 
         // Load rent per item setting
         async function loadRentSetting() {
@@ -771,8 +864,13 @@
             window.open(`/payment-receipt?receipt=${receiptNumber}`, '_blank', 'width=800,height=600');
         }
 
-        // Load accounts on page load
-        window.addEventListener('load', loadCustomerAccounts);
+        // Load accounts on page load (after permission check)
+        window.addEventListener('load', async function() {
+            const hasPermission = await checkAccountantPermission();
+            if (hasPermission) {
+                loadCustomerAccounts();
+            }
+        });
     </script>
 </body>
 </html>

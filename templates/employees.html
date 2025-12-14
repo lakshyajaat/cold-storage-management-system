@@ -213,7 +213,7 @@
             tbody.innerHTML = users.map(user => `
                 <tr class="border-b-2 border-gray-200 hover:bg-gray-50 ${!user.is_active ? 'bg-red-50' : ''}" data-role="${user.role}">
                     <td class="p-4">#${user.id}</td>
-                    <td class="p-4 font-semibold">${user.name}</td>
+                    <td class="p-4 font-semibold">${capitalizeText(user.name)}</td>
                     <td class="p-4">${user.email}</td>
                     <td class="p-4">
                         <span class="px-3 py-1 rounded text-white ${user.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'}">

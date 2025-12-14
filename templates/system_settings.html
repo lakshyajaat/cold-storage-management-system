@@ -68,6 +68,41 @@
             </button>
         </header>
 
+        <!-- Operation Mode Section -->
+        <div class="neu-border bg-white p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-arrow-left-right text-purple-600"></i>
+                Operation Mode
+            </h2>
+
+            <div class="mb-8 p-4 bg-purple-50 neu-border">
+                <p class="text-sm text-purple-800">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>IMPORTANT:</strong> This setting changes the entire system behavior!
+                </p>
+                <ul class="list-disc list-inside mt-2 text-sm text-purple-700">
+                    <li><strong>Loading Mode:</strong> Entry Room = Load items INTO storage</li>
+                    <li><strong>Unloading Mode:</strong> Entry Room = Generate Gate Pass for taking items OUT</li>
+                </ul>
+            </div>
+
+            <div class="flex items-center justify-between p-6 neu-border bg-gradient-to-r from-green-50 to-orange-50">
+                <div>
+                    <h3 class="text-xl font-bold mb-2">Current Mode:</h3>
+                    <p id="currentModeDisplay" class="text-3xl font-bold">
+                        <span id="modeIcon">📦</span>
+                        <span id="modeText">LOADING</span>
+                    </p>
+                </div>
+                <div class="text-right">
+                    <button onclick="toggleOperationMode()" class="neu-button text-white text-lg px-8 py-4" id="toggleModeBtn">
+                        <i class="bi bi-arrow-repeat"></i> Switch to UNLOADING
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rent Price Section -->
         <div class="neu-border bg-white p-8">
             <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                 <i class="bi bi-currency-rupee"></i>
@@ -143,23 +178,102 @@
 
         async function loadSettings() {
             try {
-                const response = await fetch('/api/settings/rent_per_item', {
+                // Load rent per item
+                const rentResponse = await fetch('/api/settings/rent_per_item', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (!response.ok) {
-                    throw new Error('Failed to load settings');
+                if (!rentResponse.ok) {
+                    throw new Error('Failed to load rent settings');
                 }
 
-                const setting = await response.json();
-                document.getElementById('rentPerItem').value = setting.setting_value;
+                const rentSetting = await rentResponse.json();
+                document.getElementById('rentPerItem').value = rentSetting.setting_value;
 
-                const lastUpdated = new Date(setting.updated_at);
+                const lastUpdated = new Date(rentSetting.updated_at);
                 document.getElementById('lastUpdated').textContent = lastUpdated.toLocaleString('en-IN');
-                document.getElementById('updatedBy').textContent = setting.updated_by_user_id || 'System';
+                document.getElementById('updatedBy').textContent = rentSetting.updated_by_user_id || 'System';
+
+                // Load operation mode
+                const modeResponse = await fetch('/api/settings/operation_mode', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (modeResponse.ok) {
+                    const modeSetting = await modeResponse.json();
+                    updateModeDisplay(modeSetting.setting_value);
+                }
             } catch (error) {
                 console.error('Error loading settings:', error);
                 showError('Failed to load settings: ' + error.message);
+            }
+        }
+
+        function updateModeDisplay(mode) {
+            const modeIcon = document.getElementById('modeIcon');
+            const modeText = document.getElementById('modeText');
+            const toggleBtn = document.getElementById('toggleModeBtn');
+            const modeDisplay = document.getElementById('currentModeDisplay');
+
+            if (mode === 'loading') {
+                modeIcon.textContent = '📦';
+                modeText.textContent = 'LOADING';
+                modeText.style.color = '#16a34a'; // green
+                toggleBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Switch to UNLOADING';
+                toggleBtn.className = 'neu-button bg-orange-500 text-white text-lg px-8 py-4';
+            } else {
+                modeIcon.textContent = '📤';
+                modeText.textContent = 'UNLOADING';
+                modeText.style.color = '#ea580c'; // orange
+                toggleBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Switch to LOADING';
+                toggleBtn.className = 'neu-button bg-green-500 text-white text-lg px-8 py-4';
+            }
+        }
+
+        async function toggleOperationMode() {
+            // Get current mode
+            const modeResponse = await fetch('/api/settings/operation_mode', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!modeResponse.ok) {
+                showError('Failed to get current mode');
+                return;
+            }
+
+            const currentModeSetting = await modeResponse.json();
+            const newMode = currentModeSetting.setting_value === 'loading' ? 'unloading' : 'loading';
+
+            // Confirm the change
+            const confirmMessage = newMode === 'unloading'
+                ? 'Switch to UNLOADING mode?\n\n⚠️ Entry Room will become Gate Pass system for releasing items.\nRoom Config will show Unloading Tickets instead.'
+                : 'Switch to LOADING mode?\n\n⚠️ Entry Room will be for loading items into storage.\nRoom Config will show normal room assignments.';
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/operation_mode', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        setting_value: newMode
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update mode');
+                }
+
+                updateModeDisplay(newMode);
+                showSuccess();
+            } catch (error) {
+                console.error('Error updating mode:', error);
+                showError('Failed to update mode: ' + error.message);
             }
         }
 

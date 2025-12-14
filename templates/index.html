@@ -143,6 +143,12 @@
     </main>
 
     <script>
+        // Capitalize first letter of text
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+        }
+
         // Load and display user name
         (function() {
             const userStr = localStorage.getItem('user');
@@ -151,7 +157,7 @@
                     const user = JSON.parse(userStr);
                     const nameElement = document.getElementById('employeeName');
                     if (nameElement) {
-                        nameElement.textContent = user.name || user.email || 'User';
+                        nameElement.textContent = capitalizeText(user.name) || user.email || 'User';
                     }
                 } catch (error) {
                     console.error('Error parsing user data:', error);

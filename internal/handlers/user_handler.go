@@ -3,27 +3,41 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 
 	"github.com/gorilla/mux"
 )
 
 type UserHandler struct {
-	Service *services.UserService
+	Service         *services.UserService
+	AdminActionRepo *repositories.AdminActionLogRepository
 }
 
-func NewUserHandler(s *services.UserService) *UserHandler {
-	return &UserHandler{Service: s}
+func NewUserHandler(s *services.UserService, adminActionRepo *repositories.AdminActionLogRepository) *UserHandler {
+	return &UserHandler{
+		Service:         s,
+		AdminActionRepo: adminActionRepo,
+	}
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get admin user ID from context
+	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -39,6 +53,18 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
+	// Log admin action
+	ipAddress := getIPAddress(r)
+	description := fmt.Sprintf("Created user: %s (%s) with role: %s", user.Name, user.Email, user.Role)
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: adminUserID,
+		ActionType:  "CREATE",
+		TargetType:  "user",
+		TargetID:    &user.ID,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	json.NewEncoder(w).Encode(user)
 }
@@ -73,6 +99,16 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
 
+	// Get admin user ID from context
+	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get old user data for logging
+	oldUser, _ := h.Service.GetUser(context.Background(), id)
+
 	var req models.UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -93,6 +129,34 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log admin action
+	ipAddress := getIPAddress(r)
+	description := fmt.Sprintf("Updated user: %s (%s)", user.Name, user.Email)
+
+	// Track specific changes
+	var changes []string
+	if oldUser != nil {
+		if oldUser.Role != user.Role {
+			changes = append(changes, fmt.Sprintf("role: %s → %s", oldUser.Role, user.Role))
+		}
+		if oldUser.HasAccountantAccess != user.HasAccountantAccess {
+			changes = append(changes, fmt.Sprintf("accountant access: %v → %v", oldUser.HasAccountantAccess, user.HasAccountantAccess))
+		}
+	}
+
+	if len(changes) > 0 {
+		description += fmt.Sprintf(" [Changes: %v]", changes)
+	}
+
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: adminUserID,
+		ActionType:  "UPDATE",
+		TargetType:  "user",
+		TargetID:    &user.ID,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
@@ -102,10 +166,36 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
 
+	// Get admin user ID from context
+	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user data before deletion for logging
+	user, _ := h.Service.GetUser(context.Background(), id)
+
 	if err := h.Service.DeleteUser(context.Background(), id); err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
+	// Log admin action
+	ipAddress := getIPAddress(r)
+	description := "Deleted user"
+	if user != nil {
+		description = fmt.Sprintf("Deleted user: %s (%s)", user.Name, user.Email)
+	}
+
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: adminUserID,
+		ActionType:  "DELETE",
+		TargetType:  "user",
+		TargetID:    &id,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -114,6 +204,16 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) ToggleActiveStatus(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
+
+	// Get admin user ID from context
+	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user data for logging
+	user, _ := h.Service.GetUser(context.Background(), id)
 
 	var req struct {
 		IsActive bool `json:"is_active"`
@@ -127,6 +227,27 @@ func (h *UserHandler) ToggleActiveStatus(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
+	// Log admin action
+	ipAddress := getIPAddress(r)
+	status := "activated"
+	if !req.IsActive {
+		status = "paused"
+	}
+
+	description := fmt.Sprintf("User status changed to %s", status)
+	if user != nil {
+		description = fmt.Sprintf("%s user: %s (%s)", status, user.Name, user.Email)
+	}
+
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: adminUserID,
+		ActionType:  "TOGGLE_STATUS",
+		TargetType:  "user",
+		TargetID:    &id,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{

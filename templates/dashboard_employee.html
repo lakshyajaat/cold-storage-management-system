@@ -151,6 +151,12 @@
     </div>
 
     <script>
+        // Capitalize first letter of text
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+        }
+
         function navigate(path) {
             window.location.href = path;
         }
@@ -170,7 +176,7 @@
                 // Display employee name
                 const nameElement = document.getElementById('employeeName');
                 if (nameElement) {
-                    nameElement.textContent = user.name || user.email || 'Employee';
+                    nameElement.textContent = capitalizeText(user.name) || user.email || 'Employee';
                 }
 
                 // Show account button only if employee has accountant access

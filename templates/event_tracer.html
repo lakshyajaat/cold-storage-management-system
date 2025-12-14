@@ -23,6 +23,59 @@
         .table-header {
             background: #a8e0ff;
         }
+        .row-seed {
+            background: #dcfce7 !important;
+            border-left: 4px solid #22c55e;
+        }
+        .row-sell {
+            background: #fed7aa !important;
+            border-left: 4px solid #f97316;
+        }
+        .row-other {
+            background: #f3f4f6 !important;
+        }
+        .category-seed {
+            background: #22c55e;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .category-sell {
+            background: #f97316;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-main {
+            background: #3b82f6;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+        .status-room {
+            background: #8b5cf6;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+        .row-main {
+            background: #dbeafe !important;
+            border-left: 4px solid #3b82f6;
+        }
+        .row-room {
+            background: #ede9fe !important;
+            border-left: 4px solid #8b5cf6;
+        }
     </style>
 </head>
 <body class="bg-[#DFCCFB] min-h-screen p-8">
@@ -79,52 +132,29 @@
             </div>
         </div>
 
-        <!-- Recent Main Entries Section -->
-        <div class="neu-border bg-white p-6 mb-8">
+        <!-- Combined Activity Log Section -->
+        <div class="neu-border bg-white p-6">
             <h2 class="text-2xl font-bold mb-4">
-                <i class="bi bi-box-arrow-in-down text-blue-600"></i> Recent Main Entries
+                <i class="bi bi-activity text-purple-600"></i> All Activity Log
             </h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="table-header">
                         <tr>
-                            <th class="p-3 text-left border-2 border-black">ID</th>
                             <th class="p-3 text-left border-2 border-black">Truck Number</th>
+                            <th class="p-3 text-left border-2 border-black">Category</th>
                             <th class="p-3 text-left border-2 border-black">Customer Name</th>
                             <th class="p-3 text-left border-2 border-black">Phone</th>
                             <th class="p-3 text-left border-2 border-black">Village</th>
-                            <th class="p-3 text-left border-2 border-black">Category</th>
-                            <th class="p-3 text-left border-2 border-black">Expected Qty</th>
-                            <th class="p-3 text-left border-2 border-black">Created At</th>
+                            <th class="p-3 text-left border-2 border-black">Room/Floor/Gate</th>
+                            <th class="p-3 text-left border-2 border-black">Quantity</th>
+                            <th class="p-3 text-left border-2 border-black">Entry Created</th>
+                            <th class="p-3 text-left border-2 border-black">Room Allocated</th>
+                            <th class="p-3 text-left border-2 border-black">Status</th>
                         </tr>
                     </thead>
-                    <tbody id="mainEntriesBody">
-                        <tr><td colspan="8" class="text-center p-4">Loading...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Recent Room Entries Section -->
-        <div class="neu-border bg-white p-6">
-            <h2 class="text-2xl font-bold mb-4">
-                <i class="bi bi-door-open text-purple-600"></i> Recent Room Entries
-            </h2>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="table-header">
-                        <tr>
-                            <th class="p-3 text-left border-2 border-black">ID</th>
-                            <th class="p-3 text-left border-2 border-black">Truck Number</th>
-                            <th class="p-3 text-left border-2 border-black">Room</th>
-                            <th class="p-3 text-left border-2 border-black">Floor</th>
-                            <th class="p-3 text-left border-2 border-black">Gate</th>
-                            <th class="p-3 text-left border-2 border-black">Quantity (Bags)</th>
-                            <th class="p-3 text-left border-2 border-black">Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody id="roomEntriesBody">
-                        <tr><td colspan="7" class="text-center p-4">Loading...</td></tr>
+                    <tbody id="activityLogBody">
+                        <tr><td colspan="10" class="text-center p-4">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -135,13 +165,19 @@
         const token = localStorage.getItem('token');
         let showAllEvents = false; // Track view mode: false = recent (10), true = all
 
+        // Capitalize first letter of text
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+        }
+
         // Load and display user name
         (function() {
             const userStr = localStorage.getItem('user');
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    document.getElementById('userName').textContent = user.name || user.email || 'User';
+                    document.getElementById('userName').textContent = capitalizeText(user.name) || user.email || 'User';
                 } catch (error) {
                     console.error('Error parsing user data:', error);
                     document.getElementById('userName').textContent = 'User';
@@ -171,72 +207,138 @@
             return '-';
         }
 
-        async function loadMainEntries() {
-            try {
-                const response = await fetch('/api/entries', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const entries = await response.json();
-
-                // Get entries based on view mode
-                const recentEntries = showAllEvents ? entries : entries.slice(0, 10);
-
-                const tbody = document.getElementById('mainEntriesBody');
-                if (recentEntries.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4">No entries found</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = recentEntries.map(entry => `
-                    <tr>
-                        <td class="p-3 border-2 border-black">${entry.id || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.truck_number || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.name || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.phone || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.village || '-'}</td>
-                        <td class="p-3 border-2 border-black">${getCategory(entry.truck_number)}</td>
-                        <td class="p-3 border-2 border-black">${entry.expected_quantity || 0}</td>
-                        <td class="p-3 border-2 border-black">${formatDateTime(entry.created_at)}</td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading main entries:', error);
-                document.getElementById('mainEntriesBody').innerHTML =
-                    '<tr><td colspan="8" class="text-center p-4 text-red-600">Error loading data</td></tr>';
-            }
+        function getCategoryClass(category) {
+            if (category === 'SEED') return 'category-seed';
+            if (category === 'SELL') return 'category-sell';
+            return '';
         }
 
-        async function loadRoomEntries() {
+        function getRowClass(truckNumber) {
+            const category = getCategory(truckNumber);
+            if (category === 'SEED') return 'row-seed';
+            if (category === 'SELL') return 'row-sell';
+            return 'row-other';
+        }
+
+        async function loadActivityLog() {
             try {
-                const response = await fetch('/api/room-entries', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Fetch all data including users
+                const [entriesRes, roomEntriesRes, usersRes] = await Promise.all([
+                    fetch('/api/entries', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/room-entries', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+
+                const entries = await entriesRes.json();
+                const roomEntries = await roomEntriesRes.json();
+                const users = await usersRes.json();
+
+                // Create user lookup map
+                const userMap = {};
+                users.forEach(user => {
+                    userMap[user.id] = capitalizeText(user.name);
                 });
-                const roomEntries = await response.json();
 
-                // Get room entries based on view mode
-                const recentRoomEntries = showAllEvents ? roomEntries : roomEntries.slice(0, 10);
+                // Group by truck number
+                const truckMap = new Map();
 
-                const tbody = document.getElementById('roomEntriesBody');
-                if (recentRoomEntries.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4">No room entries found</td></tr>';
+                // Process main entries
+                entries.forEach(entry => {
+                    const truckNum = entry.truck_number;
+                    if (!truckMap.has(truckNum)) {
+                        truckMap.set(truckNum, {
+                            truck_number: truckNum,
+                            customer_name: entry.name,
+                            phone: entry.phone,
+                            village: entry.village,
+                            quantity: entry.expected_quantity || 0,
+                            main_entry_time: entry.created_at,
+                            main_entry_user: userMap[entry.created_by_user_id] || `User #${entry.created_by_user_id}`,
+                            room_entry_time: null,
+                            room_entry_user: null,
+                            room: null,
+                            floor: null,
+                            gate: null,
+                            room_quantity: null,
+                            latest_time: new Date(entry.created_at).getTime()
+                        });
+                    }
+                });
+
+                // Process room entries
+                roomEntries.forEach(entry => {
+                    const truckNum = entry.truck_number;
+                    if (truckMap.has(truckNum)) {
+                        const existing = truckMap.get(truckNum);
+                        existing.room = entry.room_no;
+                        existing.floor = entry.floor;
+                        existing.gate = entry.gate_no;
+                        existing.room_quantity = entry.quantity;
+                        existing.room_entry_time = entry.created_at;
+                        existing.room_entry_user = userMap[entry.created_by_user_id] || `User #${entry.created_by_user_id}`;
+                        existing.latest_time = Math.max(existing.latest_time, new Date(entry.created_at).getTime());
+                    }
+                });
+
+                // Convert to array and sort by latest activity
+                let activities = Array.from(truckMap.values());
+                activities.sort((a, b) => b.latest_time - a.latest_time);
+
+                // Apply view mode filter
+                const displayActivities = showAllEvents ? activities : activities.slice(0, 20);
+
+                const tbody = document.getElementById('activityLogBody');
+                if (displayActivities.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No activity found</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = recentRoomEntries.map(entry => `
-                    <tr>
-                        <td class="p-3 border-2 border-black">${entry.id || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.truck_number || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.room_no || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.floor || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.gate_no || '-'}</td>
-                        <td class="p-3 border-2 border-black">${entry.quantity || 0}</td>
-                        <td class="p-3 border-2 border-black">${formatDateTime(entry.created_at)}</td>
+                tbody.innerHTML = displayActivities.map(activity => {
+                    const category = getCategory(activity.truck_number);
+                    const categoryClass = getCategoryClass(category);
+                    const hasRoom = activity.room !== null;
+                    const rowClass = hasRoom ? 'row-room' : 'row-main';
+                    const statusClass = hasRoom ? 'status-room' : 'status-main';
+                    const statusText = hasRoom ? 'COMPLETE' : 'PENDING STORAGE';
+
+                    const roomInfo = hasRoom ?
+                        `Room ${activity.room} / Floor ${activity.floor} / Gate ${activity.gate}` :
+                        '<span class="text-orange-600 font-semibold">Awaiting Storage</span>';
+
+                    return `
+                    <tr class="${rowClass} hover:opacity-80 transition-opacity">
+                        <td class="p-3 border-2 border-black font-bold text-lg">${activity.truck_number || '-'}</td>
+                        <td class="p-3 border-2 border-black">
+                            <span class="${categoryClass}">${category}</span>
+                        </td>
+                        <td class="p-3 border-2 border-black font-semibold">${capitalizeText(activity.customer_name) || '-'}</td>
+                        <td class="p-3 border-2 border-black">${activity.phone || '-'}</td>
+                        <td class="p-3 border-2 border-black">${capitalizeText(activity.village) || '-'}</td>
+                        <td class="p-3 border-2 border-black text-purple-700 font-semibold">${roomInfo}</td>
+                        <td class="p-3 border-2 border-black">
+                            <div class="text-sm">Expected: <span class="font-bold">${activity.quantity}</span></div>
+                            ${hasRoom ? `<div class="text-sm text-green-700">Stored: <span class="font-bold">${activity.room_quantity} bags</span></div>` : ''}
+                        </td>
+                        <td class="p-3 border-2 border-black text-sm">
+                            <div class="font-semibold">${formatDateTime(activity.main_entry_time)}</div>
+                            <div class="text-xs text-blue-600">by ${activity.main_entry_user}</div>
+                        </td>
+                        <td class="p-3 border-2 border-black text-sm">
+                            ${hasRoom ? `
+                                <div class="font-semibold">${formatDateTime(activity.room_entry_time)}</div>
+                                <div class="text-xs text-purple-600">by ${activity.room_entry_user}</div>
+                            ` : '<span class="text-gray-400">-</span>'}
+                        </td>
+                        <td class="p-3 border-2 border-black">
+                            <span class="${statusClass}">${statusText}</span>
+                        </td>
                     </tr>
-                `).join('');
+                    `;
+                }).join('');
             } catch (error) {
-                console.error('Error loading room entries:', error);
-                document.getElementById('roomEntriesBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center p-4 text-red-600">Error loading data</td></tr>';
+                console.error('Error loading activity log:', error);
+                document.getElementById('activityLogBody').innerHTML =
+                    '<tr><td colspan="10" class="text-center p-4 text-red-600">Error loading data</td></tr>';
             }
         }
 
@@ -279,8 +381,7 @@
         async function refreshData() {
             // Load all data in parallel
             await Promise.all([
-                loadMainEntries(),
-                loadRoomEntries(),
+                loadActivityLog(),
                 loadEntryStatus()
             ]);
 

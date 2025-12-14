@@ -43,10 +43,29 @@
             padding: 1.5rem;
             background: white;
         }
+        /* Hide content by default until permission check passes */
+        #mainContent {
+            display: none;
+        }
+        #loadingScreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
-    <div class="max-w-7xl mx-auto">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="max-w-7xl mx-auto">
+        <div class="neu-border bg-white p-8 text-center">
+            <i class="bi bi-hourglass-split text-4xl animate-pulse"></i>
+            <p class="mt-4">Verifying permissions...</p>
+        </div>
+    </div>
+
+    <!-- Main Content (hidden by default) -->
+    <div id="mainContent" class="max-w-7xl mx-auto">
         <!-- Header -->
         <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
             <div>
@@ -172,23 +191,58 @@
         }
 
         // Check role on page load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
             const user = decodeToken();
             if (!user) return;
 
-            // Check if user is accountant or admin
-            if (user.role !== 'accountant' && user.role !== 'admin') {
-                alert('Access denied. This page is for accountants only.');
-                window.location.href = '/dashboard';
+            // Check if user is admin or accountant role
+            if (user.role === 'admin' || user.role === 'accountant') {
+                // Admins and accountants always have access
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                document.getElementById('userName').textContent = user.email.split('@')[0];
+                loadDashboardStats();
+                loadRecentPayments();
                 return;
             }
 
-            // Display user name
-            document.getElementById('userName').textContent = user.email.split('@')[0];
+            // For employees, check has_accountant_access field from the API
+            if (user.role === 'employee') {
+                try {
+                    const response = await fetch(`/api/users/${user.user_id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
 
-            // Load dashboard data
-            loadDashboardStats();
-            loadRecentPayments();
+                    if (!response.ok) {
+                        throw new Error('Failed to verify permissions');
+                    }
+
+                    const userData = await response.json();
+
+                    // Check if employee has accountant access
+                    if (!userData.has_accountant_access) {
+                        alert('Access denied. You do not have accounting permissions.');
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+
+                    // Employee has accountant access, allow access
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('userName').textContent = user.email.split('@')[0];
+                    loadDashboardStats();
+                    loadRecentPayments();
+
+                } catch (error) {
+                    console.error('Error verifying permissions:', error);
+                    alert('Access denied. Unable to verify permissions.');
+                    window.location.href = '/dashboard';
+                }
+            } else {
+                // Unknown role, deny access
+                alert('Access denied. This page is for accountants only.');
+                window.location.href = '/dashboard';
+            }
         });
 
         async function loadDashboardStats() {

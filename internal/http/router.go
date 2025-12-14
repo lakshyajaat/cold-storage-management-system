@@ -17,6 +17,9 @@ func NewRouter(
 	systemSettingHandler *handlers.SystemSettingHandler,
 	rentPaymentHandler *handlers.RentPaymentHandler,
 	invoiceHandler *handlers.InvoiceHandler,
+	loginLogHandler *handlers.LoginLogHandler,
+	roomEntryEditLogHandler *handlers.RoomEntryEditLogHandler,
+	adminActionLogHandler *handlers.AdminActionLogHandler,
 	pageHandler *handlers.PageHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *mux.Router {
@@ -58,6 +61,9 @@ func NewRouter(
 
 	// System settings page (admin only)
 	r.HandleFunc("/system-settings", pageHandler.SystemSettingsPage).Methods("GET")
+
+	// Admin reports page (admin only)
+	r.HandleFunc("/admin/report", pageHandler.AdminReportPage).Methods("GET")
 
 	// Protected API routes - System Settings
 	settingsAPI := r.PathPrefix("/api/settings").Subrouter()
@@ -126,6 +132,26 @@ func NewRouter(
 	invoicesAPI.HandleFunc("/{id}", invoiceHandler.GetInvoice).Methods("GET")
 	invoicesAPI.HandleFunc("/number/{number}", invoiceHandler.GetInvoiceByNumber).Methods("GET")
 	invoicesAPI.HandleFunc("/customer/{customer_id}", invoiceHandler.GetCustomerInvoices).Methods("GET")
+
+	// Protected API routes - Login Logs (admin only)
+	loginLogsAPI := r.PathPrefix("/api/login-logs").Subrouter()
+	loginLogsAPI.Use(authMiddleware.Authenticate)
+	loginLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(loginLogHandler.ListLoginLogs)).ServeHTTP).Methods("GET")
+
+	// Protected API routes - Logout
+	logoutAPI := r.PathPrefix("/api/logout").Subrouter()
+	logoutAPI.Use(authMiddleware.Authenticate)
+	logoutAPI.HandleFunc("", loginLogHandler.Logout).Methods("POST")
+
+	// Protected API routes - Room Entry Edit Logs (admin only)
+	editLogsAPI := r.PathPrefix("/api/edit-logs").Subrouter()
+	editLogsAPI.Use(authMiddleware.Authenticate)
+	editLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(roomEntryEditLogHandler.ListEditLogs)).ServeHTTP).Methods("GET")
+
+	// Protected API routes - Admin Action Logs (admin only)
+	adminActionLogsAPI := r.PathPrefix("/api/admin-action-logs").Subrouter()
+	adminActionLogsAPI.Use(authMiddleware.Authenticate)
+	adminActionLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(adminActionLogHandler.ListActionLogs)).ServeHTTP).Methods("GET")
 
 	return r
 }
