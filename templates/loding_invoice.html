@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cold Storage Invoice</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <title>गुड़ कृपा कोल्ड स्टोर - प्रवेश रसीद</title>
     <style>
         * {
             margin: 0;
@@ -12,112 +11,132 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Arial', 'Noto Sans Devanagari', sans-serif;
             padding: 10px;
             background: #f5f5f5;
         }
         .container {
             max-width: 100%;
             margin: 0 auto;
-            padding: 0 20px;
         }
         .invoice-wrapper {
             display: flex;
             flex-direction: row;
-            gap: 20px;
+            gap: 15px;
             justify-content: center;
             align-items: flex-start;
         }
         .invoice {
             background: white;
-            border: 2px solid #000;
-            padding: 20px;
+            border: 3px solid #000;
+            padding: 15px;
             flex: 1;
             max-width: 48%;
         }
         .header {
             text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
         .header h1 {
-            font-size: 20px;
-            margin-bottom: 5px;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 3px;
         }
-        .header p {
-            font-size: 12px;
-            color: #666;
+        .header .subtitle {
+            font-size: 13px;
+            margin: 2px 0;
+        }
+        .header .mobile {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .info-section {
+            border: 2px solid #000;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .info-section h3 {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+            background: #000;
+            color: white;
+            padding: 4px;
         }
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
         }
         .info-label {
             font-weight: bold;
-            color: #666;
         }
         .info-value {
-            color: #000;
-        }
-        .section {
-            margin-bottom: 15px;
-        }
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            background: #000;
-            color: white;
-            padding: 5px 8px;
-            margin-bottom: 10px;
+            text-align: right;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
-            font-size: 13px;
+            font-size: 11px;
         }
         th, td {
-            border: 1px solid #000;
-            padding: 6px;
-            text-align: left;
+            border: 2px solid #000;
+            padding: 5px;
+            text-align: center;
         }
         th {
+            background: #000;
+            color: white;
+            font-weight: bold;
+        }
+        .total-row {
             background: #f0f0f0;
             font-weight: bold;
         }
-        .total-section {
-            background: #000;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            margin-top: 15px;
+        .terms {
+            border: 2px solid #000;
+            padding: 10px;
+            margin: 12px 0;
+            font-size: 10px;
         }
-        .total-section .label {
+        .terms h3 {
             font-size: 12px;
-            margin-bottom: 5px;
-        }
-        .total-section .amount {
-            font-size: 28px;
             font-weight: bold;
-            margin: 8px 0;
-        }
-        .footer {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #000;
+            margin-bottom: 6px;
             text-align: center;
-            font-size: 11px;
-            color: #666;
         }
-        .signature {
+        .terms ol {
+            margin-left: 15px;
+        }
+        .terms li {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
             margin-top: 30px;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            font-size: 12px;
+            padding-top: 10px;
+            border-top: 2px solid #000;
+        }
+        .signature-box {
             text-align: center;
+            flex: 1;
+        }
+        .signature-line {
+            border-top: 2px solid #000;
+            margin-top: 40px;
+            padding-top: 5px;
+            font-size: 11px;
+            font-weight: bold;
         }
         .buttons {
             text-align: center;
@@ -127,17 +146,16 @@
             background: #4CAF50;
             color: white;
             padding: 12px 30px;
-            border: 2px solid #000;
-            border-radius: 0;
+            border: 3px solid #000;
             font-size: 16px;
             cursor: pointer;
             margin: 0 10px;
             font-weight: bold;
-            box-shadow: 3px 3px 0 #000;
+            box-shadow: 4px 4px 0 #000;
         }
         .btn:hover {
             transform: translate(-2px, -2px);
-            box-shadow: 5px 5px 0 #000;
+            box-shadow: 6px 6px 0 #000;
         }
         .btn-secondary {
             background: #666;
@@ -150,49 +168,27 @@
         @media print {
             @page {
                 size: landscape;
-                margin: 10mm;
+                margin: 8mm;
             }
             body {
                 background: white;
                 padding: 0;
-                margin: 0;
             }
-            .container {
-                padding: 0;
-                max-width: 100%;
-            }
-            .buttons, .btn {
+            .buttons {
                 display: none;
             }
             .invoice-wrapper {
-                display: flex;
-                flex-direction: row;
-                gap: 10px;
-                justify-content: space-between;
-                page-break-inside: avoid;
+                gap: 8px;
             }
             .invoice {
-                border: 2px solid #000;
                 padding: 10px;
-                margin-bottom: 0;
-                flex: 1;
-                max-width: 48%;
-                page-break-inside: avoid;
+                max-width: 49%;
             }
             .header h1 {
-                font-size: 16px;
+                font-size: 18px;
             }
-            .header p {
-                font-size: 10px;
-            }
-            .info-row, .section-title, table {
-                font-size: 11px;
-            }
-            th, td {
-                padding: 4px;
-            }
-            .total-section .amount {
-                font-size: 22px;
+            table, .info-row, .terms {
+                font-size: 9px;
             }
         }
     </style>
@@ -200,152 +196,179 @@
 <body>
     <div class="container">
         <div id="loading" class="loading">
-            <i class="bi bi-hourglass-split" style="font-size: 48px;"></i>
-            <p>Loading invoice...</p>
+            <p>रसीद लोड हो रही है...</p>
         </div>
 
         <div id="invoiceContent" style="display: none;">
             <div class="buttons">
                 <button class="btn" onclick="window.print()">
-                    <i class="bi bi-printer"></i> Print Invoice
+                    🖨️ प्रिंट करें
                 </button>
                 <button class="btn btn-secondary" onclick="window.history.back()">
-                    <i class="bi bi-arrow-left"></i> Back
+                    ← वापस जाएं
                 </button>
             </div>
 
             <div class="invoice-wrapper">
-                <!-- First Invoice Copy -->
+                <!-- First Copy -->
                 <div class="invoice">
                     <div class="header">
-                        <h1>COLD STORAGE INVOICE</h1>
-                        <p>Payment Receipt</p>
-                        <p style="margin-top: 8px; font-size: 14px; font-weight: bold; color: #000;">
-                            Invoice #: <span id="invoiceNumber1">-</span>
-                        </p>
+                        <h1>गुड़ कृपा कोल्ड स्टोर</h1>
+                        <div class="subtitle">Gud Kripa Cold Store</div>
+                        <div class="subtitle">कोल्ड स्टोर लाइसेंस/गोदाम | Cold Store License/Warehouse</div>
+                        <div class="mobile">Mobile: 7505837172</div>
                     </div>
 
-                    <div class="section">
+                    <div class="info-section">
+                        <h3>मूल जानकारी | Basic Information</h3>
                         <div class="info-row">
-                            <span class="info-label">Customer Name:</span>
+                            <span class="info-label">क्र. | Sr. No.:</span>
+                            <span class="info-value" id="invoiceNumber1">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ग्राहक का नाम | Customer Name:</span>
                             <span class="info-value" id="customerName1">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Phone:</span>
+                            <span class="info-label">फोन | Phone:</span>
                             <span class="info-value" id="customerPhone1">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Village:</span>
+                            <span class="info-label">ग्राम व पता | Village & Address:</span>
                             <span class="info-value" id="customerVillage1">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Invoice Date:</span>
-                            <span class="info-value" id="invoiceDate1">-</span>
+                            <span class="info-label">विकासखण्ड | Development Block:</span>
+                            <span class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Employee:</span>
-                            <span class="info-value" id="employeeName1">-</span>
+                            <span class="info-label">जनपद | District:</span>
+                            <span class="info-value">जालौन (कालपी) | Jalaun (Kalpi)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">दिनांक | Date:</span>
+                            <span class="info-value" id="invoiceDate1">-</span>
                         </div>
                     </div>
 
-                    <div class="section">
-                        <div class="section-title">STORAGE ITEMS</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Truck No</th>
-                                    <th>Quantity</th>
-                                    <th>Rate (₹)</th>
-                                    <th>Rent (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="itemsTable1">
-                                <tr>
-                                    <td colspan="4" class="text-center">Loading...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>क्र.<br>Sr. No.</th>
+                                <th>ट्रक नं.<br>Truck No.</th>
+                                <th>कुल भरती बोरे<br>Total Bags</th>
+                                <th>बोरी बिक्री मात्रा<br>Sold Qty</th>
+                                <th>शेष मात्रा<br>Remaining</th>
+                                <th>भाड़ा<br>Rent (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTable1">
+                            <tr>
+                                <td colspan="6">लोड हो रहा है...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="terms">
+                        <h3>नियम एवं शर्तें | Terms and Conditions</h3>
+                        <ol>
+                            <li>यदि प्रतिनिधि के कटौती प्राप्त होने पर कोई भी आलू की बीमा दावे का अधिकार नहीं होगा।</li>
+                            <li>यदि कोई भी प्राकृतिक आपदा के कारण आलू की क्षति होने पर कोल्ड की जिम्मेदारी नहीं होगी।</li>
+                            <li>आलू में कोई कटौती प्राप्त होने पर कोल्ड की कोई जिम्मेदारी नहीं होगी।</li>
+                            <li>यदि उचित समय पर भाड़ा भुगतान न होने पर 15 दिन की अतिरिक्त मोहलत दी जाएगी।</li>
+                            <li>यदि 15 दिनों में भाड़ा भुगतान न होने पर आलू की नीलामी की जाएगी।</li>
+                            <li>आलू 15 जून तक निकालना अनिवार्य है अन्यथा 1-जुलाई से अतिरिक्त भाड़ा लागू होगा।</li>
+                        </ol>
                     </div>
 
-                    <div class="total-section">
-                        <div class="label">TOTAL RENT AMOUNT</div>
-                        <div class="amount" id="totalAmount1">₹0</div>
-                    </div>
-
-                    <div class="signature">
-                        <strong>Signature: ___________________</strong>
-                    </div>
-
-                    <div class="footer">
-                        <p><strong>Status:</strong> Ready for Exit</p>
-                        <p style="margin-top: 8px;">This is a computer-generated invoice.</p>
+                    <div class="signature-section">
+                        <div class="signature-box">
+                            <div class="signature-line">ग्राहक के हस्ताक्षर<br>Customer's Signature</div>
+                        </div>
+                        <div class="signature-box">
+                            <div class="signature-line">प्रबंधक के हस्ताक्षर<br>Manager's Signature<br><span id="employeeName1" style="font-size: 10px;">-</span></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Second Invoice Copy (Duplicate) -->
+                <!-- Second Copy -->
                 <div class="invoice">
                     <div class="header">
-                        <h1>COLD STORAGE INVOICE</h1>
-                        <p>Payment Receipt (Copy)</p>
-                        <p style="margin-top: 8px; font-size: 14px; font-weight: bold; color: #000;">
-                            Invoice #: <span id="invoiceNumber2">-</span>
-                        </p>
+                        <h1>गुड़ कृपा कोल्ड स्टोर</h1>
+                        <div class="subtitle">Gud Kripa Cold Store</div>
+                        <div class="subtitle">कोल्ड स्टोर लाइसेंस/गोदाम | Cold Store License/Warehouse</div>
+                        <div class="mobile">Mobile: 7505837172</div>
                     </div>
 
-                    <div class="section">
+                    <div class="info-section">
+                        <h3>मूल जानकारी | Basic Information</h3>
                         <div class="info-row">
-                            <span class="info-label">Customer Name:</span>
+                            <span class="info-label">क्र. | Sr. No.:</span>
+                            <span class="info-value" id="invoiceNumber2">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ग्राहक का नाम | Customer Name:</span>
                             <span class="info-value" id="customerName2">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Phone:</span>
+                            <span class="info-label">फोन | Phone:</span>
                             <span class="info-value" id="customerPhone2">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Village:</span>
+                            <span class="info-label">ग्राम व पता | Village & Address:</span>
                             <span class="info-value" id="customerVillage2">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Invoice Date:</span>
-                            <span class="info-value" id="invoiceDate2">-</span>
+                            <span class="info-label">विकासखण्ड | Development Block:</span>
+                            <span class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Employee:</span>
-                            <span class="info-value" id="employeeName2">-</span>
+                            <span class="info-label">जनपद | District:</span>
+                            <span class="info-value">जालौन (कालपी) | Jalaun (Kalpi)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">दिनांक | Date:</span>
+                            <span class="info-value" id="invoiceDate2">-</span>
                         </div>
                     </div>
 
-                    <div class="section">
-                        <div class="section-title">STORAGE ITEMS</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Truck No</th>
-                                    <th>Quantity</th>
-                                    <th>Rate (₹)</th>
-                                    <th>Rent (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="itemsTable2">
-                                <tr>
-                                    <td colspan="4" class="text-center">Loading...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>क्र.<br>Sr. No.</th>
+                                <th>ट्रक नं.<br>Truck No.</th>
+                                <th>कुल भरती बोरे<br>Total Bags</th>
+                                <th>बोरी बिक्री मात्रा<br>Sold Qty</th>
+                                <th>शेष मात्रा<br>Remaining</th>
+                                <th>भाड़ा<br>Rent (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTable2">
+                            <tr>
+                                <td colspan="6">लोड हो रहा है...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="terms">
+                        <h3>नियम एवं शर्तें | Terms and Conditions</h3>
+                        <ol>
+                            <li>यदि प्रतिनिधि के कटौती प्राप्त होने पर कोई भी आलू की बीमा दावे का अधिकार नहीं होगा।</li>
+                            <li>यदि कोई भी प्राकृतिक आपदा के कारण आलू की क्षति होने पर कोल्ड की जिम्मेदारी नहीं होगी।</li>
+                            <li>आलू में कोई कटौती प्राप्त होने पर कोल्ड की कोई जिम्मेदारी नहीं होगी।</li>
+                            <li>यदि उचित समय पर भाड़ा भुगतान न होने पर 15 दिन की अतिरिक्त मोहलत दी जाएगी।</li>
+                            <li>यदि 15 दिनों में भाड़ा भुगतान न होने पर आलू की नीलामी की जाएगी।</li>
+                            <li>आलू 15 जून तक निकालना अनिवार्य है अन्यथा 1-जुलाई से अतिरिक्त भाड़ा लागू होगा।</li>
+                        </ol>
                     </div>
 
-                    <div class="total-section">
-                        <div class="label">TOTAL RENT AMOUNT</div>
-                        <div class="amount" id="totalAmount2">₹0</div>
-                    </div>
-
-                    <div class="signature">
-                        <strong>Signature: ___________________</strong>
-                    </div>
-
-                    <div class="footer">
-                        <p><strong>Status:</strong> Ready for Exit</p>
-                        <p style="margin-top: 8px;">This is a computer-generated invoice.</p>
+                    <div class="signature-section">
+                        <div class="signature-box">
+                            <div class="signature-line">ग्राहक के हस्ताक्षर<br>Customer's Signature</div>
+                        </div>
+                        <div class="signature-box">
+                            <div class="signature-line">प्रबंधक के हस्ताक्षर<br>Manager's Signature<br><span id="employeeName2" style="font-size: 10px;">-</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -359,6 +382,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const entryId = urlParams.get('entry_id');
         const roomEntryId = urlParams.get('room_entry_id');
+
+        // Capitalize first letter function
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1);
+        }
 
         // Decode JWT to get employee details
         function getEmployeeFromToken() {
@@ -382,11 +411,10 @@
             try {
                 if (!entryId || !roomEntryId) {
                     document.getElementById('loading').innerHTML = `
-                        <i class="bi bi-exclamation-circle" style="font-size: 48px; color: orange;"></i>
-                        <p style="color: orange; font-weight: bold;">Invoice Access Error</p>
-                        <p style="margin-top: 10px;">This page must be accessed by clicking on an entry from the Recent Room Entries table.</p>
+                        <p style="color: orange; font-weight: bold;">रसीद एक्सेस त्रुटि</p>
+                        <p style="margin-top: 10px;">इस पृष्ठ को Entry Room से एक्सेस किया जाना चाहिए।</p>
                         <button class="btn" onclick="window.location.href='/entry-room'" style="margin-top: 20px;">
-                            <i class="bi bi-arrow-left"></i> Go to Entry Room
+                            ← Entry Room पर जाएं
                         </button>
                     `;
                     return;
@@ -397,12 +425,6 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const entry = await entryResponse.json();
-
-                // Fetch room entry details
-                const roomEntryResponse = await fetch(`/api/room-entries/${roomEntryId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const roomEntry = await roomEntryResponse.json();
 
                 // Fetch rent per item from system settings
                 const settingsResponse = await fetch('/api/settings/rent_per_item', {
@@ -422,10 +444,29 @@
 
                 // Get employee details
                 const employee = getEmployeeFromToken();
-                const employeeName = employee?.email?.split('@')[0] || 'N/A';
 
-                // Format dates
-                const invoiceDate = new Date().toLocaleString('en-IN');
+                // Fetch employee name from API
+                let employeeName = 'N/A';
+                if (employee?.user_id) {
+                    try {
+                        const userResponse = await fetch(`/api/users/${employee.user_id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (userResponse.ok) {
+                            const user = await userResponse.json();
+                            employeeName = capitalizeText(user.name);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching employee name:', error);
+                    }
+                }
+
+                // Format date as DD/MM/YYYY
+                const invoiceDate = new Date().toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
 
                 // Calculate total amount
                 let totalRent = 0;
@@ -445,11 +486,11 @@
                 // Save invoice to database
                 const invoice = await saveInvoice(entry.id, employee.user_id, totalRent, items);
 
-                // Populate both invoices with same data including invoice number
+                // Populate both invoices
                 populateInvoice('1', entry, customerEntries, rentPerItem, invoiceDate, employeeName, invoice.invoice_number);
                 populateInvoice('2', entry, customerEntries, rentPerItem, invoiceDate, employeeName, invoice.invoice_number);
 
-                // Update status to "Ready for Exit" (2nd last step)
+                // Update status to "Ready for Exit"
                 await updateEntryStatus(entryId, 'READY', 'Invoice generated - Ready for exit');
 
                 // Show invoice
@@ -459,9 +500,8 @@
             } catch (error) {
                 console.error('Error loading invoice:', error);
                 document.getElementById('loading').innerHTML = `
-                    <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: red;"></i>
-                    <p style="color: red;">Error loading invoice: ${error.message}</p>
-                    <button class="btn btn-secondary" onclick="window.history.back()">Go Back</button>
+                    <p style="color: red;">रसीद लोड करने में त्रुटि: ${error.message}</p>
+                    <button class="btn btn-secondary" onclick="window.history.back()">वापस जाएं</button>
                 `;
             }
         }
@@ -490,7 +530,6 @@
                 return await response.json();
             } catch (error) {
                 console.error('Error saving invoice:', error);
-                // Return a fallback invoice object
                 return { invoice_number: 'TEMP-' + Date.now() };
             }
         }
@@ -500,15 +539,15 @@
             document.getElementById('invoiceNumber' + suffix).textContent = invoiceNumber;
 
             // Populate customer info
-            document.getElementById('customerName' + suffix).textContent = entry.name;
+            document.getElementById('customerName' + suffix).textContent = capitalizeText(entry.name);
             document.getElementById('customerPhone' + suffix).textContent = entry.phone;
-            document.getElementById('customerVillage' + suffix).textContent = entry.village || 'N/A';
+            document.getElementById('customerVillage' + suffix).textContent = capitalizeText(entry.village) || 'N/A';
             document.getElementById('invoiceDate' + suffix).textContent = invoiceDate;
             document.getElementById('employeeName' + suffix).textContent = employeeName;
 
             // Populate items table
             let totalRent = 0;
-            const itemsTableHtml = customerEntries.map(e => {
+            const itemsTableHtml = customerEntries.map((e, index) => {
                 const quantity = e.expected_quantity || 0;
                 const rent = quantity * rentPerItem;
                 totalRent += rent;
@@ -516,16 +555,25 @@
 
                 return `
                     <tr>
-                        <td class="${truckColor} font-bold">${e.truck_number}</td>
+                        <td>${index + 1}</td>
+                        <td style="color: ${truckColor === 'text-green-600' ? 'green' : 'orange'}; font-weight: bold;">${e.truck_number}</td>
                         <td>${quantity}</td>
-                        <td>₹${rentPerItem.toFixed(2)}</td>
+                        <td>0</td>
+                        <td>${quantity}</td>
                         <td>₹${rent.toFixed(2)}</td>
                     </tr>
                 `;
             }).join('');
 
-            document.getElementById('itemsTable' + suffix).innerHTML = itemsTableHtml;
-            document.getElementById('totalAmount' + suffix).textContent = '₹' + totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            // Add total row
+            const totalRow = `
+                <tr class="total-row">
+                    <td colspan="5" style="text-align: right;"><strong>कुल भाड़ा | Total Rent:</strong></td>
+                    <td><strong>₹${totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong></td>
+                </tr>
+            `;
+
+            document.getElementById('itemsTable' + suffix).innerHTML = itemsTableHtml + totalRow;
         }
 
         async function updateEntryStatus(entryId, eventType, notes) {
@@ -552,7 +600,7 @@
             const numMatch = truckNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num < 600 ? 'text-green-600' : 'text-orange-600';
+                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700';
         }

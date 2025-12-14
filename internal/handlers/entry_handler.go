@@ -98,13 +98,13 @@ func (h *EntryHandler) GetCountByCategory(w http.ResponseWriter, r *http.Request
 	}
 
 	// Calculate next number based on category
-	// SEED: 1-599 range (next = count + 1)
-	// SELL: 600-1500 range (next = 600 + count)
+	// SEED: 1-1500 range (next = count + 1)
+	// SELL: 1501-3000 range (next = 1501 + count)
 	var next int
 	if category == "seed" {
 		next = count + 1
 	} else if category == "sell" {
-		next = 600 + count
+		next = 1501 + count
 	}
 
 	w.Header().Set("Content-Type", "application/json")

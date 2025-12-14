@@ -15,6 +15,7 @@ type Claims struct {
 	Email               string `json:"email"`
 	Role                string `json:"role"`
 	HasAccountantAccess bool   `json:"has_accountant_access"`
+	IsActive            bool   `json:"is_active"`
 	jwt.RegisteredClaims
 }
 
@@ -35,6 +36,7 @@ func (j *JWTManager) GenerateToken(user *models.User) (string, error) {
 		Email:               user.Email,
 		Role:                user.Role,
 		HasAccountantAccess: user.HasAccountantAccess,
+		IsActive:            user.IsActive,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

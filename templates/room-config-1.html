@@ -717,7 +717,7 @@
             const numMatch = truckNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num < 600 ? 'text-green-600' : 'text-orange-600';
+                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700';
         }

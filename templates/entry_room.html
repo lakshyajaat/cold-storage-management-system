@@ -1013,82 +1013,80 @@
                 // Format dates
                 const entryDate = new Date(entry.created_at).toLocaleString('en-IN');
                 const roomEntryDate = new Date(roomEntry.created_at).toLocaleString('en-IN');
-                const printDate = new Date().toLocaleString('en-IN');
+                const printDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-                // Create receipt HTML (2 copies side by side)
+                // Generate random weight between 55-57 kg (whole numbers)
+                const randomWeight = Math.floor(Math.random() * (58 - 55) + 55);
+
+                // Determine category from truck number (SEED: 1-1500, SELL: 1501-3000)
+                const truckNum = parseInt(roomEntry.truck_number.split('/')[0]);
+                const category = truckNum <= 1500 ? 'बीज' : 'मोटा';
+
+                // Create receipt HTML (2 copies side by side) - Hindi Format
                 const receiptHTML = `
                     <div class="receipt">
                         <div class="header">
-                            <h1>COLD STORAGE</h1>
-                            <p>Entry Receipt</p>
+                            <h1>गुड़ कृपा कोल्ड स्टोर</h1>
+                            <p>Gud Kripa Cold Store</p>
+                            <p>कोल्ड स्टोर लाइसेंस/गोदाम | Cold Store License/Warehouse</p>
+                            <p style="font-weight: bold; margin-top: 2px;">Mobile: 7505837172</p>
                         </div>
 
                         <div class="truck-banner">
                             ${roomEntry.truck_number}
                         </div>
 
-                        <div class="info-row">
-                            <div class="info-item">
-                                <span class="label">Customer:</span>
-                                <span class="value">${entry.name}</span>
+                        <div class="info-section">
+                            <div class="info-row">
+                                <span class="label">ग्राहक का नाम | Customer:</span>
+                                <span class="value">${capitalizeText(entry.name)}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">Phone:</span>
+                            <div class="info-row">
+                                <span class="label">फोन | Phone:</span>
                                 <span class="value">${entry.phone}</span>
                             </div>
-                        </div>
-
-                        <div class="info-row">
-                            <div class="info-item">
-                                <span class="label">Village:</span>
-                                <span class="value">${entry.village || 'N/A'}</span>
+                            <div class="info-row">
+                                <span class="label">ग्राम व पता | Village:</span>
+                                <span class="value">${capitalizeText(entry.village) || 'N/A'}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">Category:</span>
-                                <span class="value">${entry.truck_category.toUpperCase()}</span>
-                            </div>
-                        </div>
-
-                        <div class="location-section">
-                            <div class="section-title">STORAGE LOCATION</div>
-                            <div class="location-grid">
-                                <div><strong>Room:</strong> ${roomEntry.room_no}</div>
-                                <div><strong>Floor:</strong> ${roomEntry.floor}</div>
-                                <div><strong>Gatar:</strong> ${roomEntry.gate_no}</div>
+                            <div class="info-row">
+                                <span class="label">दिनांक | Date:</span>
+                                <span class="value">${printDate}</span>
                             </div>
                         </div>
 
                         <div class="quantity-section">
-                            <div class="quantity-label">Quantity</div>
-                            <div class="quantity-value">${roomEntry.quantity} units</div>
+                            <div class="quantity-label">कुल भरती बोरे | Total Bags</div>
+                            <div class="quantity-value">${roomEntry.quantity} बोरे</div>
                         </div>
 
-                        <div class="pricing-section">
-                            <div class="pricing-title">RENT PRICING</div>
-                            <div class="pricing-row">
-                                <span>Rate per Unit:</span>
-                                <span>₹${ratePerUnit.toLocaleString('en-IN')}</span>
-                            </div>
-                            <div class="pricing-row">
-                                <span>Total Units:</span>
-                                <span>${roomEntry.quantity} units</span>
-                            </div>
-                            <div class="pricing-total">
-                                <span>Grand Total:</span>
-                                <span>₹${grandTotal.toLocaleString('en-IN')}</span>
+                        <div class="weight-section">
+                            <div class="weight-label">प्राप्त हुआ भार (प्रति बैग):</div>
+                            <div class="weight-value">${randomWeight} किग्रा</div>
+                        </div>
+
+                        <div class="category-section">
+                            <div class="category-label">श्रेणी:</div>
+                            <div class="category-value">${category}</div>
+                        </div>
+
+                        <div class="terms-section">
+                            <div class="terms-title">शर्तें:</div>
+                            <div class="terms-text">
+                                स्पेशल-1, पुखराज एवं कुफरी मोहन किस्म के आलू के गलने की जिम्मेदारी माल मालिक की होगी। आलू भंडारण की अवधि 15 फरवरी से 15 नवम्बर तक माल की सुरक्षा एवं संरक्षण की जिम्मेदारी शीतगृह स्वामी की होगी। इसके पश्चात बिना किसी सूचना के माल का भंडारण एवं खराब होना, दोनों की पूर्ण जिम्मेदारी माल मालिक की होगी।
                             </div>
                         </div>
 
-                        <div class="employee-section">
-                            <div><strong>Employee ID:</strong> #${employee?.user_id || 'N/A'}</div>
-                            <div><strong>Role:</strong> ${employee?.role?.toUpperCase() || 'N/A'}</div>
-                            <div class="timestamp">${printDate}</div>
+                        <div class="signature-section">
+                            <div class="signature-box">
+                                <div class="signature-line">ग्राहक के हस्ताक्षर<br>Customer Signature</div>
+                            </div>
+                            <div class="signature-box">
+                                <div class="signature-line">प्रबंधक के हस्ताक्षर<br>Manager Signature</div>
+                            </div>
                         </div>
 
-                        <div class="footer">
-                            ${roomEntry.remark ? '<div class="remark">Note: ' + roomEntry.remark + '</div>' : ''}
-                            <p>This is a computer-generated receipt</p>
-                        </div>
+                        ${roomEntry.remark ? '<div class="remark">टिप्पणी | Note: ' + roomEntry.remark + '</div>' : ''}
                     </div>
                 `;
 
@@ -1134,13 +1132,18 @@
                                 margin-bottom: 8px;
                             }
                             .header h1 {
-                                font-size: 16px;
+                                font-size: 18px;
                                 font-weight: bold;
                             }
                             .header p {
-                                font-size: 9px;
-                                color: #666;
-                                margin-top: 3px;
+                                font-size: 8px;
+                                color: #000;
+                                margin-top: 2px;
+                            }
+                            .info-section {
+                                border: 2px solid #000;
+                                padding: 8px;
+                                margin-bottom: 8px;
                             }
                             .truck-banner {
                                 border: 2px solid #000;
@@ -1155,8 +1158,10 @@
                             }
                             .info-row {
                                 display: flex;
-                                gap: 6px;
-                                margin-bottom: 6px;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-bottom: 8px;
+                                padding: 4px 0;
                             }
                             .info-item {
                                 flex: 1;
@@ -1165,18 +1170,17 @@
                                 background: white;
                             }
                             .label {
-                                font-size: 7px;
-                                color: #000;
-                                font-weight: bold;
-                                display: block;
-                                text-transform: uppercase;
-                            }
-                            .value {
                                 font-size: 10px;
                                 color: #000;
                                 font-weight: bold;
-                                display: block;
-                                margin-top: 2px;
+                                display: inline-block;
+                                min-width: 120px;
+                            }
+                            .value {
+                                font-size: 12px;
+                                color: #000;
+                                font-weight: bold;
+                                display: inline-block;
                             }
                             .location-section {
                                 border: 1px solid #000;
@@ -1217,6 +1221,44 @@
                             }
                             .quantity-value {
                                 font-size: 20px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .weight-section {
+                                border: 2px solid #000;
+                                padding: 8px;
+                                margin: 8px 0;
+                                background: white;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            }
+                            .weight-label {
+                                font-size: 10px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .weight-value {
+                                font-size: 14px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .category-section {
+                                border: 2px solid #000;
+                                padding: 8px;
+                                margin: 8px 0;
+                                background: white;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            }
+                            .category-label {
+                                font-size: 10px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .category-value {
+                                font-size: 14px;
                                 font-weight: bold;
                                 color: #000;
                             }
@@ -1289,6 +1331,55 @@
                                 font-size: 7px;
                                 color: #000;
                             }
+                            .terms-section {
+                                border: 2px solid #000;
+                                padding: 6px;
+                                margin: 8px 0;
+                                background: white;
+                            }
+                            .terms-title {
+                                font-size: 11px;
+                                font-weight: bold;
+                                text-align: center;
+                                background: #000;
+                                color: white;
+                                padding: 4px;
+                                margin-bottom: 6px;
+                            }
+                            .terms-list {
+                                font-size: 11px;
+                                line-height: 1.5;
+                                margin-left: 12px;
+                                padding: 0;
+                            }
+                            .terms-list li {
+                                margin-bottom: 3px;
+                            }
+                            .terms-text {
+                                font-size: 11px;
+                                line-height: 1.6;
+                                padding: 8px;
+                                text-align: justify;
+                                color: #000;
+                            }
+                            .signature-section {
+                                display: flex;
+                                justify-content: space-between;
+                                margin-top: 15px;
+                                padding-top: 8px;
+                                border-top: 2px solid #000;
+                            }
+                            .signature-box {
+                                flex: 1;
+                                text-align: center;
+                            }
+                            .signature-line {
+                                border-top: 2px solid #000;
+                                margin-top: 30px;
+                                padding-top: 4px;
+                                font-size: 8px;
+                                font-weight: bold;
+                            }
                             .print-button {
                                 background: #4CAF50;
                                 color: white;
@@ -1337,7 +1428,7 @@
             const numMatch = truckNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num < 600 ? 'text-green-600' : 'text-orange-600';
+                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700';
         }

@@ -58,7 +58,7 @@ func main() {
 	pageHandler := handlers.NewPageHandler()
 
 	// Initialize middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
+	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userRepo)
 	corsMiddleware := middleware.NewCORS(cfg)
 
 	// Create router

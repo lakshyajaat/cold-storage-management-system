@@ -284,12 +284,12 @@
         }
 
         function getTruckColor(truckNumber) {
-            // Extract the numeric part from truck number (e.g., "001/100" -> 001, "605/200" -> 605)
+            // Extract the numeric part from truck number (e.g., "0001/100" -> 0001, "1605/200" -> 1605)
             const numMatch = truckNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                // SEED: 1-599 (green), SELL: 600+ (orange)
-                return num < 600 ? 'text-green-600' : 'text-orange-600';
+                // SEED: 1-1500 (green), SELL: 1501-3000 (orange)
+                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700'; // Default color
         }

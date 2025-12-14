@@ -60,6 +60,11 @@ func (s *UserService) DeleteUser(ctx context.Context, id int) error {
 	return s.Repo.Delete(ctx, id)
 }
 
+// ToggleActiveStatus toggles the is_active status of a user
+func (s *UserService) ToggleActiveStatus(ctx context.Context, userID int, isActive bool) error {
+	return s.Repo.ToggleActiveStatus(ctx, userID, isActive)
+}
+
 // Signup creates a new user with hashed password
 func (s *UserService) Signup(ctx context.Context, req *models.SignupRequest) (*models.AuthResponse, error) {
 	// Validate input

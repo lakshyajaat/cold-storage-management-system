@@ -74,6 +74,7 @@ func NewRouter(
 	usersAPI.HandleFunc("/{id}", userHandler.GetUser).Methods("GET")
 	usersAPI.HandleFunc("/{id}", userHandler.UpdateUser).Methods("PUT")
 	usersAPI.HandleFunc("/{id}", userHandler.DeleteUser).Methods("DELETE")
+	usersAPI.HandleFunc("/{id}/toggle-active", userHandler.ToggleActiveStatus).Methods("PATCH")
 
 	// Protected API routes - Customers
 	customersAPI := r.PathPrefix("/api/customers").Subrouter()

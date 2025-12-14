@@ -27,14 +27,14 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 	}
 
 	// Generate truck number: NO/QUANTITY format
-	// SEED: 001-599 range (sequential from 1)
-	// SELL: 600-1500 range (sequential from 600)
+	// SEED: 001-1500 range (sequential from 1)
+	// SELL: 1501-3000 range (sequential from 1501)
 	var truckNumber string
 	if e.TruckCategory == "seed" {
 		nextNumber := count + 1
-		truckNumber = fmt.Sprintf("%03d/%d", nextNumber, e.ExpectedQuantity)
+		truckNumber = fmt.Sprintf("%04d/%d", nextNumber, e.ExpectedQuantity)
 	} else if e.TruckCategory == "sell" {
-		nextNumber := 600 + count
+		nextNumber := 1501 + count
 		truckNumber = fmt.Sprintf("%d/%d", nextNumber, e.ExpectedQuantity)
 	}
 	e.TruckNumber = truckNumber

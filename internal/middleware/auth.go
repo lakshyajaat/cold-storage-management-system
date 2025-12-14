@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"cold-backend/internal/auth"
+	"cold-backend/internal/repositories"
 )
 
 type contextKey string
@@ -17,10 +18,14 @@ const HasAccountantAccessKey contextKey = "has_accountant_access"
 
 type AuthMiddleware struct {
 	jwtManager *auth.JWTManager
+	userRepo   *repositories.UserRepository
 }
 
-func NewAuthMiddleware(jwtManager *auth.JWTManager) *AuthMiddleware {
-	return &AuthMiddleware{jwtManager: jwtManager}
+func NewAuthMiddleware(jwtManager *auth.JWTManager, userRepo *repositories.UserRepository) *AuthMiddleware {
+	return &AuthMiddleware{
+		jwtManager: jwtManager,
+		userRepo:   userRepo,
+	}
 }
 
 // Authenticate is a middleware that validates JWT tokens
@@ -46,11 +51,24 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		// Add user info to context
-		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-		ctx = context.WithValue(ctx, EmailKey, claims.Email)
-		ctx = context.WithValue(ctx, RoleKey, claims.Role)
-		ctx = context.WithValue(ctx, HasAccountantAccessKey, claims.HasAccountantAccess)
+		// Check database for current user status (for immediate permission updates)
+		user, err := m.userRepo.Get(r.Context(), claims.UserID)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusUnauthorized)
+			return
+		}
+
+		// Check if user is active (from database, not token)
+		if !user.IsActive {
+			http.Error(w, "Account suspended. Please contact administrator.", http.StatusForbidden)
+			return
+		}
+
+		// Add user info to context (using database values for real-time updates)
+		ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+		ctx = context.WithValue(ctx, EmailKey, user.Email)
+		ctx = context.WithValue(ctx, RoleKey, user.Role)
+		ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -112,10 +130,31 @@ func (m *AuthMiddleware) RequireRole(allowedRoles ...string) func(http.Handler) 
 				return
 			}
 
-			// Check if user has one of the allowed roles
+			// Check database for current user status (for immediate permission updates)
+			user, err := m.userRepo.Get(r.Context(), claims.UserID)
+			if err != nil {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") {
+					http.Redirect(w, r, "/login", http.StatusFound)
+					return
+				}
+				http.Error(w, "User not found", http.StatusUnauthorized)
+				return
+			}
+
+			// Check if user is active (from database)
+			if !user.IsActive {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") {
+					http.Redirect(w, r, "/login?error=suspended", http.StatusFound)
+					return
+				}
+				http.Error(w, "Account suspended. Please contact administrator.", http.StatusForbidden)
+				return
+			}
+
+			// Check if user has one of the allowed roles (from database)
 			hasRole := false
 			for _, role := range allowedRoles {
-				if claims.Role == role {
+				if user.Role == role {
 					hasRole = true
 					break
 				}
@@ -130,11 +169,11 @@ func (m *AuthMiddleware) RequireRole(allowedRoles ...string) func(http.Handler) 
 				return
 			}
 
-			// Add user info to context
-			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-			ctx = context.WithValue(ctx, EmailKey, claims.Email)
-			ctx = context.WithValue(ctx, RoleKey, claims.Role)
-			ctx = context.WithValue(ctx, HasAccountantAccessKey, claims.HasAccountantAccess)
+			// Add user info to context (using database values)
+			ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+			ctx = context.WithValue(ctx, EmailKey, user.Email)
+			ctx = context.WithValue(ctx, RoleKey, user.Role)
+			ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -178,9 +217,30 @@ func (m *AuthMiddleware) RequireAccountantAccess(next http.Handler) http.Handler
 			return
 		}
 
-		// Check if user has accountant access
+		// Check database for current user status (for immediate permission updates)
+		user, err := m.userRepo.Get(r.Context(), claims.UserID)
+		if err != nil {
+			if strings.Contains(r.Header.Get("Accept"), "text/html") {
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			}
+			http.Error(w, "User not found", http.StatusUnauthorized)
+			return
+		}
+
+		// Check if user is active (from database)
+		if !user.IsActive {
+			if strings.Contains(r.Header.Get("Accept"), "text/html") {
+				http.Redirect(w, r, "/login?error=suspended", http.StatusFound)
+				return
+			}
+			http.Error(w, "Account suspended. Please contact administrator.", http.StatusForbidden)
+			return
+		}
+
+		// Check if user has accountant access (from database)
 		// Allow: admin, accountant role, OR employee with has_accountant_access=true
-		hasAccess := claims.Role == "admin" || claims.Role == "accountant" || claims.HasAccountantAccess
+		hasAccess := user.Role == "admin" || user.Role == "accountant" || user.HasAccountantAccess
 
 		if !hasAccess {
 			if strings.Contains(r.Header.Get("Accept"), "text/html") {
@@ -191,11 +251,11 @@ func (m *AuthMiddleware) RequireAccountantAccess(next http.Handler) http.Handler
 			return
 		}
 
-		// Add user info to context
-		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-		ctx = context.WithValue(ctx, EmailKey, claims.Email)
-		ctx = context.WithValue(ctx, RoleKey, claims.Role)
-		ctx = context.WithValue(ctx, HasAccountantAccessKey, claims.HasAccountantAccess)
+		// Add user info to context (using database values)
+		ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+		ctx = context.WithValue(ctx, EmailKey, user.Email)
+		ctx = context.WithValue(ctx, RoleKey, user.Role)
+		ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

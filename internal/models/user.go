@@ -11,6 +11,7 @@ type User struct {
 	PasswordHash         string    `json:"-"` // Never expose in JSON
 	Role                 string    `json:"role"` // admin or employee
 	HasAccountantAccess  bool      `json:"has_accountant_access"` // employees can have accountant access
+	IsActive             bool      `json:"is_active"` // true = active, false = paused/suspended
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
 }

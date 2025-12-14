@@ -216,6 +216,12 @@
             }
         }
 
+        // Capitalize first letter of text (for outputs)
+        function capitalizeText(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1);
+        }
+
         // Auto-apply capitalization to all text inputs
         document.addEventListener('DOMContentLoaded', function() {
             const textInputs = document.querySelectorAll('input[type="text"]:not([disabled]):not([type="email"]):not([type="tel"])');
@@ -262,9 +268,12 @@
                 // Load rent setting first
                 await loadRentSetting();
 
-                // Fetch all entries
-                const entriesResponse = await fetch('/api/entries', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Fetch all entries (with cache-busting to prevent stale data)
+                const entriesResponse = await fetch('/api/entries?_=' + Date.now(), {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
                 });
 
                 if (!entriesResponse.ok) {
@@ -277,20 +286,37 @@
 
                 const entries = await entriesResponse.json();
 
-                // Fetch all rent payments
-                const paymentsResponse = await fetch('/api/rent-payments', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Fetch all rent payments (with cache-busting to prevent stale data)
+                const paymentsResponse = await fetch('/api/rent-payments?_=' + Date.now(), {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
                 });
 
+                let allPayments = [];
                 if (!paymentsResponse.ok) {
-                    if (paymentsResponse.status === 401 || paymentsResponse.status === 403) {
+                    if (paymentsResponse.status === 403) {
+                        console.error('Permission denied: User does not have accountant access');
+                        alert('You do not have permission to view payment data. Please contact an administrator to grant you accountant access.');
+                        // Continue with empty payments array
+                    } else if (paymentsResponse.status === 401) {
                         window.location.href = '/login';
                         return;
+                    } else {
+                        throw new Error(`Failed to load payments: ${await paymentsResponse.text()}`);
                     }
-                    throw new Error(`Failed to load payments: ${await paymentsResponse.text()}`);
-                }
+                } else {
+                    allPayments = await paymentsResponse.json();
+                    console.log('Total payments loaded:', allPayments.length);
+                    console.log('All payments:', allPayments);
 
-                const allPayments = await paymentsResponse.json();
+                    // Log summary of all payments
+                    console.log('Payment summary:');
+                    allPayments.forEach(p => {
+                        console.log(`  ${p.receipt_number}: phone="${p.customer_phone}", name="${p.customer_name}", amount=${p.amount_paid}`);
+                    });
+                }
 
                 // Group entries by phone number (customer)
                 const customerMap = new Map();
@@ -332,6 +358,10 @@
                     if (customer) {
                         customer.totalPaid += payment.amount_paid;
                         customer.payments.push(payment);
+                    } else {
+                        console.warn('Payment not matched to any customer:', payment);
+                        console.warn('Customer phone from payment:', payment.customer_phone);
+                        console.warn('Available customer phones:', Array.from(customerMap.values()).map(c => c.phone));
                     }
                 });
 
@@ -389,7 +419,7 @@
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="text-2xl font-bold">${customer.name}</h3>
+                                    <h3 class="text-2xl font-bold">${capitalizeText(customer.name)}</h3>
                                     ${customer.balance > 0 ? `
                                         <span class="badge bg-red-500 text-white">
                                             Outstanding: ₹${customer.balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}
@@ -407,7 +437,7 @@
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-geo-alt"></i>
-                                        <span>${customer.village}</span>
+                                        <span>${capitalizeText(customer.village)}</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-truck"></i>
@@ -454,7 +484,7 @@
                                 <div>
                                     <h4 class="font-bold mb-3 flex items-center gap-2">
                                         <i class="bi bi-truck"></i>
-                                        All Trucks for ${customer.name}
+                                        All Trucks for ${capitalizeText(customer.name)}
                                     </h4>
                                     <table class="w-full">
                                         <thead class="bg-gray-100 border-2 border-black">
@@ -535,7 +565,7 @@
             const numMatch = truckNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num < 600 ? 'text-green-600' : 'text-orange-600';
+                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700';
         }
@@ -590,7 +620,7 @@
 
                     if (response.ok) {
                         const user = await response.json();
-                        employeeCache[userId] = `${user.name}`;
+                        employeeCache[userId] = capitalizeText(user.name);
                     } else {
                         employeeCache[userId] = `Employee #${userId}`;
                     }
@@ -612,7 +642,7 @@
         function openPaymentModal(index) {
             currentPaymentCustomer = allCustomerAccounts[index];
 
-            document.getElementById('paymentCustomerName').textContent = currentPaymentCustomer.name;
+            document.getElementById('paymentCustomerName').textContent = capitalizeText(currentPaymentCustomer.name);
             document.getElementById('paymentCustomerPhone').textContent = currentPaymentCustomer.phone;
             document.getElementById('paymentTotalAmount').textContent = '₹' + currentPaymentCustomer.balance.toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('paymentAmount').value = currentPaymentCustomer.balance.toFixed(2);
@@ -641,6 +671,13 @@
                 }
             }
 
+            // Validate customer data
+            if (!currentPaymentCustomer || !currentPaymentCustomer.phone || !currentPaymentCustomer.name) {
+                alert('Error: Customer information is missing. Please refresh the page and try again.');
+                console.error('Invalid customer data:', currentPaymentCustomer);
+                return;
+            }
+
             try {
                 // Get first entry ID for this customer
                 const entryId = currentPaymentCustomer.trucks[0].id;
@@ -648,21 +685,25 @@
                 // Calculate new balance
                 const newBalance = currentPaymentCustomer.balance - amount;
 
+                const paymentData = {
+                    entry_id: entryId,
+                    customer_name: currentPaymentCustomer.name,
+                    customer_phone: currentPaymentCustomer.phone,
+                    total_rent: currentPaymentCustomer.totalRent,
+                    amount_paid: amount,
+                    balance: newBalance < 0 ? 0 : newBalance,
+                    notes: notes || `Payment for account - ${currentPaymentCustomer.name}`
+                };
+
+                console.log('Creating payment with data:', paymentData);
+
                 const response = await fetch('/api/rent-payments', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        entry_id: entryId,
-                        customer_name: currentPaymentCustomer.name,
-                        customer_phone: currentPaymentCustomer.phone,
-                        total_rent: currentPaymentCustomer.totalRent,
-                        amount_paid: amount,
-                        balance: newBalance < 0 ? 0 : newBalance,
-                        notes: notes || `Payment for account - ${currentPaymentCustomer.name}`
-                    })
+                    body: JSON.stringify(paymentData)
                 });
 
                 if (!response.ok) {
@@ -672,14 +713,16 @@
 
                 const result = await response.json();
 
-                // Open receipt in new window
+                // Close modal and reload accounts first
+                closePaymentModal();
+                await loadCustomerAccounts(); // Reload to update balances
+
+                // Then show success message and open receipt
+                alert(`Payment of ₹${amount.toFixed(2)} collected successfully!\nReceipt: ${result.receipt_number}`);
+
                 if (result.receipt_number) {
                     window.open(`/payment-receipt?receipt=${result.receipt_number}`, '_blank', 'width=800,height=600');
                 }
-
-                alert(`Payment of ₹${amount.toFixed(2)} collected successfully!\nReceipt: ${result.receipt_number}`);
-                closePaymentModal();
-                loadCustomerAccounts(); // Reload to update balances
 
             } catch (error) {
                 console.error('Error processing payment:', error);
