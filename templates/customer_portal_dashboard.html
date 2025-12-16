@@ -110,7 +110,7 @@
         <!-- Gate Pass Request Form -->
         <div class="neu-card">
             <h2 class="text-xl font-bold mb-4 text-gray-800">Request Gate Pass</h2>
-            <form id="gatePassForm" onsubmit="submitGatePassRequest(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form id="gatePassForm" onsubmit="submitGatePassRequest(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="block font-semibold mb-2">Select Truck</label>
                     <select id="truckSelect" class="neu-input" required>
@@ -123,10 +123,14 @@
                     <p class="text-xs text-gray-500 mt-1">Max: <span id="maxQuantity">0</span></p>
                 </div>
                 <div>
+                    <label class="block font-semibold mb-2">Recipient Name *</label>
+                    <input type="text" id="recipientName" class="neu-input" placeholder="Who will receive items" required>
+                </div>
+                <div>
                     <label class="block font-semibold mb-2">Remarks (optional)</label>
                     <input type="text" id="remarks" class="neu-input" placeholder="Add any notes">
                 </div>
-                <div class="md:col-span-3">
+                <div class="md:col-span-4">
                     <button type="submit" class="neu-button w-full md:w-auto">Submit Request</button>
                 </div>
             </form>
@@ -141,6 +145,7 @@
                         <tr class="border-b-2">
                             <th class="text-left p-2">Date</th>
                             <th class="text-left p-2">Truck</th>
+                            <th class="text-left p-2">Recipient</th>
                             <th class="text-left p-2">Requested</th>
                             <th class="text-left p-2">Approved</th>
                             <th class="text-left p-2">Picked Up</th>
@@ -257,10 +262,18 @@
                 const date = new Date(gp.issued_at).toLocaleDateString('en-IN');
                 const statusClass = `status-${gp.status.replace(/ /g, '_')}`;
 
+                // Extract recipient from remarks (format: "Recipient: Name | ...")
+                let recipient = '-';
+                if (gp.remarks) {
+                    const match = gp.remarks.match(/Recipient:\s*([^|]+)/i);
+                    if (match) recipient = match[1].trim();
+                }
+
                 const row = `
                     <tr class="border-b">
                         <td class="p-2">${date}</td>
                         <td class="p-2">${gp.truck_number}</td>
+                        <td class="p-2 font-semibold">${recipient}</td>
                         <td class="p-2">${gp.requested_quantity}</td>
                         <td class="p-2">${gp.approved_quantity || '-'}</td>
                         <td class="p-2">${gp.total_picked_up || 0}</td>
@@ -271,7 +284,7 @@
             });
 
             if (dashboardData.gate_passes.length === 0) {
-                historyTable.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No gate pass requests yet</td></tr>';
+                historyTable.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No gate pass requests yet</td></tr>';
             }
         }
 
@@ -298,11 +311,23 @@
 
             const truck = document.getElementById('truckSelect').value;
             const quantity = parseInt(document.getElementById('quantity').value);
+            const recipientName = document.getElementById('recipientName').value.trim();
             const remarks = document.getElementById('remarks').value;
 
             if (!truck) {
                 alert('Please select a truck');
                 return;
+            }
+
+            if (!recipientName) {
+                alert('Please enter recipient name');
+                return;
+            }
+
+            // Combine recipient and remarks
+            let finalRemarks = `Recipient: ${recipientName}`;
+            if (remarks) {
+                finalRemarks += ` | ${remarks}`;
             }
 
             try {
@@ -316,7 +341,7 @@
                     body: JSON.stringify({
                         truck_number: truck,
                         requested_quantity: quantity,
-                        remarks: remarks
+                        remarks: finalRemarks
                     })
                 });
 
@@ -343,6 +368,15 @@
                 window.location.href = '/login';
             });
         }
+
+        // Auto-refresh dashboard every 30 seconds
+        setInterval(async () => {
+            try {
+                await loadDashboard();
+            } catch (e) {
+                console.error('Auto-refresh failed:', e);
+            }
+        }, 30000);
     </script>
 </body>
 </html>

@@ -81,6 +81,12 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 			currentInventory = 0
 		}
 
+		// Get pending quantity from gate passes (approved/pending but not yet picked up)
+		pendingQty, err := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
+		if err != nil {
+			pendingQty = 0
+		}
+
 		// Get rent payments for this entry
 		payments, err := s.RentPaymentRepo.GetByEntryID(ctx, entry.ID)
 		if err != nil {
@@ -113,14 +119,23 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 			rentPerItem = entryTotalRent / float64(entry.ExpectedQuantity)
 		}
 
-		// Calculate how much customer can take out
-		// canTakeOut = MIN(currentInventory, FLOOR(totalPaid / rentPerItem))
-		canTakeOut := currentInventory
+		// Calculate effective available inventory (current - already committed in pending gate passes)
+		effectiveInventory := currentInventory - pendingQty
+		if effectiveInventory < 0 {
+			effectiveInventory = 0
+		}
+
+		// Calculate how much customer can take out (considering pending gate passes)
+		// canTakeOut = MIN(effectiveInventory, FLOOR(totalPaid / rentPerItem))
+		canTakeOut := effectiveInventory
 		if rentPerItem > 0 {
 			maxAllowedByPayment := int(entryTotalPaid / rentPerItem)
 			if maxAllowedByPayment < canTakeOut {
 				canTakeOut = maxAllowedByPayment
 			}
+		}
+		if canTakeOut < 0 {
+			canTakeOut = 0
 		}
 
 		trucks = append(trucks, TruckInfo{
@@ -175,8 +190,21 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 		currentInventory = 0
 	}
 
-	if currentInventory < request.RequestedQuantity {
-		return nil, fmt.Errorf("insufficient inventory: requested %d, available %d", request.RequestedQuantity, currentInventory)
+	// Get pending quantity from existing gate passes
+	pendingQty, err := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
+	if err != nil {
+		pendingQty = 0
+	}
+
+	// Calculate effective available inventory
+	effectiveInventory := currentInventory - pendingQty
+	if effectiveInventory < 0 {
+		effectiveInventory = 0
+	}
+
+	if effectiveInventory < request.RequestedQuantity {
+		return nil, fmt.Errorf("insufficient inventory: requested %d, available %d (current: %d, pending in gate passes: %d)",
+			request.RequestedQuantity, effectiveInventory, currentInventory, pendingQty)
 	}
 
 	// Get rent payments to check payment allowance

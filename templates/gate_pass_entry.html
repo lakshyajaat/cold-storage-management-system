@@ -235,6 +235,7 @@
                             <tr class="border-b-2 border-black">
                                 <th class="text-left p-2 font-bold">Thock NO</th>
                                 <th class="text-left p-2 font-bold">Customer</th>
+                                <th class="text-left p-2 font-bold">Recipient</th>
                                 <th class="text-left p-2 font-bold">Qty</th>
                                 <th class="text-left p-2 font-bold">Status</th>
                                 <th class="text-left p-2 font-bold">Expires In</th>
@@ -244,7 +245,7 @@
                         </thead>
                         <tbody id="gatePassesTableBody">
                             <tr>
-                                <td colspan="7" class="text-center p-4 text-gray-500">Loading gate passes...</td>
+                                <td colspan="8" class="text-center p-4 text-gray-500">Loading gate passes...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -375,6 +376,7 @@
         let totalPaid = 0;
         let balanceDue = 0;
         let selectedTruckEntry = null; // Track the selected truck's entry
+        let cachedRoomEntries = []; // Cache room entries - ALWAYS use this for inventory, NEVER expected_quantity
 
         // Fuzzy match function
         function fuzzyMatch(searchTerm, targetText) {
@@ -536,6 +538,9 @@
                 if (response.ok) {
                     const allRoomEntries = await response.json();
 
+                    // CACHE room entries globally for use in validateQuantityAndPayment
+                    cachedRoomEntries = allRoomEntries;
+
                     // Filter room entries for this customer's trucks
                     const customerRoomEntries = allRoomEntries.filter(re =>
                         truckNumbers.includes(re.truck_number)
@@ -558,19 +563,16 @@
                         availableSpan.classList.add('text-red-600');
                     }
                 } else {
-                    // Fallback to expected_quantity if API fails
-                    const totalInInventory = customerEntries.reduce((sum, entry) => {
-                        return sum + (entry.expected_quantity || 0);
-                    }, 0);
-                    document.getElementById('availableQuantity').textContent = totalInInventory;
+                    // API failed - show 0, NEVER use expected_quantity
+                    console.error('Room entries API returned non-ok status');
+                    cachedRoomEntries = [];
+                    document.getElementById('availableQuantity').textContent = '0';
                 }
             } catch (error) {
                 console.error('Error fetching room entries:', error);
-                // Fallback to expected_quantity
-                const totalInInventory = customerEntries.reduce((sum, entry) => {
-                    return sum + (entry.expected_quantity || 0);
-                }, 0);
-                document.getElementById('availableQuantity').textContent = totalInInventory;
+                // Error - show 0, NEVER use expected_quantity
+                cachedRoomEntries = [];
+                document.getElementById('availableQuantity').textContent = '0';
             }
         }
 
@@ -638,15 +640,23 @@
                 return;
             }
 
-            // Get available inventory based on selected truck
+            // Get available inventory from CACHED room_entries - NEVER use expected_quantity
+            const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
+            const truckNumbers = customerEntries.map(entry => entry.truck_number);
+
             let totalInInventory;
             if (selectedTruckEntry) {
-                // Specific truck selected - use only that truck's inventory
-                totalInInventory = selectedTruckEntry.expected_quantity || 0;
+                // Specific truck selected - use only that truck's room_entries quantity
+                const truckRoomEntries = cachedRoomEntries.filter(re =>
+                    re.truck_number === selectedTruckEntry.truck_number
+                );
+                totalInInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             } else {
-                // No truck selected - use total inventory
-                const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
-                totalInInventory = customerEntries.reduce((sum, entry) => sum + (entry.expected_quantity || 0), 0);
+                // No truck selected - use total room_entries for all customer trucks
+                const customerRoomEntries = cachedRoomEntries.filter(re =>
+                    truckNumbers.includes(re.truck_number)
+                );
+                totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
             // Calculate total payment available (existing + current)
@@ -837,12 +847,9 @@
                         availableInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                     }
                 } else {
-                    // Fallback to expected_quantity if API fails
-                    if (selectedTruckEntry) {
-                        availableInventory = selectedTruckEntry.expected_quantity || 0;
-                    } else {
-                        availableInventory = customerEntries.reduce((sum, entry) => sum + (entry.expected_quantity || 0), 0);
-                    }
+                    // API failed - show 0, NEVER use expected_quantity
+                    console.error('Room entries API failed in updateAvailabilityDisplay');
+                    availableInventory = 0;
                 }
 
                 // Update inventory display
@@ -871,11 +878,8 @@
                 }
             } catch (error) {
                 console.error('Error fetching room entries:', error);
-                // Use expected_quantity as fallback
-                const availableInventory = selectedTruckEntry
-                    ? selectedTruckEntry.expected_quantity || 0
-                    : customerEntries.reduce((sum, entry) => sum + (entry.expected_quantity || 0), 0);
-                document.getElementById('availableQuantity').textContent = availableInventory;
+                // Error - show 0, NEVER use expected_quantity
+                document.getElementById('availableQuantity').textContent = '0';
             }
         }
 
@@ -908,15 +912,23 @@
             const requestedQty = parseInt(document.getElementById('requestedQuantity').value);
             const paymentAmount = 0; // Payment field removed - always 0
 
-            // Get available inventory based on selected truck
+            // Get available inventory from CACHED room_entries - NEVER use expected_quantity
+            const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
+            const truckNumbers = customerEntries.map(entry => entry.truck_number);
+
             let totalInInventory;
             if (selectedTruckEntry) {
-                // Specific truck selected - use only that truck's inventory
-                totalInInventory = selectedTruckEntry.expected_quantity || 0;
+                // Specific truck selected - use only that truck's room_entries quantity
+                const truckRoomEntries = cachedRoomEntries.filter(re =>
+                    re.truck_number === selectedTruckEntry.truck_number
+                );
+                totalInInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             } else {
-                // No truck selected - use total inventory
-                const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
-                totalInInventory = customerEntries.reduce((sum, entry) => sum + (entry.expected_quantity || 0), 0);
+                // No truck selected - use total room_entries for all customer trucks
+                const customerRoomEntries = cachedRoomEntries.filter(re =>
+                    truckNumbers.includes(re.truck_number)
+                );
+                totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
             // Calculate total payment available (existing + current)
@@ -1064,7 +1076,7 @@
             const tbody = document.getElementById('gatePassesTableBody');
 
             if (gatePasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No gate passes yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No gate passes yet</td></tr>';
                 return;
             }
 
@@ -1091,6 +1103,13 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+
+                // Extract recipient from remarks
+                let recipient = '-';
+                if (gp.remarks) {
+                    const match = gp.remarks.match(/Recipient:\s*([^|]+)/i);
+                    if (match) recipient = match[1].trim();
+                }
 
                 // Calculate remaining time for pending gate passes
                 const remaining = gp.status === 'pending' ? getRemainingTime(gp.expires_at) : { text: '-', color: 'text-gray-400' };
@@ -1121,6 +1140,7 @@
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="p-2 font-bold ${truckColor}">${gp.truck_number}</td>
                         <td class="p-2">${gp.customer_name}</td>
+                        <td class="p-2 font-semibold text-purple-600">${recipient}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
                         <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${gp.status.toUpperCase()}</span></td>
                         <td class="p-2 text-xs ${remaining.color}">${remaining.text}</td>
@@ -1331,6 +1351,16 @@
             loadRecentGatePasses();
             loadCustomerRequests(); // Load customer requests
         });
+
+        // Auto-refresh gate passes and customer requests every 30 seconds
+        setInterval(async () => {
+            try {
+                await loadRecentGatePasses();
+                await loadCustomerRequests();
+            } catch (e) {
+                console.error('Auto-refresh failed:', e);
+            }
+        }, 30000);
     </script>
 
 </body>

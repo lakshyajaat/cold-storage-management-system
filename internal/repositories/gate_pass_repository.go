@@ -589,3 +589,25 @@ func (r *GatePassRepository) GetTotalApprovedQuantityForEntry(ctx context.Contex
 
 	return totalApproved, nil
 }
+
+// GetPendingQuantityForEntry calculates the remaining quantity yet to be picked up
+// from pending, approved, and partially_completed gate passes
+// This is used to show accurate "Can Take Out" values
+func (r *GatePassRepository) GetPendingQuantityForEntry(ctx context.Context, entryID int) (int, error) {
+	query := `
+		SELECT COALESCE(SUM(
+			COALESCE(approved_quantity, requested_quantity) - total_picked_up
+		), 0)
+		FROM gate_passes
+		WHERE entry_id = $1
+		AND status IN ('pending', 'approved', 'partially_completed')
+	`
+
+	var pendingQty int
+	err := r.DB.QueryRow(ctx, query, entryID).Scan(&pendingQty)
+	if err != nil {
+		return 0, err
+	}
+
+	return pendingQty, nil
+}

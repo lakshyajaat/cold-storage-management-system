@@ -99,7 +99,7 @@
                                 <tr class="border-b-2 border-black">
                                     <th class="text-left p-2 font-bold">Thock NO</th>
                                     <th class="text-left p-2 font-bold">Customer</th>
-                                    <th class="text-left p-2 font-bold">Phone</th>
+                                    <th class="text-left p-2 font-bold">Recipient</th>
                                     <th class="text-left p-2 font-bold">Room</th>
                                     <th class="text-left p-2 font-bold">Floor</th>
                                     <th class="text-left p-2 font-bold">Gatar</th>
@@ -256,14 +256,14 @@
                 <div class="neu-border bg-white p-6 mt-8">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
                         <i class="bi bi-clipboard-check text-blue-600"></i>
-                        Approved Passes
+                        Approved Passes - Record Pickup
                     </h2>
-                    <div id="approvedPasses" class="overflow-auto" style="max-height: 300px;">
+                    <div id="approvedPasses" class="overflow-auto" style="max-height: 400px;">
                         <table class="w-full text-sm">
                             <thead class="sticky top-0 bg-white">
                                 <tr class="border-b-2 border-black">
                                     <th class="text-left p-2 font-bold">Thock</th>
-                                    <th class="text-left p-2 font-bold">Qty</th>
+                                    <th class="text-left p-2 font-bold">Progress</th>
                                     <th class="text-left p-2 font-bold">Action</th>
                                 </tr>
                             </thead>
@@ -276,6 +276,99 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Record Pickup Modal -->
+    <div id="pickupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="neu-border bg-white p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-box-arrow-up text-green-600"></i>
+                Record Pickup
+            </h3>
+            <form id="pickupForm" onsubmit="submitPickup(event)">
+                <input type="hidden" id="pickupGatePassId">
+
+                <div class="mb-4 p-4 bg-blue-50 neu-border">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Truck:</p>
+                            <p class="font-bold text-xl" id="pickupTruckNumber"></p>
+                            <p class="text-sm text-gray-600 mt-2">Recipient:</p>
+                            <p class="font-bold text-purple-600" id="pickupRecipient"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Approved:</p>
+                            <p class="font-bold" id="pickupApprovedQty"></p>
+                            <p class="text-sm text-gray-600 mt-1">Picked Up:</p>
+                            <p class="font-bold text-green-600" id="pickupAlreadyPickedUp"></p>
+                            <p class="text-sm text-gray-600 mt-1">Remaining:</p>
+                            <p class="font-bold text-orange-600" id="pickupRemaining"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage Location -->
+                <div class="mb-4 p-4 bg-yellow-50 neu-border">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">📍 Storage Location (Items are stored here):</p>
+                    <div id="storageLocationInfo" class="text-center">
+                        <span class="text-gray-500">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Pickup Quantity *
+                    </label>
+                    <input
+                        type="number"
+                        id="pickupQuantity"
+                        required
+                        min="1"
+                        class="w-full neu-input"
+                        placeholder="Enter quantity being picked up now"
+                    >
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Room No</label>
+                        <select id="pickupRoomNo" class="w-full neu-input">
+                            <option value="">Select Room</option>
+                            <option value="1">Room 1</option>
+                            <option value="2">Room 2</option>
+                            <option value="3">Room 3</option>
+                            <option value="4">Room 4</option>
+                            <option value="G">Gallery</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Floor</label>
+                        <select id="pickupFloor" class="w-full neu-input">
+                            <option value="">Select Floor</option>
+                            <option value="1">Floor 1</option>
+                            <option value="2">Floor 2</option>
+                            <option value="3">Floor 3</option>
+                            <option value="4">Floor 4</option>
+                            <option value="5">Floor 5</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Remarks (Optional)</label>
+                    <textarea id="pickupRemarks" class="w-full neu-input" rows="2" placeholder="Any notes"></textarea>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" class="neu-button bg-green-500 text-white flex-1">
+                        <i class="bi bi-check-circle"></i> Record Pickup
+                    </button>
+                    <button type="button" onclick="closePickupModal()" class="neu-button bg-gray-300">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -351,6 +444,13 @@
                     minute: '2-digit'
                 });
 
+                // Extract recipient from remarks
+                let recipient = '-';
+                if (gp.remarks) {
+                    const match = gp.remarks.match(/Recipient:\s*([^|]+)/i);
+                    if (match) recipient = match[1].trim();
+                }
+
                 // Calculate remaining time
                 const remaining = getRemainingTime(gp.expires_at);
 
@@ -365,7 +465,7 @@
                         onclick='selectTicket(${JSON.stringify(gp)})'>
                         <td class="p-2 font-bold ${truckColor}">${gp.truck_number}</td>
                         <td class="p-2">${gp.customer_name}</td>
-                        <td class="p-2">${gp.customer_phone}</td>
+                        <td class="p-2 font-semibold text-purple-600">${recipient}</td>
                         <td class="p-2 font-semibold text-blue-600">${gp.room_no || '-'}</td>
                         <td class="p-2 font-semibold text-blue-600">${gp.floor || '-'}</td>
                         <td class="p-2 font-semibold text-blue-600">${gp.gate_no || '-'}</td>
@@ -520,31 +620,168 @@
         function displayApprovedPasses(passes) {
             const tbody = document.getElementById('approvedTableBody');
 
-            if (passes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">No approved passes</td></tr>';
+            // Include both approved and partially_completed gate passes
+            const activePasses = passes.filter(gp =>
+                gp.status === 'approved' || gp.status === 'partially_completed'
+            );
+
+            if (activePasses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">No approved passes waiting for pickup</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = passes.map(gp => {
+            tbody.innerHTML = activePasses.map(gp => {
                 const approvedQty = gp.approved_quantity || gp.requested_quantity;
+                const pickedUp = gp.total_picked_up || 0;
+                const remaining = approvedQty - pickedUp;
+
+                // Progress bar color
+                let progressColor = 'bg-orange-500';
+                let progressPercent = (pickedUp / approvedQty) * 100;
+                if (progressPercent >= 100) progressColor = 'bg-green-500';
+                else if (progressPercent >= 50) progressColor = 'bg-yellow-500';
+
+                // Action button - Record Pickup or Complete
+                let actionBtn = '';
+                if (remaining > 0) {
+                    actionBtn = `
+                        <button onclick='openPickupModal(${JSON.stringify(gp)})'
+                            class="neu-button bg-blue-500 text-white text-xs px-2 py-1">
+                            <i class="bi bi-box-arrow-up"></i> Pickup
+                        </button>
+                    `;
+                } else {
+                    actionBtn = `
+                        <button onclick="completeGatePass(${gp.id})"
+                            class="neu-button bg-green-500 text-white text-xs px-2 py-1">
+                            <i class="bi bi-check-circle"></i> Complete
+                        </button>
+                    `;
+                }
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="p-2 font-bold text-blue-600">${gp.truck_number}</td>
-                        <td class="p-2 font-bold">${approvedQty}</td>
                         <td class="p-2">
-                            <button onclick="completeGatePass(${gp.id})"
-                                class="neu-button bg-green-500 text-white text-xs px-2 py-1">
-                                <i class="bi bi-check-circle"></i> Complete
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold ${remaining === 0 ? 'text-green-600' : 'text-orange-600'}">${pickedUp}/${approvedQty}</span>
+                                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="${progressColor} h-full" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
                         </td>
+                        <td class="p-2">${actionBtn}</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        let currentPickupGatePass = null;
+
+        async function openPickupModal(gatePass) {
+            currentPickupGatePass = gatePass;
+            const approvedQty = gatePass.approved_quantity || gatePass.requested_quantity;
+            const pickedUp = gatePass.total_picked_up || 0;
+            const remaining = approvedQty - pickedUp;
+
+            // Extract recipient from remarks
+            let recipient = '-';
+            if (gatePass.remarks) {
+                const match = gatePass.remarks.match(/Recipient:\s*([^|]+)/i);
+                if (match) recipient = match[1].trim();
+            }
+
+            document.getElementById('pickupGatePassId').value = gatePass.id;
+            document.getElementById('pickupTruckNumber').textContent = gatePass.truck_number;
+            document.getElementById('pickupRecipient').textContent = recipient;
+            document.getElementById('pickupApprovedQty').textContent = approvedQty + ' items';
+            document.getElementById('pickupAlreadyPickedUp').textContent = pickedUp + ' items';
+            document.getElementById('pickupRemaining').textContent = remaining + ' items';
+            document.getElementById('pickupQuantity').value = remaining;
+            document.getElementById('pickupQuantity').max = remaining;
+            document.getElementById('pickupRemarks').value = '';
+
+            // Fetch storage location from room_entries
+            document.getElementById('storageLocationInfo').innerHTML = '<span class="text-gray-500">Loading...</span>';
+            try {
+                const response = await fetch('/api/room-entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const roomEntries = await response.json();
+                    const truckEntries = roomEntries.filter(re => re.truck_number === gatePass.truck_number);
+
+                    if (truckEntries.length > 0) {
+                        const locationHtml = truckEntries.map(re => `
+                            <div class="inline-block m-1 p-2 bg-white neu-border text-sm">
+                                <span class="font-bold text-blue-600">Room ${re.room_no}</span> |
+                                <span class="font-bold text-green-600">Floor ${re.floor}</span> |
+                                <span class="font-bold text-purple-600">Gate ${re.gate_no}</span> |
+                                <span class="font-bold">${re.quantity} items</span>
+                            </div>
+                        `).join('');
+                        document.getElementById('storageLocationInfo').innerHTML = locationHtml;
+
+                        // Pre-fill room and floor from first entry
+                        document.getElementById('pickupRoomNo').value = truckEntries[0].room_no || '';
+                        document.getElementById('pickupFloor').value = truckEntries[0].floor || '';
+                    } else {
+                        document.getElementById('storageLocationInfo').innerHTML = '<span class="text-red-500">No storage location found</span>';
+                        document.getElementById('pickupRoomNo').value = '';
+                        document.getElementById('pickupFloor').value = '';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching storage location:', error);
+                document.getElementById('storageLocationInfo').innerHTML = '<span class="text-red-500">Failed to load</span>';
+            }
+
+            document.getElementById('pickupModal').classList.remove('hidden');
+        }
+
+        function closePickupModal() {
+            document.getElementById('pickupModal').classList.add('hidden');
+            currentPickupGatePass = null;
+        }
+
+        async function submitPickup(event) {
+            event.preventDefault();
+
+            const gatePassId = parseInt(document.getElementById('pickupGatePassId').value);
+            const pickupData = {
+                gate_pass_id: gatePassId,
+                pickup_quantity: parseInt(document.getElementById('pickupQuantity').value),
+                room_no: document.getElementById('pickupRoomNo').value,
+                floor: document.getElementById('pickupFloor').value,
+                remarks: document.getElementById('pickupRemarks').value
+            };
+
+            try {
+                const response = await fetch('/api/gate-passes/pickup', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pickupData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                alert('Pickup recorded successfully! Inventory updated.');
+                closePickupModal();
+                loadApprovedPasses();
+
+            } catch (error) {
+                alert('Error recording pickup: ' + error.message);
+            }
+        }
+
         async function completeGatePass(gatePassId) {
-            if (!confirm('Mark this gate pass as completed (items physically taken)?')) {
+            if (!confirm('Mark this gate pass as completed? All items have been picked up.')) {
                 return;
             }
 

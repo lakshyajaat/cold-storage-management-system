@@ -128,6 +128,36 @@ func (s *GatePassService) ApproveGatePass(ctx context.Context, id int, req *mode
 		return errors.New("gate pass has expired - not approved within 30 hours")
 	}
 
+	// Validate approved quantity against available inventory
+	if req.Status == "approved" && gatePass.EntryID != nil {
+		// Get current inventory from room entries
+		currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, gatePass.TruckNumber)
+		if err != nil {
+			currentInventory = 0
+		}
+
+		// Get pending quantity from other gate passes (excluding this one)
+		pendingQty, err := s.GatePassRepo.GetPendingQuantityForEntry(ctx, *gatePass.EntryID)
+		if err != nil {
+			pendingQty = 0
+		}
+		// Subtract this gate pass's requested quantity since it's included in pending
+		pendingQty -= gatePass.RequestedQuantity
+
+		// Calculate effective available inventory
+		effectiveInventory := currentInventory - pendingQty
+		if effectiveInventory < 0 {
+			effectiveInventory = 0
+		}
+
+		// Validate approved quantity
+		if req.ApprovedQuantity > effectiveInventory {
+			return errors.New("insufficient inventory: approved quantity (" +
+				strconv.Itoa(req.ApprovedQuantity) + ") exceeds available stock (" +
+				strconv.Itoa(effectiveInventory) + ")")
+		}
+	}
+
 	// Use UpdateGatePassWithSource if request_source is provided
 	if req.RequestSource != "" {
 		err = s.GatePassRepo.UpdateGatePassWithSource(ctx, id, req.ApprovedQuantity, req.GateNo, req.Status, req.RequestSource, req.Remarks, userID)
@@ -149,8 +179,15 @@ func (s *GatePassService) CompleteGatePass(ctx context.Context, id int, userID i
 		return err
 	}
 
-	if gatePass.Status != "approved" {
-		return errors.New("gate pass must be approved before completion")
+	// Allow completion from approved or partially_completed status
+	if gatePass.Status != "approved" && gatePass.Status != "partially_completed" {
+		return errors.New("gate pass must be approved or partially completed before completion")
+	}
+
+	// CRITICAL FIX: Validate that items were actually picked up via RecordPickup
+	// This prevents completing gate passes with 0 pickup, which would cause inventory mismatch
+	if gatePass.TotalPickedUp == 0 {
+		return errors.New("cannot complete: no items picked up yet. Use Record Pickup to log items before completing")
 	}
 
 	err = s.GatePassRepo.CompleteGatePass(ctx, id)
@@ -222,26 +259,53 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 		return errors.New("pickup quantity must be greater than zero")
 	}
 
-	// Create pickup record
+	// CRITICAL FIX: Auto-fill storage location from room_entries if not provided
+	// This ensures inventory is ALWAYS reduced when pickup is recorded
+	roomNo := req.RoomNo
+	floor := req.Floor
+
+	if roomNo == "" || floor == "" {
+		// Get actual storage location from room_entries
+		roomEntries, err := s.RoomEntryRepo.ListByTruckNumber(ctx, gatePass.TruckNumber)
+		if err != nil {
+			return errors.New("failed to get storage location: " + err.Error())
+		}
+		if len(roomEntries) == 0 {
+			return errors.New("no storage location found for truck " + gatePass.TruckNumber + " - items must be assigned to storage first")
+		}
+
+		// Use the first room entry with available quantity
+		for _, re := range roomEntries {
+			if re.Quantity >= req.PickupQuantity {
+				roomNo = re.RoomNo
+				floor = re.Floor
+				break
+			}
+		}
+
+		// If no single room has enough, use the first one (will reduce what's available)
+		if roomNo == "" || floor == "" {
+			roomNo = roomEntries[0].RoomNo
+			floor = roomEntries[0].Floor
+		}
+	}
+
+	// Create pickup record with the resolved storage location
 	pickup := &models.GatePassPickup{
 		GatePassID:       req.GatePassID,
 		PickupQuantity:   req.PickupQuantity,
 		PickedUpByUserID: userID,
 	}
 
-	if req.RoomNo != "" {
-		pickup.RoomNo = &req.RoomNo
-	}
-	if req.Floor != "" {
-		pickup.Floor = &req.Floor
-	}
+	pickup.RoomNo = &roomNo
+	pickup.Floor = &floor
+
 	if req.Remarks != "" {
 		pickup.Remarks = &req.Remarks
 	}
 
 	// CRITICAL FIX: Execute all database operations in sequence with proper error handling
 	// TODO: Implement proper database transactions to ensure atomicity
-	// For now, we ensure all operations succeed or fail together
 
 	// Step 1: Create pickup record
 	err = s.PickupRepo.CreatePickup(ctx, pickup)
@@ -252,22 +316,16 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 	// Step 2: Update gate pass total_picked_up and status
 	err = s.GatePassRepo.UpdatePickupQuantity(ctx, req.GatePassID, req.PickupQuantity)
 	if err != nil {
-		// CRITICAL: Pickup was created but gate pass update failed
-		// This creates inconsistency - pickup exists but gate pass total not updated
 		return errors.New("CRITICAL ERROR: pickup created but gate pass update failed - " +
 			"manual intervention required for gate pass ID " + strconv.Itoa(req.GatePassID) + ": " + err.Error())
 	}
 
-	// Step 3: Update room inventory - reduce quantity
-	if req.RoomNo != "" && req.Floor != "" {
-		err = s.RoomEntryRepo.ReduceQuantity(ctx, gatePass.TruckNumber, req.RoomNo, req.Floor, req.PickupQuantity)
-		if err != nil {
-			// CRITICAL: Gate pass updated but room inventory not reduced
-			// This creates inconsistency - items marked as picked up but still in room
-			return errors.New("CRITICAL ERROR: gate pass updated but inventory reduction failed - " +
-				"manual inventory adjustment required for room " + req.RoomNo + ", floor " + req.Floor +
-				", truck " + gatePass.TruckNumber + ": " + err.Error())
-		}
+	// Step 3: ALWAYS reduce room inventory - this is mandatory now
+	err = s.RoomEntryRepo.ReduceQuantity(ctx, gatePass.TruckNumber, roomNo, floor, req.PickupQuantity)
+	if err != nil {
+		return errors.New("CRITICAL ERROR: gate pass updated but inventory reduction failed - " +
+			"manual inventory adjustment required for room " + roomNo + ", floor " + floor +
+			", truck " + gatePass.TruckNumber + ": " + err.Error())
 	}
 
 	return nil
