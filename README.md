@@ -1174,6 +1174,76 @@ python3 scripts/infrastructure/cold_auto_recovery.py --once
 
 ---
 
+## Cloudflare Tunnel (Web Access)
+
+The application is exposed to the internet via Cloudflare Tunnel for secure, encrypted access without opening firewall ports.
+
+### Architecture
+
+```
+Internet (HTTPS) → Cloudflare Edge → Tunnel (QUIC) → K3s Cluster
+                                          │
+              ┌───────────────────────────┼───────────────────────────┐
+              │                           │                           │
+        ┌─────▼─────┐              ┌─────▼─────┐              ┌─────▼─────┐
+        │cloudflared│              │cloudflared│              │cloudflared│
+        │  Pod 1    │              │  Pod 2    │              │  Pod 3    │
+        └───────────┘              └───────────┘              └───────────┘
+                                          │
+                          ┌───────────────┴───────────────┐
+                          ▼                               ▼
+                cold-backend-employee:8080      cold-backend-customer:8081
+```
+
+### Live URLs
+
+| Domain | Service | Status |
+|--------|---------|--------|
+| https://app.ailakshya.in | Employee Portal (Dev) | Active |
+| https://customer.ailakshya.in | Customer Portal (Dev) | Active |
+| https://gurukripacoldstore.in | Customer Portal (Prod) | Pending DNS |
+
+### HA Features
+
+- 3 cloudflared replicas spread across different nodes
+- PodDisruptionBudget ensures minimum 2 replicas always available
+- QUIC protocol for encrypted tunnel transport
+- Automatic failover if a tunnel pod fails
+- Pod anti-affinity prevents all replicas on same node
+
+### Tunnel Configuration
+
+**Files:** `k8s/cloudflare/`
+- `01-secret.yaml` - Tunnel credentials
+- `02-configmap.yaml` - Tunnel routing config
+- `03-deployment.yaml` - HA deployment + PDB
+- `04-service.yaml` - Metrics service
+
+### Managing the Tunnel
+
+```bash
+# Check tunnel status
+cloudflared tunnel info cold-storage
+
+# View tunnel pods
+kubectl get pods -l app=cloudflared
+
+# View tunnel logs
+kubectl logs -l app=cloudflared --tail=50
+
+# Add new DNS route
+cloudflared tunnel route dns cold-storage subdomain.domain.com
+```
+
+### Security
+
+- All traffic encrypted end-to-end (TLS at edge + QUIC in tunnel)
+- No ports exposed on firewall
+- Cloudflare DDoS protection included
+- Access logs available in Cloudflare dashboard
+
+---
+
 ## Troubleshooting
 
 ### Common Issues
