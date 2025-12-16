@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"cold-backend/internal/handlers"
 	"cold-backend/internal/middleware"
 )
@@ -22,6 +23,7 @@ func NewRouter(
 	adminActionLogHandler *handlers.AdminActionLogHandler,
 	gatePassHandler *handlers.GatePassHandler,
 	pageHandler *handlers.PageHandler,
+	healthHandler *handlers.HealthHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *mux.Router {
 	r := mux.NewRouter()
@@ -29,21 +31,19 @@ func NewRouter(
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// Public HTML pages
+	// Public HTML pages (NO AUTHENTICATION REQUIRED)
 	r.HandleFunc("/", pageHandler.LoginPage).Methods("GET")
 	r.HandleFunc("/login", pageHandler.LoginPage).Methods("GET")
+	r.HandleFunc("/logout", pageHandler.LogoutPage).Methods("GET")
 
-	// API routes - Authentication
+	// Public API routes - Authentication
 	r.HandleFunc("/auth/signup", authHandler.Signup).Methods("POST")
 	r.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
 
-	// Logout route
-	r.HandleFunc("/logout", pageHandler.LogoutPage).Methods("GET")
-
-	// Protected HTML pages
+	// Protected HTML pages - Client-side authentication via localStorage
+	// These pages load without server-side auth and use JavaScript to check localStorage
+	// Common pages (employee, admin, accountant)
 	r.HandleFunc("/dashboard", pageHandler.DashboardPage).Methods("GET")
-	r.HandleFunc("/admin/dashboard", pageHandler.AdminDashboardPage).Methods("GET")
-	r.HandleFunc("/accountant/dashboard", pageHandler.AccountantDashboardPage).Methods("GET")
 	r.HandleFunc("/item-search", pageHandler.ItemSearchPage).Methods("GET")
 	r.HandleFunc("/events", pageHandler.EventTracerPage).Methods("GET")
 	r.HandleFunc("/entry-room", pageHandler.EntryRoomPage).Methods("GET")
@@ -51,24 +51,25 @@ func NewRouter(
 	r.HandleFunc("/room-config-1", pageHandler.RoomConfig1Page).Methods("GET")
 	r.HandleFunc("/room-form-2", pageHandler.RoomForm2Page).Methods("GET")
 	r.HandleFunc("/loading-invoice", pageHandler.LoadingInvoicePage).Methods("GET")
-	r.HandleFunc("/rent", pageHandler.RentPage).Methods("GET")
-	r.HandleFunc("/rent-management", pageHandler.RentManagementPage).Methods("GET")
 	r.HandleFunc("/room-entry-edit", pageHandler.RoomEntryEditPage).Methods("GET")
 	r.HandleFunc("/payment-receipt", pageHandler.PaymentReceiptPage).Methods("GET")
 	r.HandleFunc("/verify-receipt", pageHandler.VerifyReceiptPage).Methods("GET")
 
-	// Unloading mode pages (for gate pass system)
+	// Unloading mode pages
 	r.HandleFunc("/gate-pass-entry", pageHandler.GatePassEntryPage).Methods("GET")
 	r.HandleFunc("/unloading-tickets", pageHandler.UnloadingTicketsPage).Methods("GET")
 
-	// Employee management page (admin only)
+	// Accountant pages
+	r.HandleFunc("/rent", pageHandler.RentPage).Methods("GET")
+	r.HandleFunc("/rent-management", pageHandler.RentManagementPage).Methods("GET")
+	r.HandleFunc("/accountant/dashboard", pageHandler.AccountantDashboardPage).Methods("GET")
+
+	// Admin-only pages
+	r.HandleFunc("/admin/dashboard", pageHandler.AdminDashboardPage).Methods("GET")
 	r.HandleFunc("/employees", pageHandler.EmployeesPage).Methods("GET")
-
-	// System settings page (admin only)
 	r.HandleFunc("/system-settings", pageHandler.SystemSettingsPage).Methods("GET")
-
-	// Admin reports page (admin only)
 	r.HandleFunc("/admin/report", pageHandler.AdminReportPage).Methods("GET")
+	r.HandleFunc("/infrastructure", pageHandler.InfrastructureMonitoringPage).Methods("GET")
 
 	// Protected API routes - System Settings
 	settingsAPI := r.PathPrefix("/api/settings").Subrouter()
@@ -171,6 +172,28 @@ func NewRouter(
 	gatePassAPI.HandleFunc("/{id}/pickups", gatePassHandler.GetPickupHistory).Methods("GET")
 	gatePassAPI.HandleFunc("/pickup", authMiddleware.RequireRole("employee", "admin")(http.HandlerFunc(gatePassHandler.RecordPickup)).ServeHTTP).Methods("POST")
 
+	// Protected API routes - Infrastructure Monitoring
+	infraHandler := handlers.NewInfrastructureHandler()
+	infraAPI := r.PathPrefix("/api/infrastructure").Subrouter()
+	infraAPI.Use(authMiddleware.Authenticate)
+	infraAPI.HandleFunc("/backup-status", infraHandler.GetBackupStatus).Methods("GET")
+	infraAPI.HandleFunc("/k3s-status", infraHandler.GetK3sStatus).Methods("GET")
+	infraAPI.HandleFunc("/postgresql-status", infraHandler.GetPostgreSQLStatus).Methods("GET")
+	infraAPI.HandleFunc("/postgresql-pods", infraHandler.GetPostgreSQLPods).Methods("GET")
+	infraAPI.HandleFunc("/vip-status", infraHandler.GetVIPStatus).Methods("GET")
+	infraAPI.HandleFunc("/backend-pods", infraHandler.GetBackendPods).Methods("GET")
+	infraAPI.HandleFunc("/trigger-backup", infraHandler.TriggerBackup).Methods("POST")
+	infraAPI.HandleFunc("/backup-schedule", infraHandler.UpdateBackupSchedule).Methods("POST")
+	infraAPI.HandleFunc("/failover", infraHandler.ExecuteFailover).Methods("POST")
+
+	// Health endpoints (no auth required - for Kubernetes probes)
+	r.HandleFunc("/health", healthHandler.BasicHealth).Methods("GET")
+	r.HandleFunc("/health/ready", healthHandler.ReadinessHealth).Methods("GET")
+	r.HandleFunc("/health/detailed", healthHandler.DetailedHealth).Methods("GET")
+
+	// Metrics endpoint (Prometheus format)
+	r.Handle("/metrics", promhttp.Handler())
+
 	return r
 }
 
@@ -178,6 +201,7 @@ func NewRouter(
 func NewCustomerRouter(
 	customerPortalHandler *handlers.CustomerPortalHandler,
 	pageHandler *handlers.PageHandler,
+	healthHandler *handlers.HealthHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *mux.Router {
 	r := mux.NewRouter()
@@ -204,6 +228,14 @@ func NewCustomerRouter(
 	customerAPI.Use(authMiddleware.AuthenticateCustomer)
 	customerAPI.HandleFunc("/dashboard", customerPortalHandler.GetDashboard).Methods("GET")
 	customerAPI.HandleFunc("/gate-pass-requests", customerPortalHandler.CreateGatePassRequest).Methods("POST")
+
+	// Health endpoints (no auth required - for Kubernetes probes)
+	r.HandleFunc("/health", healthHandler.BasicHealth).Methods("GET")
+	r.HandleFunc("/health/ready", healthHandler.ReadinessHealth).Methods("GET")
+	r.HandleFunc("/health/detailed", healthHandler.DetailedHealth).Methods("GET")
+
+	// Metrics endpoint (Prometheus format)
+	r.Handle("/metrics", promhttp.Handler())
 
 	return r
 }

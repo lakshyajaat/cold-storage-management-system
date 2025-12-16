@@ -6,6 +6,7 @@ type Customer struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	Phone     string    `json:"phone"`
+	SO        string    `json:"so"`
 	Village   string    `json:"village"`
 	Address   string    `json:"address"`
 	CreatedAt time.Time `json:"created_at"`
@@ -16,6 +17,7 @@ type Customer struct {
 type CreateCustomerRequest struct {
 	Name    string `json:"name"`
 	Phone   string `json:"phone"`
+	SO      string `json:"so"`
 	Village string `json:"village"`
 	Address string `json:"address"`
 }
@@ -24,6 +26,7 @@ type CreateCustomerRequest struct {
 type UpdateCustomerRequest struct {
 	Name    string `json:"name"`
 	Phone   string `json:"phone"`
+	SO      string `json:"so"`
 	Village string `json:"village"`
 	Address string `json:"address"`
 }

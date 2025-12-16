@@ -1,0 +1,61 @@
+---
+# Employee Portal LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-employee-lb
+  namespace: default
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.15.200
+    metallb.universe.tf/allow-shared-ip: cold-storage-vip
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: cold-backend
+    mode: employee
+
+---
+# Customer Portal LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-customer-lb
+  namespace: default
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.15.200
+    metallb.universe.tf/allow-shared-ip: cold-storage-vip
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  selector:
+    app: cold-backend
+    mode: customer
+
+---
+# Monitoring Dashboard LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-monitoring-lb
+  namespace: default
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.15.200
+    metallb.universe.tf/allow-shared-ip: cold-storage-vip
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: cold-backend

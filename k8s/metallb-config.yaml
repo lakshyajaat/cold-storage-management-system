@@ -1,0 +1,17 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: cold-storage-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.15.200/32  # Single VIP for all services
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: cold-storage-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - cold-storage-pool

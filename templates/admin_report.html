@@ -541,10 +541,12 @@
 
                 if (!response.ok) throw new Error('Failed to load users');
 
-                allUsers = await response.json();
+                allUsers = await response.json() || [];
                 displayUsers();
             } catch (error) {
                 console.error('Error loading users:', error);
+                allUsers = [];
+                displayUsers();
             }
         }
 
@@ -556,10 +558,12 @@
 
                 if (!response.ok) throw new Error('Failed to load entries');
 
-                allEntries = await response.json();
+                allEntries = await response.json() || [];
                 displayEntries();
             } catch (error) {
                 console.error('Error loading entries:', error);
+                allEntries = [];
+                displayEntries();
             }
         }
 
@@ -571,10 +575,12 @@
 
                 if (!response.ok) throw new Error('Failed to load room entries');
 
-                allRoomEntries = await response.json();
+                allRoomEntries = await response.json() || [];
                 displayRoomEntries();
             } catch (error) {
                 console.error('Error loading room entries:', error);
+                allRoomEntries = [];
+                displayRoomEntries();
             }
         }
 
@@ -586,10 +592,12 @@
 
                 if (!response.ok) throw new Error('Failed to load payments');
 
-                allPayments = await response.json();
+                allPayments = await response.json() || [];
                 displayPayments();
             } catch (error) {
                 console.error('Error loading payments:', error);
+                allPayments = [];
+                displayPayments();
             }
         }
 
@@ -601,10 +609,12 @@
 
                 if (!response.ok) throw new Error('Failed to load login logs');
 
-                allLoginLogs = await response.json();
+                allLoginLogs = await response.json() || [];
                 displayLoginLogs();
             } catch (error) {
                 console.error('Error loading login logs:', error);
+                allLoginLogs = [];
+                displayLoginLogs();
             }
         }
 
@@ -616,10 +626,12 @@
 
                 if (!response.ok) throw new Error('Failed to load edit logs');
 
-                allEditLogs = await response.json();
+                allEditLogs = await response.json() || [];
                 displayEditLogs();
             } catch (error) {
                 console.error('Error loading edit logs:', error);
+                allEditLogs = [];
+                displayEditLogs();
             }
         }
 
@@ -631,10 +643,12 @@
 
                 if (!response.ok) throw new Error('Failed to load admin actions');
 
-                allAdminActions = await response.json();
+                allAdminActions = await response.json() || [];
                 displayAdminActions();
             } catch (error) {
                 console.error('Error loading admin actions:', error);
+                allAdminActions = [];
+                displayAdminActions();
             }
         }
 
@@ -646,10 +660,12 @@
 
                 if (!response.ok) throw new Error('Failed to load gate passes');
 
-                allGatePasses = await response.json();
+                allGatePasses = await response.json() || [];
                 displayGatePasses();
             } catch (error) {
                 console.error('Error loading gate passes:', error);
+                allGatePasses = [];
+                displayGatePasses();
             }
         }
 
@@ -661,10 +677,12 @@
 
                 if (!response.ok) throw new Error('Failed to load expired gate passes');
 
-                allExpiredPasses = await response.json();
+                allExpiredPasses = await response.json() || [];
                 displayExpiredPasses();
             } catch (error) {
                 console.error('Error loading expired gate passes:', error);
+                allExpiredPasses = [];
+                displayExpiredPasses();
             }
         }
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/services"
 
@@ -22,6 +23,18 @@ func NewInvoiceHandler(s *services.InvoiceService) *InvoiceHandler {
 
 // CreateInvoice creates a new invoice
 func (h *InvoiceHandler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
+	// IDOR protection - only employees and admins can create invoices
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" && role != "employee" {
+		http.Error(w, "Forbidden - employee or admin access required", http.StatusForbidden)
+		return
+	}
+
 	var req models.CreateInvoiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -89,6 +102,18 @@ func (h *InvoiceHandler) GetCustomerInvoices(w http.ResponseWriter, r *http.Requ
 	customerID, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid customer ID", http.StatusBadRequest)
+		return
+	}
+
+	// CRITICAL FIX: IDOR protection - only employees, admins, and accountants can view customer invoices
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" && role != "employee" && role != "accountant" {
+		http.Error(w, "Forbidden - employee access required to view customer invoices", http.StatusForbidden)
 		return
 	}
 

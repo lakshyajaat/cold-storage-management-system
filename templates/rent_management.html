@@ -381,7 +381,7 @@
                     throw new Error(`Failed to load entries: ${await entriesResponse.text()}`);
                 }
 
-                const entries = await entriesResponse.json();
+                const entries = await entriesResponse.json() || [];
 
                 // Fetch all rent payments (with cache-busting to prevent stale data)
                 const paymentsResponse = await fetch('/api/rent-payments?_=' + Date.now(), {
@@ -404,7 +404,7 @@
                         throw new Error(`Failed to load payments: ${await paymentsResponse.text()}`);
                     }
                 } else {
-                    allPayments = await paymentsResponse.json();
+                    allPayments = await paymentsResponse.json() || [];
                     console.log('Total payments loaded:', allPayments.length);
                     console.log('All payments:', allPayments);
 
@@ -425,7 +425,7 @@
 
                 let allGatePasses = [];
                 if (gatePassesResponse.ok) {
-                    const gatePasses = await gatePassesResponse.json();
+                    const gatePasses = await gatePassesResponse.json() || [];
                     // Filter only completed gate passes
                     allGatePasses = gatePasses.filter(gp => gp.status === 'completed');
                     console.log('Completed gate passes loaded:', allGatePasses.length);

@@ -266,6 +266,77 @@ func (m *AuthMiddleware) RequireAdmin(next http.Handler) http.Handler {
 	return m.RequireRole("admin")(next)
 }
 
+// RequireAuth is a middleware for HTML pages that requires authentication but no specific role
+// Redirects to login if user is not authenticated or session is invalid
+func (m *AuthMiddleware) RequireAuth() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check for Authorization header (from JavaScript localStorage)
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				// For HTML pages, redirect to login instead of returning 401
+				if strings.Contains(r.Header.Get("Accept"), "text/html") || r.Header.Get("Accept") == "" {
+					http.Redirect(w, r, "/login", http.StatusFound)
+					return
+				}
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+
+			// Extract token from "Bearer <token>"
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") || r.Header.Get("Accept") == "" {
+					http.Redirect(w, r, "/login", http.StatusFound)
+					return
+				}
+				http.Error(w, "Invalid authorization format", http.StatusUnauthorized)
+				return
+			}
+
+			token := parts[1]
+			claims, err := m.jwtManager.ValidateToken(token)
+			if err != nil {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") || r.Header.Get("Accept") == "" {
+					http.Redirect(w, r, "/login?error=session_expired", http.StatusFound)
+					return
+				}
+				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+				return
+			}
+
+			// Check database for current user status (for immediate permission updates)
+			user, err := m.userRepo.Get(r.Context(), claims.UserID)
+			if err != nil {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") || r.Header.Get("Accept") == "" {
+					http.Redirect(w, r, "/login?error=user_not_found", http.StatusFound)
+					return
+				}
+				http.Error(w, "User not found", http.StatusUnauthorized)
+				return
+			}
+
+			// Check if user is active (from database, not token)
+			if !user.IsActive {
+				if strings.Contains(r.Header.Get("Accept"), "text/html") || r.Header.Get("Accept") == "" {
+					http.Redirect(w, r, "/login?error=account_suspended", http.StatusFound)
+					return
+				}
+				http.Error(w, "Account suspended. Please contact administrator.", http.StatusForbidden)
+				return
+			}
+
+			// Add user info to context (using database values for real-time updates)
+			ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+			ctx = context.WithValue(ctx, EmailKey, user.Email)
+			ctx = context.WithValue(ctx, RoleKey, user.Role)
+			ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // Customer authentication middleware
 
 const CustomerIDKey contextKey = "customer_id"

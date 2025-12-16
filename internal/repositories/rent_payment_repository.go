@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"time"
 	"cold-backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,19 +16,14 @@ func NewRentPaymentRepository(db *pgxpool.Pool) *RentPaymentRepository {
 }
 
 func (r *RentPaymentRepository) GenerateReceiptNumber(ctx context.Context) (string, error) {
-	now := time.Now()
-	datePrefix := now.Format("20060102")
-
-	var count int
-	err := r.DB.QueryRow(ctx,
-		`SELECT COUNT(*) FROM rent_payments WHERE receipt_number LIKE $1`,
-		fmt.Sprintf("RCP-%s-%%", datePrefix),
-	).Scan(&count)
+	// PERFORMANCE FIX: Use database sequence instead of COUNT for O(1) performance
+	var nextNum int
+	err := r.DB.QueryRow(ctx, "SELECT nextval('receipt_number_sequence')").Scan(&nextNum)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get next receipt number: %w", err)
 	}
 
-	receiptNumber := fmt.Sprintf("RCP-%s-%04d", datePrefix, count+1)
+	receiptNumber := fmt.Sprintf("RCP-%06d", nextNum)
 	return receiptNumber, nil
 }
 

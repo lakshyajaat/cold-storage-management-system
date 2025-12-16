@@ -25,6 +25,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *models.Create
 	customer := &models.Customer{
 		Name:    req.Name,
 		Phone:   req.Phone,
+		SO:      req.SO,
 		Village: req.Village,
 		Address: req.Address,
 	}
@@ -61,6 +62,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id int, req *model
 		ID:      id,
 		Name:    req.Name,
 		Phone:   req.Phone,
+		SO:      req.SO,
 		Village: req.Village,
 		Address: req.Address,
 	}

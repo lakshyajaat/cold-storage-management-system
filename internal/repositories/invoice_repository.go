@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"cold-backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,23 +18,14 @@ func NewInvoiceRepository(db *pgxpool.Pool) *InvoiceRepository {
 
 // GenerateInvoiceNumber generates a unique invoice number
 func (r *InvoiceRepository) GenerateInvoiceNumber(ctx context.Context) (string, error) {
-	now := time.Now()
-	// Format: INV-YYYYMMDD-NNNN (e.g., INV-20231213-0001)
-	datePrefix := now.Format("20060102")
-
-	// Get count of invoices created today
-	var count int
-	err := r.DB.QueryRow(ctx,
-		`SELECT COUNT(*) FROM invoices WHERE invoice_number LIKE $1`,
-		fmt.Sprintf("INV-%s-%%", datePrefix),
-	).Scan(&count)
-
+	// PERFORMANCE FIX: Use database sequence instead of COUNT for O(1) performance
+	var nextNum int
+	err := r.DB.QueryRow(ctx, "SELECT nextval('invoice_number_sequence')").Scan(&nextNum)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get next invoice number: %w", err)
 	}
 
-	// Increment and format with leading zeros
-	invoiceNumber := fmt.Sprintf("INV-%s-%04d", datePrefix, count+1)
+	invoiceNumber := fmt.Sprintf("INV-%06d", nextNum)
 	return invoiceNumber, nil
 }
 

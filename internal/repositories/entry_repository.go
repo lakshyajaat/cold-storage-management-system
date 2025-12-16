@@ -17,24 +17,33 @@ func NewEntryRepository(db *pgxpool.Pool) *EntryRepository {
 }
 
 func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
-	// Count existing entries for this category to get next sequential number
-	var count int
-	err := r.DB.QueryRow(ctx,
-		`SELECT COUNT(*) FROM entries WHERE truck_category=$1`,
-		e.TruckCategory).Scan(&count)
+	// CRITICAL FIX: Use database sequences instead of COUNT to prevent race conditions
+	// This ensures thread-safe, unique sequential numbering even with concurrent requests
+
+	var nextNumber int
+	var sequenceName string
+
+	if e.TruckCategory == "seed" {
+		sequenceName = "seed_entry_sequence"
+	} else if e.TruckCategory == "sell" {
+		sequenceName = "sell_entry_sequence"
+	} else {
+		return fmt.Errorf("invalid truck category: %s", e.TruckCategory)
+	}
+
+	// Get next number from sequence (atomic operation)
+	err := r.DB.QueryRow(ctx, fmt.Sprintf("SELECT nextval('%s')", sequenceName)).Scan(&nextNumber)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get next sequence number: %w", err)
 	}
 
 	// Generate truck number: NO/QUANTITY format
-	// SEED: 001-1500 range (sequential from 1)
-	// SELL: 1501-3000 range (sequential from 1501)
+	// SEED: 0001/quantity format
+	// SELL: 1501+/quantity format
 	var truckNumber string
 	if e.TruckCategory == "seed" {
-		nextNumber := count + 1
 		truckNumber = fmt.Sprintf("%04d/%d", nextNumber, e.ExpectedQuantity)
 	} else if e.TruckCategory == "sell" {
-		nextNumber := 1501 + count
 		truckNumber = fmt.Sprintf("%d/%d", nextNumber, e.ExpectedQuantity)
 	}
 	e.TruckNumber = truckNumber

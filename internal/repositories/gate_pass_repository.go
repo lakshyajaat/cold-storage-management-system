@@ -564,3 +564,28 @@ func (r *GatePassRepository) ListByCustomerID(ctx context.Context, customerID in
 
 	return gatePasses, rows.Err()
 }
+
+// GetTotalApprovedQuantityForEntry calculates the total approved quantity
+// across all completed and approved gate passes for a specific entry
+// This is used to prevent overselling - customer can't request more than available stock
+func (r *GatePassRepository) GetTotalApprovedQuantityForEntry(ctx context.Context, entryID int) (int, error) {
+	query := `
+		SELECT COALESCE(SUM(
+			CASE
+				WHEN approved_quantity IS NOT NULL THEN approved_quantity
+				ELSE requested_quantity
+			END
+		), 0)
+		FROM gate_passes
+		WHERE entry_id = $1
+		AND status IN ('approved', 'completed', 'partially_completed')
+	`
+
+	var totalApproved int
+	err := r.DB.QueryRow(ctx, query, entryID).Scan(&totalApproved)
+	if err != nil {
+		return 0, err
+	}
+
+	return totalApproved, nil
+}

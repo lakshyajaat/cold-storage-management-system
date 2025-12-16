@@ -66,6 +66,11 @@ func (h *EntryHandler) ListEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure we return empty array instead of null
+	if entries == nil {
+		entries = []*models.Entry{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
 }
@@ -78,6 +83,11 @@ func (h *EntryHandler) ListEntriesByCustomer(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Ensure we return empty array instead of null
+	if entries == nil {
+		entries = []*models.Entry{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

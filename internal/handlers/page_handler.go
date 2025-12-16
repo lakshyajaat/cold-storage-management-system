@@ -144,3 +144,8 @@ func (h *PageHandler) CustomerPortalLoginPage(w http.ResponseWriter, r *http.Req
 func (h *PageHandler) CustomerPortalDashboardPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "customer_portal_dashboard.html", nil)
 }
+
+// InfrastructureMonitoringPage serves infrastructure monitoring page
+func (h *PageHandler) InfrastructureMonitoringPage(w http.ResponseWriter, r *http.Request) {
+	h.templates.ExecuteTemplate(w, "infrastructure_monitoring.html", nil)
+}

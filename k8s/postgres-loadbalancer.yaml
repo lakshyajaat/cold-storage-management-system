@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-postgres-lb
+  namespace: default
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.15.200
+    metallb.universe.tf/allow-shared-ip: cold-storage-vip
+spec:
+  type: LoadBalancer
+  ports:
+  - name: postgresql
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    cnpg.io/cluster: cold-postgres
+    role: primary

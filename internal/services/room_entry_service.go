@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
@@ -44,6 +45,22 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 	entry, err := s.EntryRepo.Get(ctx, req.EntryID)
 	if err != nil {
 		return nil, errors.New("entry not found")
+	}
+
+	// CRITICAL FIX: Validate that room entry quantity doesn't exceed entry quantity
+	// Get total quantity already assigned to rooms for this truck number
+	totalAssigned, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, req.TruckNumber)
+	if err != nil {
+		// If error is just "no records", treat as 0
+		totalAssigned = 0
+	}
+
+	// Validate that new quantity + existing assignments don't exceed entry quantity
+	if totalAssigned+req.Quantity > entry.ExpectedQuantity {
+		return nil, errors.New("total room assignments would exceed entry quantity - " +
+			"entry has " + strconv.Itoa(entry.ExpectedQuantity) + " items, " +
+			strconv.Itoa(totalAssigned) + " already assigned, " +
+			"trying to assign " + strconv.Itoa(req.Quantity) + " more")
 	}
 
 	// Check if room entry already exists for this entry

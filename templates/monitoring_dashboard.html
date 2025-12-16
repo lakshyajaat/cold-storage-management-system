@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cold Storage Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Alert Banner -->
+    <div id="alertBanner" class="hidden bg-red-600 text-white p-4 fixed top-0 w-full z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <span id="alertMessage"></span>
+            <button onclick="dismissAlert()" class="text-white font-bold">✕</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-8 mt-16">
+        <h1 class="text-4xl font-bold mb-8">Infrastructure Monitoring</h1>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-6 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">Database Status</div>
+                <div id="dbStatus" class="text-2xl font-bold text-green-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">Active Connections</div>
+                <div id="activeConns" class="text-2xl font-bold text-blue-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">Response Time</div>
+                <div id="responseTime" class="text-2xl font-bold text-purple-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">Requests/min</div>
+                <div id="requestRate" class="text-2xl font-bold text-indigo-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">CPU Usage</div>
+                <div id="cpuUsage" class="text-2xl font-bold text-orange-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-xs text-gray-600">Active Alerts</div>
+                <div id="activeAlerts" class="text-2xl font-bold text-red-600">0</div>
+            </div>
+        </div>
+
+        <!-- System Metrics -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-bold mb-4">System Resources</h3>
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm text-gray-600">CPU</span>
+                            <span id="cpuPercent" class="text-sm font-bold">--</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="cpuBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm text-gray-600">Memory</span>
+                            <span id="memPercent" class="text-sm font-bold">--</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="memBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm text-gray-600">Disk</span>
+                            <span id="diskPercent" class="text-sm font-bold">--</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="diskBar" class="bg-yellow-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm text-gray-600">Database</span>
+                            <span id="dbPercent" class="text-sm font-bold">--</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="dbBar" class="bg-purple-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-bold mb-4">Request Metrics</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Total Requests:</span>
+                        <span id="totalRequests" class="text-sm font-bold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Success Rate:</span>
+                        <span id="successRate" class="text-sm font-bold text-green-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Avg Response:</span>
+                        <span id="avgResponse" class="text-sm font-bold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Errors/min:</span>
+                        <span id="errorRate" class="text-sm font-bold text-red-600">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-bold mb-4">Database Metrics</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Queries/sec:</span>
+                        <span id="queriesPerSec" class="text-sm font-bold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Connections:</span>
+                        <span id="dbConnections" class="text-sm font-bold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">DB Size:</span>
+                        <span id="dbSize" class="text-sm font-bold">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Uptime:</span>
+                        <span id="uptime" class="text-sm font-bold">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cluster Overview -->
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 class="text-2xl font-bold mb-4">Cluster Totals</h2>
+            <div class="grid grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600" id="clusterNodes">--</div>
+                    <div class="text-sm text-gray-600">Total Nodes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-600" id="clusterCPUs">--</div>
+                    <div class="text-sm text-gray-600">Total CPUs</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-purple-600" id="clusterMemory">--</div>
+                    <div class="text-sm text-gray-600">Total Memory</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-yellow-600" id="clusterDisk">--</div>
+                    <div class="text-sm text-gray-600">Total Disk</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- K3s Nodes Table -->
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 class="text-2xl font-bold mb-4">K3s Cluster Nodes</h2>
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-3 text-left">Node</th>
+                        <th class="p-3 text-left">Role</th>
+                        <th class="p-3 text-left">Status</th>
+                        <th class="p-3 text-left">CPU</th>
+                        <th class="p-3 text-left">Memory</th>
+                        <th class="p-3 text-left">Disk</th>
+                        <th class="p-3 text-left">Pods</th>
+                    </tr>
+                </thead>
+                <tbody id="nodesTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Database Pods Table -->
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 class="text-2xl font-bold mb-4">PostgreSQL Database Pods</h2>
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-3 text-left">Pod Name</th>
+                        <th class="p-3 text-left">Role</th>
+                        <th class="p-3 text-left">Status</th>
+                        <th class="p-3 text-left">Node</th>
+                        <th class="p-3 text-left">Disk Used</th>
+                        <th class="p-3 text-left">Disk Total</th>
+                        <th class="p-3 text-left">Connections</th>
+                        <th class="p-3 text-left">Replication Lag</th>
+                    </tr>
+                </thead>
+                <tbody id="dbPodsTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Alerts Table -->
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 class="text-2xl font-bold mb-4">Active Alerts</h2>
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-3 text-left">Severity</th>
+                        <th class="p-3 text-left">Type</th>
+                        <th class="p-3 text-left">Message</th>
+                        <th class="p-3 text-left">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Test Alert Button -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-xl font-bold mb-4">Test Alert System</h3>
+            <div class="flex gap-4">
+                <button onclick="createTestAlert('critical')" class="bg-red-600 text-white px-6 py-2 rounded">
+                    Create Critical Alert
+                </button>
+                <button onclick="createTestAlert('warning')" class="bg-yellow-500 text-white px-6 py-2 rounded">
+                    Create Warning Alert
+                </button>
+                <button onclick="createTestAlert('info')" class="bg-blue-500 text-white px-6 py-2 rounded">
+                    Create Info Alert
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        const severityColors = {
+            critical: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        };
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://' + window.location.host + '/ws');
+
+            ws.onmessage = function(event) {
+                const alert = JSON.parse(event.data);
+                addAlertToTable(alert);
+                showAlertBanner(alert);
+                updateStats();
+            };
+
+            ws.onclose = function() {
+                setTimeout(connectWebSocket, 1000);
+            };
+        }
+
+        function loadStats() {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    // Top stats cards
+                    document.getElementById('dbStatus').textContent = data.database_status;
+                    document.getElementById('dbStatus').className =
+                        data.database_status === 'healthy' ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
+
+                    document.getElementById('activeConns').textContent = data.active_connections;
+                    document.getElementById('responseTime').textContent = data.response_time_ms + 'ms';
+                    document.getElementById('activeAlerts').textContent = data.active_alerts;
+                    document.getElementById('requestRate').textContent = data.request_rate || 0;
+                    document.getElementById('cpuUsage').textContent = (data.cpu_percent || 0).toFixed(1) + '%';
+
+                    // System Resources with absolute values
+                    const cpu = data.cpu_percent || 0;
+                    const mem = data.memory_percent || 0;
+                    const disk = data.disk_percent || 0;
+
+                    // CPU - show as percentage (no absolute core count for current pod)
+                    document.getElementById('cpuPercent').textContent = cpu.toFixed(1) + '%';
+                    document.getElementById('cpuBar').style.width = cpu + '%';
+                    document.getElementById('cpuBar').className = cpu > 80 ? 'bg-red-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full';
+
+                    // Memory - show absolute values
+                    document.getElementById('memPercent').textContent =
+                        (data.memory_used || '--') + ' / ' + (data.memory_total || '--') + ' (' + mem.toFixed(1) + '%)';
+                    document.getElementById('memBar').style.width = mem + '%';
+                    document.getElementById('memBar').className = mem > 80 ? 'bg-red-500 h-2 rounded-full' : 'bg-green-500 h-2 rounded-full';
+
+                    // Disk - show absolute values
+                    document.getElementById('diskPercent').textContent =
+                        (data.disk_used || '--') + ' / ' + (data.disk_total || '--') + ' (' + disk.toFixed(1) + '%)';
+                    document.getElementById('diskBar').style.width = disk + '%';
+                    document.getElementById('diskBar').className = disk > 80 ? 'bg-red-500 h-2 rounded-full' : 'bg-yellow-500 h-2 rounded-full';
+
+                    // Database metric (based on connections usage: assume max 100 connections)
+                    const maxConnections = 100;
+                    const dbConnUsage = ((data.active_connections || 0) / maxConnections) * 100;
+                    const dbResponseTime = data.response_time_ms || 0;
+
+                    // Show connections usage percentage
+                    document.getElementById('dbPercent').textContent =
+                        data.active_connections + ' / ' + maxConnections + ' (' + dbConnUsage.toFixed(1) + '%)';
+                    document.getElementById('dbBar').style.width = dbConnUsage + '%';
+
+                    // Color based on response time health
+                    if (dbResponseTime > 500 || data.database_status !== 'healthy') {
+                        document.getElementById('dbBar').className = 'bg-red-500 h-2 rounded-full';
+                    } else if (dbResponseTime > 200) {
+                        document.getElementById('dbBar').className = 'bg-yellow-500 h-2 rounded-full';
+                    } else {
+                        document.getElementById('dbBar').className = 'bg-purple-500 h-2 rounded-full';
+                    }
+
+                    // Request Metrics
+                    document.getElementById('totalRequests').textContent = data.total_requests || 0;
+                    document.getElementById('successRate').textContent = (data.success_rate || 100).toFixed(1) + '%';
+                    document.getElementById('avgResponse').textContent = (data.avg_response || 0) + 'ms';
+                    document.getElementById('errorRate').textContent = data.error_rate || 0;
+
+                    // Database Metrics
+                    document.getElementById('queriesPerSec').textContent = data.queries_per_sec || 0;
+                    document.getElementById('dbConnections').textContent = data.active_connections;
+                    document.getElementById('dbSize').textContent = data.db_size || '--';
+                    document.getElementById('uptime').textContent = data.uptime || '--';
+
+                    // Cluster Totals
+                    if (data.cluster_totals) {
+                        document.getElementById('clusterNodes').textContent = data.cluster_totals.total_nodes || '--';
+                        document.getElementById('clusterCPUs').textContent = data.cluster_totals.total_cpus || '--';
+                        document.getElementById('clusterMemory').textContent = data.cluster_totals.total_memory || '--';
+                        document.getElementById('clusterDisk').textContent = data.cluster_totals.total_disk || '--';
+                    }
+
+                    // K3s Nodes Table
+                    if (data.nodes && data.nodes.length > 0) {
+                        const nodesTable = document.getElementById('nodesTable');
+                        nodesTable.innerHTML = data.nodes.map(node => {
+                            const statusClass = node.status === 'Ready' ? 'text-green-600' : 'text-red-600';
+                            const cpuClass = node.cpu_percent > 80 ? 'text-red-600' : 'text-gray-900';
+                            const memClass = node.memory_percent > 80 ? 'text-red-600' : 'text-gray-900';
+                            const diskClass = node.disk_percent > 80 ? 'text-red-600' : 'text-gray-900';
+
+                            return `
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="p-3 font-semibold">${node.name}</td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-1 rounded text-xs ${node.role === 'Control Plane' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                            ${node.role}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 ${statusClass} font-semibold">${node.status}</td>
+                                    <td class="p-3 ${cpuClass}">${node.cpu_percent.toFixed(1)}%</td>
+                                    <td class="p-3 ${memClass}">
+                                        <div>${node.memory_used} / ${node.memory_total}</div>
+                                        <div class="text-xs text-gray-500">(${node.memory_percent.toFixed(1)}%)</div>
+                                    </td>
+                                    <td class="p-3 ${diskClass}">
+                                        <div>${node.disk_used} / ${node.disk_total}</div>
+                                        <div class="text-xs text-gray-500">(${node.disk_percent.toFixed(1)}%)</div>
+                                    </td>
+                                    <td class="p-3">${node.pods_running}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+
+                    // Database Pods Table
+                    if (data.database_pods && data.database_pods.length > 0) {
+                        const dbPodsTable = document.getElementById('dbPodsTable');
+                        dbPodsTable.innerHTML = data.database_pods.map(pod => {
+                            const statusClass = pod.status === 'Running' ? 'text-green-600' : 'text-red-600';
+                            const roleClass = pod.role === 'Primary' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
+
+                            return `
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="p-3 font-semibold">${pod.name}</td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-1 rounded text-xs font-bold ${roleClass}">
+                                            ${pod.role}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 ${statusClass} font-semibold">${pod.status}</td>
+                                    <td class="p-3 text-sm text-gray-600">${pod.node}</td>
+                                    <td class="p-3">${pod.disk_used}</td>
+                                    <td class="p-3">${pod.disk_total}</td>
+                                    <td class="p-3">${pod.connections}</td>
+                                    <td class="p-3 text-sm">${pod.replication_lag || 'N/A'}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                });
+        }
+
+        function loadAlerts() {
+            fetch('/api/alerts')
+                .then(r => r.json())
+                .then(alerts => {
+                    const tbody = document.getElementById('alertsTable');
+                    tbody.innerHTML = alerts.filter(a => !a.resolved).map(alert => `
+                        <tr class="border-b">
+                            <td class="p-3">
+                                <span class="${severityColors[alert.severity]} text-white px-3 py-1 rounded text-sm">
+                                    ${alert.severity}
+                                </span>
+                            </td>
+                            <td class="p-3">${alert.type}</td>
+                            <td class="p-3">${alert.message}</td>
+                            <td class="p-3">${new Date(alert.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        function addAlertToTable(alert) {
+            loadAlerts();
+        }
+
+        function showAlertBanner(alert) {
+            if (alert.severity === 'critical') {
+                const banner = document.getElementById('alertBanner');
+                const message = document.getElementById('alertMessage');
+                message.textContent = `🚨 ${alert.message}`;
+                banner.classList.remove('hidden');
+            }
+        }
+
+        function dismissAlert() {
+            document.getElementById('alertBanner').classList.add('hidden');
+        }
+
+        function createTestAlert(severity) {
+            const messages = {
+                critical: 'Database connection lost - immediate attention required',
+                warning: 'High response time detected - performance degraded',
+                info: 'System backup completed successfully'
+            };
+
+            fetch('/api/test-alert', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    severity: severity,
+                    type: 'test_alert',
+                    message: messages[severity]
+                })
+            });
+        }
+
+        function updateStats() {
+            loadStats();
+            loadAlerts();
+        }
+
+        // Initialize
+        connectWebSocket();
+        updateStats();
+        setInterval(updateStats, 10000);
+    </script>
+</body>
+</html>

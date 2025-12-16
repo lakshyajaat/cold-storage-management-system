@@ -503,30 +503,24 @@
         // Load customer phones from database
         async function loadCustomerPhones() {
             try {
-                const response = await fetch('/api/entries', {
+                const response = await fetch('/api/customers', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (!response.ok) return;
 
-                const entries = await response.json();
+                const customers = await response.json() || [];
 
-                // Extract unique customer data
-                const phoneMap = new Map();
-                entries.forEach(entry => {
-                    if (entry.phone && !phoneMap.has(entry.phone)) {
-                        phoneMap.set(entry.phone, {
-                            phone: entry.phone,
-                            name: entry.name || '',
-                            village: entry.village || '',
-                            so: entry.so || ''
-                        });
-                    }
-                });
-
-                customerPhones = Array.from(phoneMap.values());
+                // Map customer data to phone autocomplete format
+                customerPhones = customers.map(customer => ({
+                    phone: customer.phone || '',
+                    name: customer.name || '',
+                    village: customer.village || '',
+                    so: customer.so || '' // Now customers have S/O field!
+                }));
             } catch (error) {
                 console.error('Error loading customer phones:', error);
+                customerPhones = []; // Set to empty array on error
             }
         }
 

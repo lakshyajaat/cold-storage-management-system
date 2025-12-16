@@ -44,22 +44,28 @@ func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Reque
 
 	ctx := context.Background()
 
+	// CRITICAL FIX: Phone enumeration protection - use generic error messages
+	// Don't reveal whether phone exists, truck exists, or relationship details
+
 	// Get customer by phone
 	customer, err := h.CustomerPortalService.CustomerRepo.GetByPhone(ctx, req.Phone)
 	if err != nil {
-		http.Error(w, "Customer not found with this phone number", http.StatusUnauthorized)
+		// Generic error - don't reveal phone doesn't exist
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Verify truck belongs to customer
 	entry, err := h.CustomerPortalService.EntryRepo.GetByTruckNumber(ctx, req.TruckNumber)
 	if err != nil {
-		http.Error(w, "Truck number not found", http.StatusUnauthorized)
+		// Generic error - don't reveal truck doesn't exist
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	if entry.CustomerID != customer.ID {
-		http.Error(w, "Truck number does not belong to this customer", http.StatusUnauthorized)
+		// Generic error - don't reveal relationship mismatch
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
@@ -84,7 +90,7 @@ func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Reque
 			Path:     "/",
 			MaxAge:   30 * 24 * 60 * 60, // 30 days
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   true,
 			SameSite: http.SameSiteStrictMode,
 		})
 	} else {
@@ -93,7 +99,7 @@ func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Reque
 			Value:    token,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   true,
 			SameSite: http.SameSiteStrictMode,
 		})
 	}
@@ -176,7 +182,7 @@ func (h *CustomerPortalHandler) VerifyOTP(w http.ResponseWriter, r *http.Request
 			Path:     "/",
 			MaxAge:   30 * 24 * 60 * 60, // 30 days
 			HttpOnly: true,
-			Secure:   false, // Set to true in production with HTTPS
+			Secure:   true,
 			SameSite: http.SameSiteStrictMode,
 		})
 	} else {
@@ -186,7 +192,7 @@ func (h *CustomerPortalHandler) VerifyOTP(w http.ResponseWriter, r *http.Request
 			Value:    token,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   true,
 			SameSite: http.SameSiteStrictMode,
 		})
 	}

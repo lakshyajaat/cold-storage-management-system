@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cold-backend-config
+  namespace: default
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      cors_allowed_origins:
+        - "http://localhost:3000"
+        - "http://localhost:5173"
+        - "https://ailakshya.in"
+        - "https://www.ailakshya.in"
+        - "*"
+      cors_allowed_methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "OPTIONS"
+      cors_allowed_headers:
+        - "Content-Type"
+        - "Authorization"
+
+    database:
+      host: cold-postgres-rw
+      port: 5432
+      user: cold_user
+      password: SecurePostgresPassword123
+      name: cold_db
+
+    jwt:
+      secret: your-super-secret-jwt-key-change-this-in-production-minimum-32-characters
+      expiration_hours: 24
+      issuer: "cold-backend"

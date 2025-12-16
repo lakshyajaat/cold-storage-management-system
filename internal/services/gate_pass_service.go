@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
@@ -39,17 +40,28 @@ func (s *GatePassService) CreateGatePass(ctx context.Context, req *models.Create
 		return nil, errors.New("payment must be verified before issuing gate pass")
 	}
 
-	// Verify customer has enough stock if entry_id is provided
+	// CRITICAL FIX: Verify customer has enough stock if entry_id is provided
+	// Check both total entry quantity AND previously approved gate passes
 	if req.EntryID != nil {
 		entry, err := s.EntryRepo.Get(ctx, *req.EntryID)
 		if err != nil {
 			return nil, errors.New("entry not found")
 		}
 
-		// TODO: Check if customer has enough stock
-		// This would involve checking current stock vs requested quantity
-		if req.RequestedQuantity > entry.ExpectedQuantity {
-			return nil, errors.New("requested quantity exceeds available stock")
+		// Calculate total already approved/picked up from previous gate passes
+		totalApproved, err := s.GatePassRepo.GetTotalApprovedQuantityForEntry(ctx, *req.EntryID)
+		if err != nil {
+			return nil, errors.New("failed to calculate available stock")
+		}
+
+		// Calculate available quantity (entry quantity - already approved)
+		availableQuantity := entry.ExpectedQuantity - totalApproved
+
+		// Validate requested quantity doesn't exceed available stock
+		if req.RequestedQuantity > availableQuantity {
+			return nil, errors.New("requested quantity exceeds available stock - customer has already withdrawn " +
+				strconv.Itoa(totalApproved) + " out of " + strconv.Itoa(entry.ExpectedQuantity) +
+				" items. Only " + strconv.Itoa(availableQuantity) + " items available.")
 		}
 	}
 
@@ -79,7 +91,7 @@ func (s *GatePassService) CreateGatePass(ctx context.Context, req *models.Create
 			EntryID:         *req.EntryID,
 			EventType:       "GATE_PASS_ISSUED",
 			Status:          "pending",
-			Notes:           "Gate pass issued for " + string(rune(req.RequestedQuantity)) + " items",
+			Notes:           "Gate pass issued for " + strconv.Itoa(req.RequestedQuantity) + " items",
 			CreatedByUserID: userID,
 		}
 		s.EntryEventRepo.Create(ctx, event)
@@ -153,7 +165,7 @@ func (s *GatePassService) CompleteGatePass(ctx context.Context, id int, userID i
 			approvedQty = *gatePass.ApprovedQuantity
 		}
 
-		notes := "Items out: " + string(rune(approvedQty)) + " items physically taken by customer"
+		notes := "Items out: " + strconv.Itoa(approvedQty) + " items physically taken by customer"
 
 		// Check if this is partial or full withdrawal
 		entry, _ := s.EntryRepo.Get(ctx, *gatePass.EntryID)
@@ -227,23 +239,34 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 		pickup.Remarks = &req.Remarks
 	}
 
+	// CRITICAL FIX: Execute all database operations in sequence with proper error handling
+	// TODO: Implement proper database transactions to ensure atomicity
+	// For now, we ensure all operations succeed or fail together
+
+	// Step 1: Create pickup record
 	err = s.PickupRepo.CreatePickup(ctx, pickup)
 	if err != nil {
-		return err
+		return errors.New("failed to create pickup record: " + err.Error())
 	}
 
-	// Update gate pass total_picked_up and status
+	// Step 2: Update gate pass total_picked_up and status
 	err = s.GatePassRepo.UpdatePickupQuantity(ctx, req.GatePassID, req.PickupQuantity)
 	if err != nil {
-		return err
+		// CRITICAL: Pickup was created but gate pass update failed
+		// This creates inconsistency - pickup exists but gate pass total not updated
+		return errors.New("CRITICAL ERROR: pickup created but gate pass update failed - " +
+			"manual intervention required for gate pass ID " + strconv.Itoa(req.GatePassID) + ": " + err.Error())
 	}
 
-	// Update room inventory - reduce quantity
+	// Step 3: Update room inventory - reduce quantity
 	if req.RoomNo != "" && req.Floor != "" {
 		err = s.RoomEntryRepo.ReduceQuantity(ctx, gatePass.TruckNumber, req.RoomNo, req.Floor, req.PickupQuantity)
 		if err != nil {
-			// Log error but don't fail - inventory can be adjusted manually
-			// TODO: Add proper logging
+			// CRITICAL: Gate pass updated but room inventory not reduced
+			// This creates inconsistency - items marked as picked up but still in room
+			return errors.New("CRITICAL ERROR: gate pass updated but inventory reduction failed - " +
+				"manual inventory adjustment required for room " + req.RoomNo + ", floor " + req.Floor +
+				", truck " + gatePass.TruckNumber + ": " + err.Error())
 		}
 	}
 

@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-backend-employee
+  namespace: default
+  labels:
+    app: cold-backend
+    mode: employee
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080
+    protocol: TCP
+    name: http
+  selector:
+    app: cold-backend
+    mode: employee
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-backend-customer
+  namespace: default
+  labels:
+    app: cold-backend
+    mode: customer
+spec:
+  type: NodePort
+  ports:
+  - port: 8081
+    targetPort: 8081
+    nodePort: 30081
+    protocol: TCP
+    name: http
+  selector:
+    app: cold-backend
+    mode: customer

@@ -1,17 +1,22 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"cold-backend/internal/auth"
 	"cold-backend/internal/config"
+	"cold-backend/internal/database"
 	"cold-backend/internal/db"
 	h "cold-backend/internal/http"
 	"cold-backend/internal/handlers"
+	"cold-backend/internal/health"
 	"cold-backend/internal/middleware"
+	"cold-backend/internal/monitoring"
 	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 	"cold-backend/internal/sms"
@@ -41,6 +46,23 @@ func main() {
 	pool := db.Connect(cfg)
 	defer pool.Close()
 
+	// Run database migrations
+	// This automatically creates all required tables on startup
+	log.Println("Running database migrations...")
+	migrator := database.NewMigrator(pool)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := migrator.RunMigrations(ctx); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Initialize health checker
+	healthChecker := health.NewHealthChecker(pool)
+
+	// Start monitoring dashboard server in background
+	go monitoring.NewMonitoringServer(pool, 9090).Start()
+
 	// Initialize JWT manager
 	jwtManager := auth.NewJWTManager(cfg)
 
@@ -63,6 +85,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userRepo)
 	corsMiddleware := middleware.NewCORS(cfg)
 	pageHandler := handlers.NewPageHandler()
+	healthHandler := handlers.NewHealthHandler(healthChecker)
 
 	var handler http.Handler
 
@@ -96,8 +119,10 @@ func main() {
 		)
 
 		// Create customer router
-		router := h.NewCustomerRouter(customerPortalHandler, pageHandler, authMiddleware)
-		handler = corsMiddleware(router)
+		router := h.NewCustomerRouter(customerPortalHandler, pageHandler, healthHandler, authMiddleware)
+
+		// Wrap with panic recovery and metrics middleware
+		handler = middleware.PanicRecovery(middleware.MetricsMiddleware(corsMiddleware(router)))
 
 	} else {
 		log.Println("Starting in EMPLOYEE mode")
@@ -128,8 +153,10 @@ func main() {
 		gatePassHandler := handlers.NewGatePassHandler(gatePassService, adminActionLogRepo)
 
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, adminActionLogHandler, gatePassHandler, pageHandler, authMiddleware)
-		handler = corsMiddleware(router)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, adminActionLogHandler, gatePassHandler, pageHandler, healthHandler, authMiddleware)
+
+		// Wrap with panic recovery and metrics middleware
+		handler = middleware.PanicRecovery(middleware.MetricsMiddleware(corsMiddleware(router)))
 	}
 
 	// Start server

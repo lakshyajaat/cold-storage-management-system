@@ -34,6 +34,18 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// CRITICAL FIX: Verify admin role before allowing user creation
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized - role not found", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" {
+		http.Error(w, "Forbidden - admin access required to create users", http.StatusForbidden)
+		return
+	}
+
 	// Get admin user ID from context
 	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -84,6 +96,18 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 // ListUsers returns all users
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	// CRITICAL FIX: Verify admin role before listing all users
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized - role not found", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" {
+		http.Error(w, "Forbidden - admin access required to list users", http.StatusForbidden)
+		return
+	}
+
 	users, err := h.Service.ListUsers(context.Background())
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -98,6 +122,18 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
+
+	// CRITICAL FIX: Verify admin role before updating users
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized - role not found", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" {
+		http.Error(w, "Forbidden - admin access required to update users", http.StatusForbidden)
+		return
+	}
 
 	// Get admin user ID from context
 	adminUserID, ok := middleware.GetUserIDFromContext(r.Context())

@@ -32,13 +32,34 @@ func (h *RentPaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// CRITICAL FIX: Validate balance calculation to prevent fraud
+	calculatedBalance := req.TotalRent - req.AmountPaid
+	if req.Balance != calculatedBalance {
+		http.Error(w, "Invalid balance calculation - fraud attempt detected", http.StatusBadRequest)
+		return
+	}
+
+	// Additional validations
+	if req.TotalRent < 0 {
+		http.Error(w, "Total rent cannot be negative", http.StatusBadRequest)
+		return
+	}
+	if req.AmountPaid < 0 {
+		http.Error(w, "Amount paid cannot be negative", http.StatusBadRequest)
+		return
+	}
+	if req.AmountPaid > req.TotalRent {
+		http.Error(w, "Amount paid cannot exceed total rent", http.StatusBadRequest)
+		return
+	}
+
 	payment := &models.RentPayment{
 		EntryID:           req.EntryID,
 		CustomerName:      req.CustomerName,
 		CustomerPhone:     req.CustomerPhone,
 		TotalRent:         req.TotalRent,
 		AmountPaid:        req.AmountPaid,
-		Balance:           req.Balance,
+		Balance:           calculatedBalance, // Use server-calculated balance
 		ProcessedByUserID: userID,
 		Notes:             req.Notes,
 	}
@@ -60,6 +81,20 @@ func (h *RentPaymentHandler) GetPaymentsByEntry(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// IDOR protection - verify accountant access
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	hasAccountantAccess, _ := r.Context().Value(middleware.HasAccountantAccessKey).(bool)
+
+	if role != "admin" && role != "accountant" && !hasAccountantAccess {
+		http.Error(w, "Forbidden - accountant access required", http.StatusForbidden)
+		return
+	}
+
 	payments, err := h.Service.GetPaymentsByEntryID(context.Background(), entryID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -74,6 +109,21 @@ func (h *RentPaymentHandler) GetPaymentsByPhone(w http.ResponseWriter, r *http.R
 	phone := r.URL.Query().Get("phone")
 	if phone == "" {
 		http.Error(w, "Phone parameter required", http.StatusBadRequest)
+		return
+	}
+
+	// CRITICAL FIX: IDOR protection - verify user has permission to view these payments
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized - role not found", http.StatusUnauthorized)
+		return
+	}
+
+	hasAccountantAccess, _ := r.Context().Value(middleware.HasAccountantAccessKey).(bool)
+
+	// Only admin, accountant, or employee with accountant access can view payments
+	if role != "admin" && role != "accountant" && !hasAccountantAccess {
+		http.Error(w, "Forbidden - accountant access required to view payments", http.StatusForbidden)
 		return
 	}
 

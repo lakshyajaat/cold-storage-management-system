@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Monitoring - Cold Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .status-healthy { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-critical { background: #ef4444; }
+        .status-unknown { background: #6b7280; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold flex items-center gap-3">
+                        <i class="bi bi-hdd-network"></i>
+                        Infrastructure Monitoring
+                    </h1>
+                    <p class="text-gray-600">Cold Storage HA Cluster Status & Failover Control</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">Last Update</div>
+                    <div id="lastUpdate" class="text-lg font-bold">--:--:--</div>
+                    <button onclick="refreshAll()" class="mt-2 neu-border bg-blue-500 text-white px-4 py-2 text-sm">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overall System Status -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="neu-border bg-white p-4">
+                <div class="text-sm text-gray-600 mb-2">K3s Cluster</div>
+                <div id="k3sStatus" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
+                    <span class="font-bold">Checking...</span>
+                </div>
+            </div>
+            <div class="neu-border bg-white p-4">
+                <div class="text-sm text-gray-600 mb-2">PostgreSQL HA</div>
+                <div id="pgStatus" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
+                    <span class="font-bold">Checking...</span>
+                </div>
+            </div>
+            <div class="neu-border bg-white p-4">
+                <div class="text-sm text-gray-600 mb-2">VIP (192.168.15.200)</div>
+                <div id="vipStatus" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
+                    <span class="font-bold">Checking...</span>
+                </div>
+            </div>
+            <div class="neu-border bg-white p-4">
+                <div class="text-sm text-gray-600 mb-2">Backup Server</div>
+                <div id="backupStatus" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
+                    <span class="font-bold">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PostgreSQL Cluster Detail -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="bi bi-database"></i> PostgreSQL Cluster
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h3 class="font-bold mb-2">Primary Node</h3>
+                    <div id="primaryNode" class="text-sm"></div>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">Replica Nodes</h3>
+                    <div id="replicaNodes" class="text-sm"></div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h3 class="font-bold mb-2">Connection String</h3>
+                <code class="bg-gray-100 p-2 block text-sm">postgresql://postgres:***@192.168.15.200:5432/cold_db</code>
+            </div>
+        </div>
+
+        <!-- PostgreSQL Database Pods -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="bi bi-database-gear"></i> PostgreSQL Database Pods
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 border-b-2 border-black">
+                            <th class="px-4 py-2 text-left font-bold">Pod Name</th>
+                            <th class="px-4 py-2 text-left font-bold">Role</th>
+                            <th class="px-4 py-2 text-left font-bold">Status</th>
+                            <th class="px-4 py-2 text-left font-bold">Node</th>
+                            <th class="px-4 py-2 text-left font-bold">Disk Used</th>
+                            <th class="px-4 py-2 text-left font-bold">Disk Total</th>
+                            <th class="px-4 py-2 text-left font-bold">Connections</th>
+                            <th class="px-4 py-2 text-left font-bold">Repl Lag</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pgPodsList">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Backend Pods Status -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="bi bi-server"></i> Backend Pods
+            </h2>
+            <div id="backendPods" class="space-y-2"></div>
+        </div>
+
+        <!-- Backup Server Health & Capacity (192.168.15.195) -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="bi bi-server"></i> Backup Server Health (192.168.15.195)
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div class="neu-border bg-blue-50 p-4">
+                    <div class="text-sm text-gray-600 mb-1">CPU Usage</div>
+                    <div id="cpuUsage" class="text-2xl font-bold">--</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div id="cpuBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="neu-border bg-green-50 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Memory Usage</div>
+                    <div id="memUsage" class="text-2xl font-bold">--</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div id="memBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="neu-border bg-purple-50 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Root Disk</div>
+                    <div id="rootDisk" class="text-2xl font-bold">--</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div id="rootBar" class="bg-purple-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="neu-border bg-yellow-50 p-4">
+                    <div class="text-sm text-gray-600 mb-1">27TB NAS</div>
+                    <div id="nasDisk" class="text-2xl font-bold">--</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div id="nasBar" class="bg-yellow-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="font-bold mb-2">Local Backup Storage</div>
+                    <div class="text-sm space-y-1">
+                        <div class="flex justify-between">
+                            <span>Total:</span>
+                            <span id="localTotal" class="font-mono">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Used:</span>
+                            <span id="localUsed" class="font-mono">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Free:</span>
+                            <span id="localFree" class="font-mono text-green-600">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="font-bold mb-2">NAS Backup Storage</div>
+                    <div class="text-sm space-y-1">
+                        <div class="flex justify-between">
+                            <span>Total:</span>
+                            <span id="nasTotal" class="font-mono">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Used:</span>
+                            <span id="nasUsed" class="font-mono">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Free:</span>
+                            <span id="nasFree" class="font-mono text-green-600">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup Status & Controls -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="bi bi-archive"></i> Backup Status & Controls
+            </h2>
+
+            <!-- Current Status -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="text-sm text-gray-600">Last Local Backup</div>
+                    <div id="lastBackup" class="text-lg font-bold">--</div>
+                </div>
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="text-sm text-gray-600">Last NAS Archive</div>
+                    <div id="lastNasBackup" class="text-lg font-bold">--</div>
+                </div>
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="text-sm text-gray-600">Total Backups</div>
+                    <div id="totalBackups" class="text-lg font-bold">--</div>
+                </div>
+                <div class="neu-border bg-gray-50 p-3">
+                    <div class="text-sm text-gray-600">Replica Status</div>
+                    <div id="replicaStatus" class="text-lg font-bold">--</div>
+                </div>
+            </div>
+
+            <!-- NAS Archive Monitoring -->
+            <div class="neu-border bg-blue-50 p-4 mb-4">
+                <h3 class="font-bold mb-3">
+                    <i class="bi bi-hdd-network"></i> 27TB NAS Archive (/mnt/192.168.15.52/mine)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <div class="text-sm text-gray-600">Archive Size</div>
+                        <div id="nasArchiveSize" class="text-xl font-bold">--</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Total Snapshots</div>
+                        <div id="nasSnapshots" class="text-xl font-bold">--</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Oldest Snapshot</div>
+                        <div id="nasOldest" class="text-xl font-bold">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Manual Backup -->
+                <div class="neu-border bg-green-50 p-4">
+                    <h3 class="font-bold mb-2">
+                        <i class="bi bi-play-circle"></i> Manual Backup
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-3">Trigger immediate backup to 27TB NAS</p>
+                    <button onclick="triggerManualBackup()" class="neu-border bg-green-500 text-white px-6 py-3 w-full">
+                        <i class="bi bi-cloud-upload"></i> Backup Now to NAS
+                    </button>
+                    <div id="backupProgress" class="mt-2 text-sm text-center hidden">
+                        <i class="bi bi-hourglass-split"></i> Backing up...
+                    </div>
+                </div>
+
+                <!-- Auto Backup Timer -->
+                <div class="neu-border bg-purple-50 p-4">
+                    <h3 class="font-bold mb-2">
+                        <i class="bi bi-clock-history"></i> Auto Backup Schedule
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-3">Set automatic backup frequency to NAS</p>
+                    <select id="backupFrequency" onchange="updateBackupSchedule()" class="neu-border w-full px-4 py-3 bg-white">
+                        <option value="disabled">Disabled</option>
+                        <option value="15min">Every 15 Minutes</option>
+                        <option value="30min">Every 30 Minutes</option>
+                        <option value="1hour" selected>Every Hour (Default)</option>
+                        <option value="3hours">Every 3 Hours</option>
+                        <option value="6hours">Every 6 Hours</option>
+                        <option value="12hours">Every 12 Hours</option>
+                        <option value="daily">Daily at Midnight</option>
+                    </select>
+                    <div id="scheduleStatus" class="mt-2 text-sm text-center text-gray-600">
+                        Current: Every Hour
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Failover Controls -->
+        <div class="neu-border bg-red-100 p-6">
+            <h2 class="text-2xl font-bold mb-4 text-red-700">
+                <i class="bi bi-exclamation-triangle"></i> Manual Failover Controls
+            </h2>
+            <p class="mb-4 text-sm">Use these controls only when the HA cluster is not responding</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="neu-border bg-white p-4">
+                    <h3 class="font-bold mb-2">Start Standby Backend</h3>
+                    <p class="text-sm text-gray-600 mb-3">Activates backup server on 192.168.15.195</p>
+                    <button onclick="startStandbyBackend()" class="neu-border bg-orange-500 text-white px-4 py-2 w-full">
+                        <i class="bi bi-play-circle"></i> Activate Standby
+                    </button>
+                </div>
+
+                <div class="neu-border bg-white p-4">
+                    <h3 class="font-bold mb-2">Restore from Backup</h3>
+                    <p class="text-sm text-gray-600 mb-3">Restore database from latest backup</p>
+                    <button onclick="restoreFromBackup()" class="neu-border bg-red-600 text-white px-4 py-2 w-full">
+                        <i class="bi bi-arrow-counterclockwise"></i> Restore Database
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No auth token found in localStorage');
+            alert('Session expired. Please log in again.');
+            window.location.href = '/login';
+        }
+        console.log('Token found, length:', token ? token.length : 0);
+
+        async function checkK3sCluster() {
+            try {
+                const response = await fetch('/api/infrastructure/k3s-status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                updateStatus('k3sStatus', data.healthy ? 'healthy' : 'critical', data.message);
+            } catch (error) {
+                updateStatus('k3sStatus', 'critical', 'Unable to reach cluster');
+            }
+        }
+
+        async function checkPostgreSQL() {
+            try {
+                const response = await fetch('/api/infrastructure/postgresql-status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                updateStatus('pgStatus', data.healthy ? 'healthy' : 'critical', data.message);
+                document.getElementById('primaryNode').textContent = data.primary || 'Unknown';
+                document.getElementById('replicaNodes').textContent = data.replicas ? data.replicas.join(', ') : 'None';
+            } catch (error) {
+                updateStatus('pgStatus', 'critical', 'Connection failed');
+            }
+        }
+
+        async function checkVIP() {
+            try {
+                const response = await fetch('/api/infrastructure/vip-status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                updateStatus('vipStatus', data.healthy ? 'healthy' : 'warning', data.message);
+            } catch (error) {
+                updateStatus('vipStatus', 'critical', 'VIP unreachable');
+            }
+        }
+
+        async function checkBackupServer() {
+            try {
+                const response = await fetch('/api/infrastructure/backup-status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                console.log('Backup server data:', data);
+                updateStatus('backupStatus', data.healthy ? 'healthy' : 'warning', 'Online');
+
+                // Backup info
+                document.getElementById('lastBackup').textContent = data.last_backup || 'Never';
+                document.getElementById('totalBackups').textContent = data.total_backups || '0';
+                // backupSize element removed from UI
+                document.getElementById('replicaStatus').textContent = data.replica_running ? '✅ Running' : '⚠️ Stopped';
+
+                // NAS Archive monitoring
+                document.getElementById('lastNasBackup').textContent = data.nas_last_backup || 'Never';
+                document.getElementById('nasArchiveSize').textContent = data.nas_archive_size || '0 MB';
+                document.getElementById('nasSnapshots').textContent = data.nas_snapshots || '0';
+                document.getElementById('nasOldest').textContent = data.nas_oldest || 'N/A';
+
+                // Load current backup schedule
+                if (data.backup_schedule) {
+                    document.getElementById('backupFrequency').value = data.backup_schedule;
+                    const scheduleText = document.getElementById('backupFrequency').selectedOptions[0].text;
+                    document.getElementById('scheduleStatus').textContent = 'Current: ' + scheduleText;
+                }
+
+                // CPU & Memory
+                const cpuPercent = data.cpu_percent || 0;
+                const memPercent = data.memory_percent || 0;
+                document.getElementById('cpuUsage').textContent = cpuPercent.toFixed(1) + '%';
+                document.getElementById('cpuBar').style.width = cpuPercent + '%';
+                document.getElementById('cpuBar').className = 'h-2 rounded-full ' + (cpuPercent > 80 ? 'bg-red-500' : cpuPercent > 60 ? 'bg-yellow-500' : 'bg-blue-500');
+
+                document.getElementById('memUsage').textContent = memPercent.toFixed(1) + '%';
+                document.getElementById('memBar').style.width = memPercent + '%';
+                document.getElementById('memBar').className = 'h-2 rounded-full ' + (memPercent > 80 ? 'bg-red-500' : memPercent > 60 ? 'bg-yellow-500' : 'bg-green-500');
+
+                // Disk usage
+                if (data.disk_root) {
+                    document.getElementById('rootDisk').textContent = data.disk_root.percent + '%';
+                    document.getElementById('rootBar').style.width = data.disk_root.percent + '%';
+                    document.getElementById('rootBar').className = 'h-2 rounded-full ' + (data.disk_root.percent > 80 ? 'bg-red-500' : 'bg-purple-500');
+                    document.getElementById('localTotal').textContent = data.disk_root.total;
+                    document.getElementById('localUsed').textContent = data.disk_root.used;
+                    document.getElementById('localFree').textContent = data.disk_root.free;
+                }
+
+                if (data.disk_nas) {
+                    document.getElementById('nasDisk').textContent = data.disk_nas.percent + '%';
+                    document.getElementById('nasBar').style.width = data.disk_nas.percent + '%';
+                    document.getElementById('nasBar').className = 'h-2 rounded-full ' + (data.disk_nas.percent > 80 ? 'bg-red-500' : 'bg-yellow-500');
+                    document.getElementById('nasTotal').textContent = data.disk_nas.total;
+                    document.getElementById('nasUsed').textContent = data.disk_nas.used;
+                    document.getElementById('nasFree').textContent = data.disk_nas.free;
+                }
+            } catch (error) {
+                console.error('Backup server check failed:', error);
+                updateStatus('backupStatus', 'warning', 'Error: ' + error.message);
+            }
+        }
+
+        async function checkBackendPods() {
+            try {
+                const response = await fetch('/api/infrastructure/backend-pods', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const container = document.getElementById('backendPods');
+                container.innerHTML = data.pods.map(pod => `
+                    <div class="flex items-center justify-between p-2 bg-gray-50 neu-border">
+                        <span class="font-mono text-sm">${pod.name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm">${pod.ready}</span>
+                            <div class="w-3 h-3 rounded-full status-${pod.status === 'Running' ? 'healthy' : 'warning'}"></div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('backendPods').innerHTML = '<div class="text-red-500">Error loading pods</div>';
+            }
+        }
+
+        async function checkPostgreSQLPods() {
+            try {
+                const response = await fetch('/api/infrastructure/postgresql-pods', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const tbody = document.getElementById('pgPodsList');
+
+                if (data.pods && data.pods.length > 0) {
+                    tbody.innerHTML = data.pods.map(pod => `
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="px-4 py-3 font-mono text-xs">${pod.name}</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs font-bold ${pod.role === 'Primary' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${pod.role}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full ${pod.status === 'Running' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                    <span class="text-xs">${pod.status}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-xs">${pod.node}</td>
+                            <td class="px-4 py-3 font-mono text-xs">${pod.disk_used}</td>
+                            <td class="px-4 py-3 font-mono text-xs">${pod.disk_total}</td>
+                            <td class="px-4 py-3 font-bold ${parseInt(pod.connections) > 0 ? 'text-green-600' : 'text-gray-400'}">${pod.connections}</td>
+                            <td class="px-4 py-3 font-mono text-xs ${pod.repl_lag !== 'N/A' ? 'text-blue-600' : 'text-gray-400'}">${pod.repl_lag}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No pods found</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('pgPodsList').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500">Error loading PostgreSQL pods</td></tr>';
+                console.error('PostgreSQL pods check failed:', error);
+            }
+        }
+
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const dot = element.querySelector('div');
+            const text = element.querySelector('span');
+
+            dot.className = `w-4 h-4 rounded-full status-${status}`;
+            text.textContent = message;
+        }
+
+        async function triggerManualBackup() {
+            if (!confirm('This will trigger an immediate backup to the 27TB NAS. Continue?')) return;
+
+            const progressEl = document.getElementById('backupProgress');
+            progressEl.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/infrastructure/trigger-backup', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                progressEl.classList.add('hidden');
+                alert(data.message || 'Backup completed successfully!');
+
+                // Refresh backup status
+                checkBackupServer();
+            } catch (error) {
+                progressEl.classList.add('hidden');
+                alert('Failed to trigger backup: ' + error.message);
+            }
+        }
+
+        async function updateBackupSchedule() {
+            const frequency = document.getElementById('backupFrequency').value;
+            const scheduleText = document.getElementById('backupFrequency').selectedOptions[0].text;
+
+            if (!confirm(`Set backup schedule to: ${scheduleText}?`)) {
+                // Reload current schedule
+                checkBackupServer();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/infrastructure/backup-schedule', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ frequency })
+                });
+                const data = await response.json();
+
+                document.getElementById('scheduleStatus').textContent = 'Current: ' + scheduleText;
+                alert(data.message || 'Backup schedule updated!');
+            } catch (error) {
+                alert('Failed to update schedule: ' + error.message);
+                checkBackupServer(); // Reload current schedule
+            }
+        }
+
+        async function startStandbyBackend() {
+            if (!confirm('This will start the standby backend server on 192.168.15.195. Continue?')) return;
+
+            try {
+                const response = await fetch('/api/infrastructure/start-standby', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                alert('Failed to start standby backend: ' + error.message);
+            }
+        }
+
+        async function restoreFromBackup() {
+            if (!confirm('WARNING: This will restore the database from the latest backup. All current data will be replaced. Continue?')) return;
+            if (!confirm('Are you ABSOLUTELY SURE? This cannot be undone!')) return;
+
+            try {
+                const response = await fetch('/api/infrastructure/restore-backup', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                alert('Failed to restore from backup: ' + error.message);
+            }
+        }
+
+        function refreshAll() {
+            checkK3sCluster();
+            checkPostgreSQL();
+            checkPostgreSQLPods();
+            checkVIP();
+            checkBackupServer();
+            checkBackendPods();
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Initial load and auto-refresh every 30 seconds
+        refreshAll();
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+</html>

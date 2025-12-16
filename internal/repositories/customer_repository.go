@@ -17,38 +17,38 @@ func NewCustomerRepository(db *pgxpool.Pool) *CustomerRepository {
 
 func (r *CustomerRepository) Create(ctx context.Context, c *models.Customer) error {
 	return r.DB.QueryRow(ctx,
-		`INSERT INTO customers(name, phone, village, address)
-         VALUES($1, $2, $3, $4)
+		`INSERT INTO customers(name, phone, so, village, address)
+         VALUES($1, $2, $3, $4, $5)
          RETURNING id, created_at, updated_at`,
-		c.Name, c.Phone, c.Village, c.Address,
+		c.Name, c.Phone, c.SO, c.Village, c.Address,
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 }
 
 func (r *CustomerRepository) Get(ctx context.Context, id int) (*models.Customer, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, name, phone, village, address, created_at, updated_at
+		`SELECT id, name, phone, COALESCE(so, '') as so, village, address, created_at, updated_at
          FROM customers WHERE id=$1`, id)
 
 	var customer models.Customer
-	err := row.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.Village,
+	err := row.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.SO, &customer.Village,
 		&customer.Address, &customer.CreatedAt, &customer.UpdatedAt)
 	return &customer, err
 }
 
 func (r *CustomerRepository) GetByPhone(ctx context.Context, phone string) (*models.Customer, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, name, phone, village, address, created_at, updated_at
+		`SELECT id, name, phone, COALESCE(so, '') as so, village, address, created_at, updated_at
          FROM customers WHERE phone=$1`, phone)
 
 	var customer models.Customer
-	err := row.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.Village,
+	err := row.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.SO, &customer.Village,
 		&customer.Address, &customer.CreatedAt, &customer.UpdatedAt)
 	return &customer, err
 }
 
 func (r *CustomerRepository) List(ctx context.Context) ([]*models.Customer, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, name, phone, village, address, created_at, updated_at
+		`SELECT id, name, phone, COALESCE(so, '') as so, village, address, created_at, updated_at
          FROM customers ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (r *CustomerRepository) List(ctx context.Context) ([]*models.Customer, erro
 	var customers []*models.Customer
 	for rows.Next() {
 		var customer models.Customer
-		err := rows.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.Village,
+		err := rows.Scan(&customer.ID, &customer.Name, &customer.Phone, &customer.SO, &customer.Village,
 			&customer.Address, &customer.CreatedAt, &customer.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -70,9 +70,9 @@ func (r *CustomerRepository) List(ctx context.Context) ([]*models.Customer, erro
 
 func (r *CustomerRepository) Update(ctx context.Context, c *models.Customer) error {
 	_, err := r.DB.Exec(ctx,
-		`UPDATE customers SET name=$1, phone=$2, village=$3, address=$4, updated_at=CURRENT_TIMESTAMP
-         WHERE id=$5`,
-		c.Name, c.Phone, c.Village, c.Address, c.ID)
+		`UPDATE customers SET name=$1, phone=$2, so=$3, village=$4, address=$5, updated_at=CURRENT_TIMESTAMP
+         WHERE id=$6`,
+		c.Name, c.Phone, c.SO, c.Village, c.Address, c.ID)
 	return err
 }
 

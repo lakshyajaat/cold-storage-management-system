@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cold-backend-employee
+  namespace: default
+  labels:
+    app: cold-backend
+    mode: employee
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cold-backend
+      mode: employee
+  template:
+    metadata:
+      labels:
+        app: cold-backend
+        mode: employee
+    spec:
+      containers:
+      - name: cold-backend
+        image: cold-backend:v1.4
+        imagePullPolicy: Never
+        args:
+          - "-mode"
+          - "employee"
+          - "-port"
+          - "8080"
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: monitoring
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cold-backend-secret
+              key: db-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: cold-backend-secret
+              key: jwt-secret
+        volumeMounts:
+        - name: config
+          mountPath: /app/configs
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: config
+        configMap:
+          name: cold-backend-config

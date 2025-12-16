@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/services"
 
@@ -58,6 +59,18 @@ func (h *CustomerHandler) SearchByPhone(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// CRITICAL FIX: IDOR protection - only employees and admins can search customers
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized - role not found", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" && role != "employee" && role != "accountant" {
+		http.Error(w, "Forbidden - employee access required", http.StatusForbidden)
+		return
+	}
+
 	customer, err := h.Service.SearchByPhone(context.Background(), phone)
 	if err != nil {
 		http.Error(w, "Customer not found", http.StatusNotFound)
@@ -83,6 +96,18 @@ func (h *CustomerHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request)
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
 
+	// IDOR protection - only admin and employees can update customers
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" && role != "employee" {
+		http.Error(w, "Forbidden - admin or employee access required", http.StatusForbidden)
+		return
+	}
+
 	var req models.UpdateCustomerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -102,6 +127,18 @@ func (h *CustomerHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request)
 func (h *CustomerHandler) DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, _ := strconv.Atoi(idStr)
+
+	// IDOR protection - only admin can delete customers
+	role, ok := middleware.GetRoleFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if role != "admin" {
+		http.Error(w, "Forbidden - admin access required to delete customers", http.StatusForbidden)
+		return
+	}
 
 	if err := h.Service.DeleteCustomer(context.Background(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

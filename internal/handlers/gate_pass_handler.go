@@ -72,6 +72,11 @@ func (h *GatePassHandler) ListAllGatePasses(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Ensure we return empty array instead of null
+	if gatePasses == nil {
+		gatePasses = []map[string]interface{}{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(gatePasses)
 }
@@ -82,6 +87,11 @@ func (h *GatePassHandler) ListPendingGatePasses(w http.ResponseWriter, r *http.R
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Ensure we return empty array instead of null
+	if gatePasses == nil {
+		gatePasses = []map[string]interface{}{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -230,6 +240,11 @@ func (h *GatePassHandler) GetExpiredGatePasses(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Ensure we return empty array instead of null
+	if expiredPasses == nil {
+		expiredPasses = []map[string]interface{}{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

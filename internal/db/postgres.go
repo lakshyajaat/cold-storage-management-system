@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"cold-backend/internal/config"
@@ -19,10 +20,26 @@ func Connect(cfg *config.Config) *pgxpool.Pool {
 		cfg.Database.Name,
 	)
 
-	pool, err := pgxpool.New(context.Background(), dsn)
+	// PERFORMANCE FIX: Configure connection pool for optimal performance
+	poolConfig, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		log.Fatalf("db config parse failed: %v", err)
+	}
+
+	// Configure pool settings for production workload
+	poolConfig.MaxConns = 25                          // Maximum connections in pool
+	poolConfig.MinConns = 5                           // Keep warm connections ready
+	poolConfig.MaxConnLifetime = time.Hour            // Recycle connections hourly
+	poolConfig.MaxConnIdleTime = 30 * time.Minute    // Close idle connections after 30min
+	poolConfig.HealthCheckPeriod = time.Minute        // Check connection health every minute
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		log.Fatalf("db connect failed: %v", err)
 	}
+
+	log.Printf("✓ Database connection pool configured: %d max conns, %d min conns",
+		poolConfig.MaxConns, poolConfig.MinConns)
 
 	// Run migrations
 	if err := RunMigrations(pool); err != nil {
