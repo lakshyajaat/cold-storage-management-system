@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entry Room - Cold Storage</title>
+    <title data-i18n-page-title="page_title_entry">Entry Room - Cold Storage</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
@@ -93,6 +93,10 @@
             background: #fbbf24;
             font-weight: 600;
         }
+        .lang-selector {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
@@ -102,14 +106,22 @@
                 <div class="flex items-center gap-3">
                     <i class="bi bi-box-arrow-in-right text-4xl text-orange-600"></i>
                     <div>
-                        <h1 class="text-3xl font-bold">Entry Room</h1>
-                        <p class="text-gray-600">Register new entry</p>
+                        <h1 class="text-3xl font-bold" data-i18n="entry_room_title">Entry Room</h1>
+                        <p class="text-gray-600" data-i18n="register_new_entry">Register new entry</p>
                     </div>
                 </div>
             </div>
-            <button onclick="goBack()" class="neu-button bg-gray-200">
-                <i class="bi bi-arrow-left"></i> Back
-            </button>
+            <div class="flex gap-3 items-center">
+                <!-- Language Selector -->
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
+                <button onclick="goBack()" class="neu-button bg-gray-200">
+                    <i class="bi bi-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content Grid: Form (Left) + Recent Room Entries (Right) -->
@@ -118,19 +130,20 @@
             <div id="entryForm" class="neu-border bg-white p-6">
                 <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                     <i class="bi bi-person-check"></i>
-                    User Details & Entry
+                    <span data-i18n="user_details_entry">User Details & Entry</span>
                 </h2>
 
                 <div class="grid grid-cols-1 gap-4 mb-6">
                     <div class="relative">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Phone * <span class="text-sm text-gray-500">(Must be 10 digits)</span>
+                            <span data-i18n="phone">Phone</span> * <span class="text-sm text-gray-500">(<span data-i18n="phone_must_10_digits">Must be 10 digits</span>)</span>
                         </label>
                         <input
                             type="tel"
                             id="userPhone"
                             required
                             class="w-full neu-input"
+                            data-i18n-placeholder="phone_placeholder"
                             placeholder="Search or enter 10-digit phone number"
                             maxlength="10"
                             minlength="10"
@@ -148,32 +161,34 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Name *
+                            <span data-i18n="name">Name</span> *
                         </label>
                         <input
                             type="text"
                             id="userName"
                             required
                             class="w-full neu-input"
+                            data-i18n-placeholder="name_placeholder"
                             placeholder="Enter name"
                             oninput="capitalizeFirstLetter(this)"
                         >
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            S/O <span class="text-sm text-gray-500">(Son Of / Father's Name)</span>
+                            <span data-i18n="so_label">S/O</span> <span class="text-sm text-gray-500">(<span data-i18n="so_description">Son Of / Father's Name</span>)</span>
                         </label>
                         <input
                             type="text"
                             id="userSO"
                             class="w-full neu-input"
+                            data-i18n-placeholder="so_placeholder"
                             placeholder="Enter father's name (optional)"
                             oninput="capitalizeFirstLetter(this)"
                         >
                     </div>
                     <div class="relative">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Village *
+                            <span data-i18n="village">Village</span> *
                         </label>
                         <div class="relative">
                             <input
@@ -181,6 +196,7 @@
                                 id="userVillage"
                                 required
                                 class="w-full neu-input"
+                                data-i18n-placeholder="village_placeholder"
                                 placeholder="Search or select village"
                                 autocomplete="off"
                                 onfocus="showVillageDropdown()"
@@ -198,7 +214,7 @@
 
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Select Category *
+                        <span data-i18n="select_category">Select Category</span> *
                     </label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="neu-border p-3 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors">
@@ -211,8 +227,8 @@
                                 onchange="updateCategoryInfo()"
                             >
                             <div>
-                                <span class="text-lg font-bold text-green-700">SEED</span>
-                                <p id="seedCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
+                                <span class="text-lg font-bold text-green-700" data-i18n="seed">SEED</span>
+                                <p id="seedCount" class="text-xs text-gray-600 mt-1 hidden" data-i18n="loading">Loading...</p>
                             </div>
                         </label>
                         <label class="neu-border p-3 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors">
@@ -225,8 +241,8 @@
                                 onchange="updateCategoryInfo()"
                             >
                             <div>
-                                <span class="text-lg font-bold text-orange-700">SELL</span>
-                                <p id="sellCount" class="text-xs text-gray-600 mt-1 hidden">Loading...</p>
+                                <span class="text-lg font-bold text-orange-700" data-i18n="sell">SELL</span>
+                                <p id="sellCount" class="text-xs text-gray-600 mt-1 hidden" data-i18n="loading">Loading...</p>
                             </div>
                         </label>
                     </div>
@@ -234,7 +250,7 @@
 
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Expected Quantity *
+                        <span data-i18n="expected_quantity_label">Expected Quantity</span> *
                     </label>
                     <input
                         type="number"
@@ -243,6 +259,7 @@
                         min="1"
                         max="1500"
                         class="w-full neu-input"
+                        data-i18n-placeholder="expected_qty_placeholder"
                         placeholder="Enter expected quantity (1-1500)"
                         oninput="updateTruckPreview()"
                     >
@@ -251,17 +268,17 @@
                 <div id="truckPreview" class="mb-4 p-3 bg-blue-50 neu-border hidden">
                     <p class="text-sm text-gray-600 mb-1">
                         <i class="bi bi-truck"></i>
-                        Truck number preview:
+                        <span data-i18n="truck_preview">Truck number preview</span>:
                     </p>
                     <p class="text-2xl font-bold text-blue-700" id="previewTruckNumber">-</p>
                 </div>
 
                 <div class="flex gap-3">
                     <button type="submit" class="neu-button bg-green-500 text-white flex-1">
-                        <i class="bi bi-check-circle"></i> Submit
+                        <i class="bi bi-check-circle"></i> <span data-i18n="submit">Submit</span>
                     </button>
                     <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
-                        <i class="bi bi-x-circle"></i> Reset
+                        <i class="bi bi-x-circle"></i> <span data-i18n="reset">Reset</span>
                     </button>
                 </div>
             </form>
@@ -272,14 +289,14 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         <i class="bi bi-door-open text-blue-600"></i>
-                        Recent Room Entries
+                        <span data-i18n="recent_room_entries">Recent Room Entries</span>
                     </h2>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 neu-border flex items-center gap-1">
-                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto-refresh (5s)
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> <span data-i18n="auto_refresh_5s">Auto-refresh (5s)</span>
                         </span>
                         <span class="text-xs text-gray-600 bg-blue-50 px-2 py-1 neu-border">
-                            <i class="bi bi-hand-index"></i> Click to print
+                            <i class="bi bi-hand-index"></i> <span data-i18n="click_to_print">Click to print</span>
                         </span>
                     </div>
                 </div>
@@ -287,18 +304,18 @@
                     <table class="w-full text-sm">
                         <thead class="sticky top-0 bg-white">
                             <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold">Truck No</th>
-                                <th class="text-left p-2 font-bold">Room</th>
-                                <th class="text-left p-2 font-bold">Floor</th>
-                                <th class="text-left p-2 font-bold">Gatar</th>
-                                <th class="text-left p-2 font-bold">Qty</th>
-                                <th class="text-left p-2 font-bold">Date</th>
-                                <th class="text-left p-2 font-bold">Action</th>
+                                <th class="text-left p-2 font-bold" data-i18n="truck_number">Truck No</th>
+                                <th class="text-left p-2 font-bold" data-i18n="room">Room</th>
+                                <th class="text-left p-2 font-bold" data-i18n="floor">Floor</th>
+                                <th class="text-left p-2 font-bold" data-i18n="gatar">Gatar</th>
+                                <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
+                                <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
+                                <th class="text-left p-2 font-bold" data-i18n="action">Action</th>
                             </tr>
                         </thead>
                         <tbody id="roomEntriesTableBody">
                             <tr>
-                                <td colspan="7" class="text-center p-4 text-gray-500">Loading room entries...</td>
+                                <td colspan="7" class="text-center p-4 text-gray-500" data-i18n="loading_room_entries">Loading room entries...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -310,14 +327,14 @@
         <div id="successMessage" class="hidden mt-6 neu-border bg-green-100 p-8">
             <h3 class="text-2xl font-bold text-green-700 mb-4 flex items-center gap-2">
                 <i class="bi bi-check-circle-fill"></i>
-                Entry Created Successfully!
+                <span data-i18n="entry_created_success">Entry Created Successfully!</span>
             </h3>
             <div class="p-6 bg-white neu-border mb-4">
-                <p class="text-lg text-gray-700 mb-2">Auto-Generated Truck Number:</p>
+                <p class="text-lg text-gray-700 mb-2"><span data-i18n="auto_generated_truck">Auto-Generated Truck Number</span>:</p>
                 <p class="text-4xl font-bold text-green-700" id="assignedTruck"></p>
             </div>
             <button onclick="resetForm()" class="neu-button bg-green-500 text-white w-full">
-                <i class="bi bi-plus-circle"></i> Create Another Entry
+                <i class="bi bi-plus-circle"></i> <span data-i18n="create_another_entry">Create Another Entry</span>
             </button>
         </div>
 
@@ -326,25 +343,25 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold flex items-center gap-2">
                     <i class="bi bi-clock-history"></i>
-                    Recent Main Entries
+                    <span data-i18n="recent_main_entries">Recent Main Entries</span>
                 </h2>
             </div>
             <div id="recentEntries" class="overflow-auto" style="max-height: 400px;">
                 <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-white">
                         <tr class="border-b-2 border-black">
-                            <th class="text-left p-2 font-bold">Truck</th>
-                            <th class="text-left p-2 font-bold">Name</th>
-                            <th class="text-left p-2 font-bold">Phone</th>
-                            <th class="text-left p-2 font-bold">Village</th>
-                            <th class="text-left p-2 font-bold">Qty</th>
-                            <th class="text-left p-2 font-bold">Category</th>
-                            <th class="text-left p-2 font-bold">Created</th>
+                            <th class="text-left p-2 font-bold" data-i18n="truck">Truck</th>
+                            <th class="text-left p-2 font-bold" data-i18n="name">Name</th>
+                            <th class="text-left p-2 font-bold" data-i18n="phone">Phone</th>
+                            <th class="text-left p-2 font-bold" data-i18n="village">Village</th>
+                            <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
+                            <th class="text-left p-2 font-bold" data-i18n="category">Category</th>
+                            <th class="text-left p-2 font-bold" data-i18n="created">Created</th>
                         </tr>
                     </thead>
                     <tbody id="entriesTableBody">
                         <tr>
-                            <td colspan="7" class="text-center p-4 text-gray-500">Loading...</td>
+                            <td colspan="7" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -352,6 +369,8 @@
         </div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
         const token = localStorage.getItem('token');
         let currentUser = null;
@@ -466,7 +485,7 @@
             ).join('');
 
             if (displayVillages.length === 0) {
-                villageList.innerHTML = '<div class="village-item" style="color: #999;">No villages found</div>';
+                villageList.innerHTML = `<div class="village-item" style="color: #999;">${i18n.t('no_villages_found', 'No villages found')}</div>`;
             }
         }
 
@@ -545,9 +564,9 @@
             }).join('');
 
             if (displayPhones.length === 0 && searchTerm.length >= 3) {
-                phoneList.innerHTML = '<div class="village-item" style="color: #999;">No matching customers found</div>';
+                phoneList.innerHTML = `<div class="village-item" style="color: #999;">${i18n.t('no_matching_customers', 'No matching customers found')}</div>`;
             } else if (searchTerm.length === 0) {
-                phoneList.innerHTML = '<div class="village-item" style="color: #999;">Start typing to search...</div>';
+                phoneList.innerHTML = `<div class="village-item" style="color: #999;">${i18n.t('start_typing_search', 'Start typing to search...')}</div>`;
             }
         }
 
@@ -564,7 +583,7 @@
             capitalizeFirstLetter(document.getElementById('userVillage'));
 
             document.getElementById('phoneDropdown').classList.add('hidden');
-            showSearchStatus('Customer found! Details auto-filled.', 'success');
+            showSearchStatus(i18n.t('customer_found', 'Customer found! Details auto-filled.'), 'success');
         }
 
         // Close dropdowns when clicking outside
@@ -689,7 +708,7 @@
             } catch (error) {
                 console.error('Error loading entries:', error);
                 document.getElementById('entriesTableBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load entries</td></tr>';
+                    `<tr><td colspan="7" class="text-center p-4 text-red-500">${i18n.t('failed_load_entries', 'Failed to load entries')}</td></tr>`;
             }
         }
 
@@ -697,7 +716,7 @@
             const tbody = document.getElementById('entriesTableBody');
 
             if (entries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No entries yet</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">${i18n.t('no_entries_yet', 'No entries yet')}</td></tr>`;
                 return;
             }
 
@@ -780,7 +799,7 @@
 
             // Validate quantity
             if (quantity < 1) {
-                alert('Quantity must be at least 1');
+                alert(i18n.t('qty_must_be_1', 'Quantity must be at least 1'));
                 return;
             }
 
@@ -792,20 +811,20 @@
 
             // Validate phone number (must be exactly 10 digits)
             if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
-                alert('Phone number must be exactly 10 digits');
+                alert(i18n.t('phone_must_10', 'Phone number must be exactly 10 digits'));
                 return;
             }
 
             // Validate required fields
             if (!name || !phone || !village) {
-                alert('Please fill in all required fields (Name, Phone, Village)');
+                alert(i18n.t('fill_required_fields', 'Please fill in all required fields (Name, Phone, Village)'));
                 return;
             }
 
             // Get selected category from radio buttons
             const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
             if (!categoryRadio) {
-                alert('Please select a category (SEED or SELL)');
+                alert(i18n.t('select_category_error', 'Please select a category (SEED or SELL)'));
                 return;
             }
             const category = categoryRadio.value;
@@ -841,7 +860,7 @@
                 console.log('Truck number:', truckNumber);
                 showSuccess(truckNumber);
             } catch (error) {
-                alert('Error creating entry: ' + error.message);
+                alert(i18n.t('error_creating_entry', 'Error creating entry') + ': ' + error.message);
             }
         }
 
@@ -923,7 +942,7 @@
             } catch (error) {
                 console.error('Error loading room entries:', error);
                 document.getElementById('roomEntriesTableBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load room entries</td></tr>';
+                    `<tr><td colspan="7" class="text-center p-4 text-red-500">${i18n.t('failed_load_room_entries', 'Failed to load room entries')}</td></tr>`;
             } finally {
                 // Stop loading animation after a short delay
                 if (refreshIcon) {
@@ -938,7 +957,7 @@
             const tbody = document.getElementById('roomEntriesTableBody');
 
             if (roomEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">${i18n.t('no_room_entries_yet', 'No room entries yet')}</td></tr>`;
                 return;
             }
 
@@ -1439,7 +1458,7 @@
 
             } catch (error) {
                 console.error('Error printing receipt:', error);
-                alert('Error printing receipt: ' + error.message);
+                alert(i18n.t('error_printing_receipt', 'Error printing receipt') + ': ' + error.message);
             }
         }
 

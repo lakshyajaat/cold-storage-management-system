@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rent Payment - Cold Storage</title>
+    <title data-i18n-page-title="page_title_rent">Rent Payment - Cold Storage</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
@@ -39,6 +39,10 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        .lang-selector {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
@@ -48,19 +52,27 @@
                 <div class="flex items-center gap-3">
                     <i class="bi bi-cash-coin text-4xl text-green-600"></i>
                     <div>
-                        <h1 class="text-3xl font-bold">Rent Payment & Invoice</h1>
-                        <p class="text-gray-600">Select trucks and record payment</p>
+                        <h1 class="text-3xl font-bold" data-i18n="rent_payment_title">Rent Payment & Invoice</h1>
+                        <p class="text-gray-600" data-i18n="select_trucks_record">Select trucks and record payment</p>
                     </div>
                 </div>
             </div>
-            <button onclick="goBack()" class="neu-button bg-gray-200">
-                <i class="bi bi-arrow-left"></i> Back
-            </button>
+            <div class="flex gap-3 items-center">
+                <!-- Language Selector -->
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
+                <button onclick="goBack()" class="neu-button bg-gray-200">
+                    <i class="bi bi-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
         </header>
 
         <div id="loadingMessage" class="text-center p-8">
             <i class="bi bi-hourglass-split text-4xl"></i>
-            <p class="mt-4">Loading customer data...</p>
+            <p class="mt-4" data-i18n="loading_customer_data">Loading customer data...</p>
         </div>
 
         <div id="rentContent" style="display: none;">
@@ -68,19 +80,19 @@
             <div class="neu-border bg-white p-6 mb-6">
                 <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
                     <i class="bi bi-person-circle"></i>
-                    Customer Information
+                    <span data-i18n="customer_information">Customer Information</span>
                 </h2>
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <p class="text-sm text-gray-600">Name</p>
+                        <p class="text-sm text-gray-600" data-i18n="name">Name</p>
                         <p class="text-lg font-bold" id="customerName">-</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600">Phone</p>
+                        <p class="text-sm text-gray-600" data-i18n="phone">Phone</p>
                         <p class="text-lg font-bold" id="customerPhone">-</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600">Village</p>
+                        <p class="text-sm text-gray-600" data-i18n="village">Village</p>
                         <p class="text-lg font-bold" id="customerVillage">-</p>
                     </div>
                 </div>
@@ -90,7 +102,7 @@
             <div class="neu-border bg-white p-6 mb-6">
                 <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
                     <i class="bi bi-truck"></i>
-                    Select Trucks for Invoice
+                    <span data-i18n="select_trucks_invoice">Select Trucks for Invoice</span>
                 </h2>
                 <div class="overflow-auto" style="max-height: 400px;">
                     <table class="w-full">
@@ -99,15 +111,15 @@
                                 <th class="text-left p-2">
                                     <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                                 </th>
-                                <th class="text-left p-2 font-bold">Truck No</th>
-                                <th class="text-left p-2 font-bold">Quantity</th>
-                                <th class="text-left p-2 font-bold">Rate (₹)</th>
-                                <th class="text-left p-2 font-bold">Rent (₹)</th>
+                                <th class="text-left p-2 font-bold" data-i18n="truck_number">Truck No</th>
+                                <th class="text-left p-2 font-bold" data-i18n="quantity">Quantity</th>
+                                <th class="text-left p-2 font-bold" data-i18n="rate">Rate (₹)</th>
+                                <th class="text-left p-2 font-bold" data-i18n="rent">Rent (₹)</th>
                             </tr>
                         </thead>
                         <tbody id="trucksTable">
                             <tr>
-                                <td colspan="5" class="text-center p-4 text-gray-500">Loading...</td>
+                                <td colspan="5" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -115,7 +127,7 @@
 
                 <div class="mt-6 p-4 bg-blue-50 neu-border">
                     <div class="flex justify-between items-center">
-                        <span class="text-lg font-bold">Total Rent (Selected Trucks):</span>
+                        <span class="text-lg font-bold" data-i18n="total_rent_selected">Total Rent (Selected Trucks):</span>
                         <span class="text-2xl font-bold text-blue-700" id="totalRent">₹0.00</span>
                     </div>
                 </div>
@@ -125,12 +137,12 @@
             <div class="neu-border bg-white p-6 mb-6">
                 <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
                     <i class="bi bi-wallet2"></i>
-                    Payment Information
+                    <span data-i18n="payment_information">Payment Information</span>
                 </h2>
                 <div class="grid grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Amount Received (₹) *
+                            <span data-i18n="amount_received">Amount Received (₹)</span> *
                         </label>
                         <input
                             type="number"
@@ -138,12 +150,13 @@
                             min="0"
                             step="0.01"
                             class="w-full neu-input"
+                            data-i18n-placeholder="enter_amount_received"
                             placeholder="Enter amount received"
                             oninput="calculateBalance()"
                         >
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="balance">
                             Balance
                         </label>
                         <div class="w-full neu-input bg-gray-100 text-xl font-bold" id="balance">₹0.00</div>
@@ -156,28 +169,28 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         <i class="bi bi-clock-history"></i>
-                        Payment History
+                        <span data-i18n="payment_history">Payment History</span>
                     </h2>
                     <div class="flex items-center gap-2 text-sm text-gray-600">
                         <i class="bi bi-arrow-clockwise" id="refreshIcon"></i>
-                        <span>Auto-refreshing every 10s</span>
+                        <span data-i18n="auto_refresh_10s">Auto-refreshing every 10s</span>
                     </div>
                 </div>
                 <div id="paymentHistory" class="overflow-auto" style="max-height: 300px;">
                     <table class="w-full">
                         <thead class="sticky top-0 bg-white">
                             <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold">Date</th>
-                                <th class="text-left p-2 font-bold">Total Rent</th>
-                                <th class="text-left p-2 font-bold">Amount Paid</th>
-                                <th class="text-left p-2 font-bold">Balance</th>
-                                <th class="text-left p-2 font-bold">Employee ID</th>
-                                <th class="text-left p-2 font-bold">Notes</th>
+                                <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
+                                <th class="text-left p-2 font-bold" data-i18n="total_rent">Total Rent</th>
+                                <th class="text-left p-2 font-bold" data-i18n="amount_paid">Amount Paid</th>
+                                <th class="text-left p-2 font-bold" data-i18n="balance">Balance</th>
+                                <th class="text-left p-2 font-bold" data-i18n="employee_id">Employee ID</th>
+                                <th class="text-left p-2 font-bold" data-i18n="notes">Notes</th>
                             </tr>
                         </thead>
                         <tbody id="paymentHistoryBody">
                             <tr>
-                                <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
+                                <td colspan="6" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -187,7 +200,7 @@
             <!-- Generate Invoice Button -->
             <div class="text-center">
                 <button onclick="generateInvoice()" class="neu-button bg-green-500 text-white text-xl px-12">
-                    <i class="bi bi-file-earmark-text"></i> Generate Invoice & Print
+                    <i class="bi bi-file-earmark-text"></i> <span data-i18n="generate_invoice_print">Generate Invoice & Print</span>
                 </button>
             </div>
         </div>
@@ -196,6 +209,8 @@
         <div id="invoicePreview" style="display: none;"></div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
         const token = localStorage.getItem('token');
         const urlParams = new URLSearchParams(window.location.search);
@@ -231,7 +246,7 @@
         async function loadData() {
             try {
                 if (!entryId) {
-                    throw new Error('Missing entry ID');
+                    throw new Error(i18n.t('missing_entry_id', 'Missing entry ID'));
                 }
 
                 // Fetch entry details
@@ -272,8 +287,8 @@
                 console.error('Error loading data:', error);
                 document.getElementById('loadingMessage').innerHTML = `
                     <i class="bi bi-exclamation-triangle text-4xl text-red-500"></i>
-                    <p class="mt-4 text-red-500">Error: ${error.message}</p>
-                    <button onclick="window.history.back()" class="neu-button bg-gray-200 mt-4">Go Back</button>
+                    <p class="mt-4 text-red-500">${i18n.t('error', 'Error')}: ${error.message}</p>
+                    <button onclick="window.history.back()" class="neu-button bg-gray-200 mt-4">${i18n.t('go_back', 'Go Back')}</button>
                 `;
             }
         }
@@ -306,7 +321,7 @@
                 console.error('Error loading payment history:', error);
                 document.getElementById('paymentHistoryBody').innerHTML = `
                     <tr>
-                        <td colspan="6" class="text-center p-4 text-gray-500">No payment history found</td>
+                        <td colspan="6" class="text-center p-4 text-gray-500">${i18n.t('no_payment_found', 'No payment history found')}</td>
                     </tr>
                 `;
             } finally {
@@ -325,7 +340,7 @@
             if (payments.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="text-center p-4 text-gray-500">No payment history yet</td>
+                        <td colspan="6" class="text-center p-4 text-gray-500">${i18n.t('no_payment_history', 'No payment history yet')}</td>
                     </tr>
                 `;
                 return;
@@ -453,13 +468,13 @@
             });
 
             if (selectedTrucks.length === 0) {
-                alert('Please select at least one truck');
+                alert(i18n.t('select_at_least_one_truck', 'Please select at least one truck'));
                 return;
             }
 
             const amountReceived = parseFloat(document.getElementById('amountReceived').value);
             if (!amountReceived || amountReceived <= 0) {
-                alert('Please enter amount received');
+                alert(i18n.t('enter_amount_received_error', 'Please enter amount received'));
                 return;
             }
 
@@ -499,7 +514,7 @@
                 loadPaymentHistory(customerData.phone);
             } catch (error) {
                 console.error('Error saving payment:', error);
-                if (!confirm('Failed to save payment record. Continue with invoice generation?')) {
+                if (!confirm(i18n.t('failed_save_payment', 'Failed to save payment record. Continue with invoice generation?'))) {
                     return;
                 }
             }
@@ -561,6 +576,25 @@
                 `;
             }).join('');
 
+            // Get translations for invoice
+            const t_invoice_title = i18n.t('cold_storage_rent_invoice', 'COLD STORAGE - RENT INVOICE');
+            const t_payment_receipt = i18n.t('payment_receipt', 'Payment Receipt');
+            const t_payment_receipt_office = i18n.t('payment_receipt_office', 'Payment Receipt (Office Copy)');
+            const t_customer = i18n.t('customer_label', 'Customer:');
+            const t_phone = i18n.t('phone_label', 'Phone:');
+            const t_village = i18n.t('village_label', 'Village:');
+            const t_date = i18n.t('date_label', 'Date:');
+            const t_employee = i18n.t('employee_label', 'Employee:');
+            const t_truck_no = i18n.t('truck_number', 'Truck No');
+            const t_qty = i18n.t('qty', 'Qty');
+            const t_rate = i18n.t('rate', 'Rate');
+            const t_rent = i18n.t('rent', 'Rent');
+            const t_total_rent = i18n.t('total_rent', 'Total Rent');
+            const t_amount_received = i18n.t('amount_received', 'Amount Received');
+            const t_balance = i18n.t('balance', 'Balance');
+            const t_customer_signature = i18n.t('customer_signature', 'Customer Signature:');
+            const t_thank_you = i18n.t('thank_you_business', 'Thank you for your business!');
+
             return `
 <!DOCTYPE html>
 <html>
@@ -599,29 +633,29 @@
         <!-- Invoice Copy 1 -->
         <div class="invoice">
             <div class="header">
-                <h1>COLD STORAGE - RENT INVOICE</h1>
-                <p>Payment Receipt</p>
+                <h1>${t_invoice_title}</h1>
+                <p>${t_payment_receipt}</p>
             </div>
 
             <div>
                 <div class="info-row">
-                    <span class="info-label">Customer:</span>
+                    <span class="info-label">${t_customer}</span>
                     <span>${customerData.name}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Phone:</span>
+                    <span class="info-label">${t_phone}</span>
                     <span>${customerData.phone}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Village:</span>
+                    <span class="info-label">${t_village}</span>
                     <span>${customerData.village || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Date:</span>
+                    <span class="info-label">${t_date}</span>
                     <span>${invoiceDate}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Employee:</span>
+                    <span class="info-label">${t_employee}</span>
                     <span>${employeeName}</span>
                 </div>
             </div>
@@ -629,10 +663,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Truck No</th>
-                        <th>Qty</th>
-                        <th>Rate</th>
-                        <th>Rent</th>
+                        <th>${t_truck_no}</th>
+                        <th>${t_qty}</th>
+                        <th>${t_rate}</th>
+                        <th>${t_rent}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -642,54 +676,54 @@
 
             <div class="totals">
                 <div class="totals-row">
-                    <span>Total Rent:</span>
+                    <span>${t_total_rent}:</span>
                     <span>₹${totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row">
-                    <span>Amount Received:</span>
+                    <span>${t_amount_received}:</span>
                     <span>₹${amountReceived.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row total">
-                    <span>Balance:</span>
+                    <span>${t_balance}:</span>
                     <span>₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
             </div>
 
             <div class="signature">
-                <strong>Customer Signature: ______________________</strong>
+                <strong>${t_customer_signature} ______________________</strong>
             </div>
 
             <div class="footer">
-                <p>Thank you for your business!</p>
+                <p>${t_thank_you}</p>
             </div>
         </div>
 
         <!-- Invoice Copy 2 -->
         <div class="invoice">
             <div class="header">
-                <h1>COLD STORAGE - RENT INVOICE</h1>
-                <p>Payment Receipt (Office Copy)</p>
+                <h1>${t_invoice_title}</h1>
+                <p>${t_payment_receipt_office}</p>
             </div>
 
             <div>
                 <div class="info-row">
-                    <span class="info-label">Customer:</span>
+                    <span class="info-label">${t_customer}</span>
                     <span>${customerData.name}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Phone:</span>
+                    <span class="info-label">${t_phone}</span>
                     <span>${customerData.phone}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Village:</span>
+                    <span class="info-label">${t_village}</span>
                     <span>${customerData.village || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Date:</span>
+                    <span class="info-label">${t_date}</span>
                     <span>${invoiceDate}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Employee:</span>
+                    <span class="info-label">${t_employee}</span>
                     <span>${employeeName}</span>
                 </div>
             </div>
@@ -697,10 +731,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Truck No</th>
-                        <th>Qty</th>
-                        <th>Rate</th>
-                        <th>Rent</th>
+                        <th>${t_truck_no}</th>
+                        <th>${t_qty}</th>
+                        <th>${t_rate}</th>
+                        <th>${t_rent}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -710,25 +744,25 @@
 
             <div class="totals">
                 <div class="totals-row">
-                    <span>Total Rent:</span>
+                    <span>${t_total_rent}:</span>
                     <span>₹${totalRent.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row">
-                    <span>Amount Received:</span>
+                    <span>${t_amount_received}:</span>
                     <span>₹${amountReceived.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row total">
-                    <span>Balance:</span>
+                    <span>${t_balance}:</span>
                     <span>₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                 </div>
             </div>
 
             <div class="signature">
-                <strong>Customer Signature: ______________________</strong>
+                <strong>${t_customer_signature} ______________________</strong>
             </div>
 
             <div class="footer">
-                <p>Thank you for your business!</p>
+                <p>${t_thank_you}</p>
             </div>
         </div>
     </div>

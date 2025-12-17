@@ -3,8 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Dashboard</title>
+    <title data-i18n-page-title="page_title_customer_dashboard">Customer Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .lang-selector {
+            border: 2px solid #667eea;
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .lang-selector:hover {
+            opacity: 0.9;
+        }
+        .lang-selector option {
+            background: white;
+            color: #333;
+        }
+    </style>
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -59,27 +77,34 @@
         <div class="neu-card mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">Welcome, <span id="customerName"></span></h1>
-                    <p class="text-gray-600">Phone: <span id="customerPhone"></span></p>
+                    <h1 class="text-2xl font-bold text-gray-800"><span data-i18n="welcome">Welcome</span>, <span id="customerName"></span></h1>
+                    <p class="text-gray-600"><span data-i18n="phone">Phone</span>: <span id="customerPhone"></span></p>
                 </div>
-                <button onclick="logout()" class="neu-button bg-red-500">Logout</button>
+                <div class="flex items-center gap-3">
+                    <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                            class="lang-selector px-3 py-2 text-sm font-medium cursor-pointer">
+                        <option value="en">EN</option>
+                        <option value="hi">हिं</option>
+                    </select>
+                    <button onclick="logout()" class="neu-button bg-red-500" data-i18n="logout">Logout</button>
+                </div>
             </div>
         </div>
 
         <!-- Payment Summary -->
         <div class="neu-card">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Payment Summary</h2>
+            <h2 class="text-xl font-bold mb-4 text-gray-800" data-i18n="payment_summary">Payment Summary</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="p-4 bg-blue-50 rounded-lg">
-                    <p class="text-sm text-gray-600">Total Rent</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_rent">Total Rent</p>
                     <p class="text-2xl font-bold text-blue-600">₹<span id="totalRent">0</span></p>
                 </div>
                 <div class="p-4 bg-green-50 rounded-lg">
-                    <p class="text-sm text-gray-600">Total Paid</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_paid">Total Paid</p>
                     <p class="text-2xl font-bold text-green-600">₹<span id="totalPaid">0</span></p>
                 </div>
                 <div class="p-4 bg-orange-50 rounded-lg">
-                    <p class="text-sm text-gray-600">Balance</p>
+                    <p class="text-sm text-gray-600" data-i18n="balance">Balance</p>
                     <p class="text-2xl font-bold" id="balanceAmount">₹<span id="totalBalance">0</span></p>
                 </div>
             </div>
@@ -87,17 +112,17 @@
 
         <!-- Trucks List -->
         <div class="neu-card">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Your Trucks</h2>
+            <h2 class="text-xl font-bold mb-4 text-gray-800" data-i18n="your_trucks">Your Trucks</h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b-2">
-                            <th class="text-left p-2">Truck Number</th>
-                            <th class="text-left p-2">Expected Qty</th>
-                            <th class="text-left p-2">Current Stock</th>
-                            <th class="text-left p-2">Can Take Out</th>
-                            <th class="text-left p-2">Balance</th>
-                            <th class="text-left p-2">Action</th>
+                            <th class="text-left p-2" data-i18n="truck_number">Truck Number</th>
+                            <th class="text-left p-2" data-i18n="expected_qty">Expected Qty</th>
+                            <th class="text-left p-2" data-i18n="current_stock">Current Stock</th>
+                            <th class="text-left p-2" data-i18n="can_take_out">Can Take Out</th>
+                            <th class="text-left p-2" data-i18n="balance">Balance</th>
+                            <th class="text-left p-2" data-i18n="action">Action</th>
                         </tr>
                     </thead>
                     <tbody id="trucksTable">
@@ -109,47 +134,47 @@
 
         <!-- Gate Pass Request Form -->
         <div class="neu-card">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Request Gate Pass</h2>
+            <h2 class="text-xl font-bold mb-4 text-gray-800" data-i18n="request_gate_pass">Request Gate Pass</h2>
             <form id="gatePassForm" onsubmit="submitGatePassRequest(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                    <label class="block font-semibold mb-2">Select Truck</label>
+                    <label class="block font-semibold mb-2" data-i18n="select_truck">Select Truck</label>
                     <select id="truckSelect" class="neu-input" required>
-                        <option value="">-- Select Truck --</option>
+                        <option value="" data-i18n="select_truck_option">-- Select Truck --</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold mb-2">Quantity</label>
+                    <label class="block font-semibold mb-2" data-i18n="quantity">Quantity</label>
                     <input type="number" id="quantity" class="neu-input" min="1" required>
-                    <p class="text-xs text-gray-500 mt-1">Max: <span id="maxQuantity">0</span></p>
+                    <p class="text-xs text-gray-500 mt-1"><span data-i18n="max">Max</span>: <span id="maxQuantity">0</span></p>
                 </div>
                 <div>
-                    <label class="block font-semibold mb-2">Recipient Name *</label>
-                    <input type="text" id="recipientName" class="neu-input" placeholder="Who will receive items" required>
+                    <label class="block font-semibold mb-2" data-i18n="recipient_name_required">Recipient Name *</label>
+                    <input type="text" id="recipientName" class="neu-input" data-i18n-placeholder="who_will_receive" placeholder="Who will receive items" required>
                 </div>
                 <div>
-                    <label class="block font-semibold mb-2">Remarks (optional)</label>
-                    <input type="text" id="remarks" class="neu-input" placeholder="Add any notes">
+                    <label class="block font-semibold mb-2" data-i18n="remarks_optional">Remarks (optional)</label>
+                    <input type="text" id="remarks" class="neu-input" data-i18n-placeholder="add_any_notes" placeholder="Add any notes">
                 </div>
                 <div class="md:col-span-4">
-                    <button type="submit" class="neu-button w-full md:w-auto">Submit Request</button>
+                    <button type="submit" class="neu-button w-full md:w-auto" data-i18n="submit_request">Submit Request</button>
                 </div>
             </form>
         </div>
 
         <!-- Gate Pass History -->
         <div class="neu-card">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Gate Pass History</h2>
+            <h2 class="text-xl font-bold mb-4 text-gray-800" data-i18n="gate_pass_history">Gate Pass History</h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b-2">
-                            <th class="text-left p-2">Date</th>
-                            <th class="text-left p-2">Truck</th>
-                            <th class="text-left p-2">Recipient</th>
-                            <th class="text-left p-2">Requested</th>
-                            <th class="text-left p-2">Approved</th>
-                            <th class="text-left p-2">Picked Up</th>
-                            <th class="text-left p-2">Status</th>
+                            <th class="text-left p-2" data-i18n="date">Date</th>
+                            <th class="text-left p-2" data-i18n="truck">Truck</th>
+                            <th class="text-left p-2" data-i18n="recipient">Recipient</th>
+                            <th class="text-left p-2" data-i18n="requested">Requested</th>
+                            <th class="text-left p-2" data-i18n="approved">Approved</th>
+                            <th class="text-left p-2" data-i18n="picked_up">Picked Up</th>
+                            <th class="text-left p-2" data-i18n="status">Status</th>
                         </tr>
                     </thead>
                     <tbody id="gatePassHistory">
@@ -160,12 +185,19 @@
         </div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
+
     <script>
         let dashboardData = null;
         let selectedTruckData = null;
 
-        // Check authentication
-        window.addEventListener('load', checkAuth);
+        // Check authentication after i18n is ready
+        window.addEventListener('load', async function() {
+            // Wait for i18n to initialize
+            await i18n.init();
+            checkAuth();
+        });
 
         async function checkAuth() {
             const token = localStorage.getItem('customer_token');
@@ -177,7 +209,7 @@
             await loadDashboard();
         }
 
-        async function loadDashboard() {
+        async function loadDashboard(silent = false) {
             try {
                 const token = localStorage.getItem('customer_token');
                 const response = await fetch('/api/dashboard', {
@@ -192,14 +224,17 @@
                         window.location.href = '/login';
                         return;
                     }
-                    throw new Error('Failed to load dashboard');
+                    throw new Error(i18n.t('failed_load_dashboard', 'Failed to load dashboard'));
                 }
 
                 dashboardData = await response.json();
                 renderDashboard();
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to load dashboard data');
+                // Only show alert on initial load, not on silent auto-refresh
+                if (!silent) {
+                    alert(i18n.t('failed_load_dashboard_data', 'Failed to load dashboard data'));
+                }
             }
         }
 
@@ -216,18 +251,20 @@
             const balanceEl = document.getElementById('balanceAmount');
             if (dashboardData.total_balance > 0) {
                 balanceEl.className = 'text-2xl font-bold text-red-600';
-                balanceEl.innerHTML = '₹' + dashboardData.total_balance.toFixed(2) + ' (Due)';
+                balanceEl.innerHTML = '₹' + dashboardData.total_balance.toFixed(2) + ' (' + i18n.t('due', 'Due') + ')';
             } else if (dashboardData.total_balance < 0) {
                 balanceEl.className = 'text-2xl font-bold text-green-600';
-                balanceEl.innerHTML = '₹' + Math.abs(dashboardData.total_balance).toFixed(2) + ' (Advance)';
+                balanceEl.innerHTML = '₹' + Math.abs(dashboardData.total_balance).toFixed(2) + ' (' + i18n.t('advance', 'Advance') + ')';
             }
 
             // Trucks table
             const trucksTable = document.getElementById('trucksTable');
             const truckSelect = document.getElementById('truckSelect');
             trucksTable.innerHTML = '';
-            truckSelect.innerHTML = '<option value="">-- Select Truck --</option>';
+            truckSelect.innerHTML = '<option value="">' + i18n.t('select_truck_option', '-- Select Truck --') + '</option>';
 
+            const requestPassText = i18n.t('request_pass', 'Request Pass');
+            const maxText = i18n.t('max', 'Max');
             dashboardData.trucks.forEach(truck => {
                 const row = `
                     <tr class="border-b">
@@ -241,7 +278,7 @@
                         <td class="p-2">
                             <button onclick="selectTruck('${truck.truck_number}', ${truck.can_take_out})"
                                     class="text-blue-600 hover:underline text-sm">
-                                Request Pass
+                                ${requestPassText}
                             </button>
                         </td>
                     </tr>
@@ -250,7 +287,7 @@
 
                 // Add to select dropdown
                 truckSelect.innerHTML += `<option value="${truck.truck_number}" data-max="${truck.can_take_out}">
-                    ${truck.truck_number} (Max: ${truck.can_take_out})
+                    ${truck.truck_number} (${maxText}: ${truck.can_take_out})
                 </option>`;
             });
 
@@ -261,6 +298,9 @@
             dashboardData.gate_passes.forEach(gp => {
                 const date = new Date(gp.issued_at).toLocaleDateString('en-IN');
                 const statusClass = `status-${gp.status.replace(/ /g, '_')}`;
+
+                // Translate status
+                const statusText = i18n.t(gp.status.replace(/ /g, '_'), gp.status);
 
                 // Extract recipient from remarks (format: "Recipient: Name | ...")
                 let recipient = '-';
@@ -277,14 +317,14 @@
                         <td class="p-2">${gp.requested_quantity}</td>
                         <td class="p-2">${gp.approved_quantity || '-'}</td>
                         <td class="p-2">${gp.total_picked_up || 0}</td>
-                        <td class="p-2"><span class="status-badge ${statusClass}">${gp.status}</span></td>
+                        <td class="p-2"><span class="status-badge ${statusClass}">${statusText}</span></td>
                     </tr>
                 `;
                 historyTable.innerHTML += row;
             });
 
             if (dashboardData.gate_passes.length === 0) {
-                historyTable.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No gate pass requests yet</td></tr>';
+                historyTable.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">' + i18n.t('no_gate_pass_requests', 'No gate pass requests yet') + '</td></tr>';
             }
         }
 
@@ -315,12 +355,12 @@
             const remarks = document.getElementById('remarks').value;
 
             if (!truck) {
-                alert('Please select a truck');
+                alert(i18n.t('please_select_truck', 'Please select a truck'));
                 return;
             }
 
             if (!recipientName) {
-                alert('Please enter recipient name');
+                alert(i18n.t('please_enter_recipient', 'Please enter recipient name'));
                 return;
             }
 
@@ -346,16 +386,16 @@
                 });
 
                 if (response.ok) {
-                    alert('Gate pass request submitted successfully!');
+                    alert(i18n.t('gate_pass_submitted_success', 'Gate pass request submitted successfully!'));
                     document.getElementById('gatePassForm').reset();
                     await loadDashboard(); // Reload dashboard
                 } else {
                     const error = await response.text();
-                    alert('Failed to submit request: ' + error);
+                    alert(i18n.t('failed_submit_request', 'Failed to submit request') + ': ' + error);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Network error. Please try again.');
+                alert(i18n.t('network_error', 'Network error. Please try again.'));
             }
         }
 
@@ -369,10 +409,10 @@
             });
         }
 
-        // Auto-refresh dashboard every 30 seconds
+        // Auto-refresh dashboard every 30 seconds (silent mode - no error alerts)
         setInterval(async () => {
             try {
-                await loadDashboard();
+                await loadDashboard(true);
             } catch (e) {
                 console.error('Auto-refresh failed:', e);
             }

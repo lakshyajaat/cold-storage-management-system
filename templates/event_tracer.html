@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Events - Cold Storage Management</title>
+    <title data-i18n-page-title="page_title_events">Events - Cold Storage Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -76,6 +76,10 @@
             background: #ede9fe !important;
             border-left: 4px solid #8b5cf6;
         }
+        .lang-selector {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
     </style>
 </head>
 <body class="bg-[#DFCCFB] min-h-screen p-8">
@@ -86,47 +90,52 @@
                 <div>
                     <h1 class="text-4xl font-bold flex items-center gap-3">
                         <i class="bi bi-calendar-event text-purple-600"></i>
-                        Events & Activity
+                        <span data-i18n="events_activity">Events & Activity</span>
                     </h1>
-                    <p class="text-gray-600 mt-2">Recent entries and system activity</p>
+                    <p class="text-gray-600 mt-2" data-i18n="recent_entries_activity">Recent entries and system activity</p>
                 </div>
-                <nav class="flex gap-4">
+                <nav class="flex gap-4 items-center">
+                    <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                            class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                        <option value="en">EN</option>
+                        <option value="hi">हिं</option>
+                    </select>
                     <button class="neu-border bg-[#98EECC] px-6 py-2" onclick="window.location.href='/dashboard'">
-                        <i class="bi bi-grid"></i> Dashboard
+                        <i class="bi bi-grid"></i> <span data-i18n="dashboard">Dashboard</span>
                     </button>
                     <button id="viewToggle" class="neu-border bg-[#FFD93D] px-6 py-2" onclick="toggleView()">
-                        <i class="bi bi-clock-history"></i> <span id="viewToggleText">Show All Events</span>
+                        <i class="bi bi-clock-history"></i> <span id="viewToggleText" data-i18n="show_all_events">Show All Events</span>
                     </button>
                     <button class="neu-border bg-[#4edcff] px-6 py-2" onclick="refreshData()">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                        <i class="bi bi-arrow-clockwise"></i> <span data-i18n="refresh">Refresh</span>
                     </button>
                 </nav>
             </div>
             <div class="mt-4 inline-block bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 border-2 border-black shadow-[3px_3px_0_#000]">
-                <i class="bi bi-person-circle"></i> <span id="userName">Loading...</span>
+                <i class="bi bi-person-circle"></i> <span id="userName" data-i18n="loading">Loading...</span>
             </div>
         </header>
 
         <!-- Entry Status Section -->
         <div class="neu-border bg-white p-6 mb-8">
             <h2 class="text-2xl font-bold mb-4">
-                <i class="bi bi-graph-up text-green-600"></i> Entry Status Overview
+                <i class="bi bi-graph-up text-green-600"></i> <span data-i18n="entry_status_overview">Entry Status Overview</span>
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="p-4 bg-green-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Total Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
                     <p id="totalEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-blue-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Room Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="room_entries">Room Entries</p>
                     <p id="totalRoomEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-purple-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">SEED Category</p>
+                    <p class="text-sm text-gray-600" data-i18n="seed_category">SEED Category</p>
                     <p id="seedEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-orange-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">SELL Category</p>
+                    <p class="text-sm text-gray-600" data-i18n="sell_category">SELL Category</p>
                     <p id="sellEntries" class="text-3xl font-bold">...</p>
                 </div>
             </div>
@@ -135,31 +144,34 @@
         <!-- Combined Activity Log Section -->
         <div class="neu-border bg-white p-6">
             <h2 class="text-2xl font-bold mb-4">
-                <i class="bi bi-activity text-purple-600"></i> All Activity Log
+                <i class="bi bi-activity text-purple-600"></i> <span data-i18n="all_activity_log">All Activity Log</span>
             </h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="table-header">
                         <tr>
-                            <th class="p-3 text-left border-2 border-black">Truck Number</th>
-                            <th class="p-3 text-left border-2 border-black">Category</th>
-                            <th class="p-3 text-left border-2 border-black">Customer Name</th>
-                            <th class="p-3 text-left border-2 border-black">Phone</th>
-                            <th class="p-3 text-left border-2 border-black">Village</th>
-                            <th class="p-3 text-left border-2 border-black">Room/Floor/Gate</th>
-                            <th class="p-3 text-left border-2 border-black">Quantity</th>
-                            <th class="p-3 text-left border-2 border-black">Entry Created</th>
-                            <th class="p-3 text-left border-2 border-black">Room Allocated</th>
-                            <th class="p-3 text-left border-2 border-black">Status</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="truck_number">Truck Number</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="category">Category</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="customer_name">Customer Name</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="phone">Phone</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="village">Village</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="room_floor_gate">Room/Floor/Gate</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="quantity">Quantity</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="entry_created">Entry Created</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="room_allocated">Room Allocated</th>
+                            <th class="p-3 text-left border-2 border-black" data-i18n="status">Status</th>
                         </tr>
                     </thead>
                     <tbody id="activityLogBody">
-                        <tr><td colspan="10" class="text-center p-4">Loading...</td></tr>
+                        <tr><td colspan="10" class="text-center p-4" data-i18n="loading">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
 
     <script>
         const token = localStorage.getItem('token');
@@ -289,9 +301,20 @@
 
                 const tbody = document.getElementById('activityLogBody');
                 if (displayActivities.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No activity found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">' + i18n.t('no_activity_found', 'No activity found') + '</td></tr>';
                     return;
                 }
+
+                const expectedLabel = i18n.t('expected_label', 'Expected:');
+                const storedLabel = i18n.t('stored_label', 'Stored:');
+                const bagsLabel = i18n.t('bags', 'bags');
+                const byLabel = i18n.t('by', 'by');
+                const roomLabel = i18n.t('room', 'Room');
+                const floorLabel = i18n.t('floor', 'Floor');
+                const gateLabel = i18n.t('gatar', 'Gate');
+                const awaitingStorageText = i18n.t('awaiting_storage', 'Awaiting Storage');
+                const completeText = i18n.t('status_complete', 'COMPLETE');
+                const pendingStorageText = i18n.t('status_pending_storage', 'PENDING STORAGE');
 
                 tbody.innerHTML = displayActivities.map(activity => {
                     const category = getCategory(activity.truck_number);
@@ -299,11 +322,11 @@
                     const hasRoom = activity.room !== null;
                     const rowClass = hasRoom ? 'row-room' : 'row-main';
                     const statusClass = hasRoom ? 'status-room' : 'status-main';
-                    const statusText = hasRoom ? 'COMPLETE' : 'PENDING STORAGE';
+                    const statusText = hasRoom ? completeText : pendingStorageText;
 
                     const roomInfo = hasRoom ?
-                        `Room ${activity.room} / Floor ${activity.floor} / Gate ${activity.gate}` :
-                        '<span class="text-orange-600 font-semibold">Awaiting Storage</span>';
+                        `${roomLabel} ${activity.room} / ${floorLabel} ${activity.floor} / ${gateLabel} ${activity.gate}` :
+                        `<span class="text-orange-600 font-semibold">${awaitingStorageText}</span>`;
 
                     return `
                     <tr class="${rowClass} hover:opacity-80 transition-opacity">
@@ -316,17 +339,17 @@
                         <td class="p-3 border-2 border-black">${capitalizeText(activity.village) || '-'}</td>
                         <td class="p-3 border-2 border-black text-purple-700 font-semibold">${roomInfo}</td>
                         <td class="p-3 border-2 border-black">
-                            <div class="text-sm">Expected: <span class="font-bold">${activity.quantity}</span></div>
-                            ${hasRoom ? `<div class="text-sm text-green-700">Stored: <span class="font-bold">${activity.room_quantity} bags</span></div>` : ''}
+                            <div class="text-sm">${expectedLabel} <span class="font-bold">${activity.quantity}</span></div>
+                            ${hasRoom ? `<div class="text-sm text-green-700">${storedLabel} <span class="font-bold">${activity.room_quantity} ${bagsLabel}</span></div>` : ''}
                         </td>
                         <td class="p-3 border-2 border-black text-sm">
                             <div class="font-semibold">${formatDateTime(activity.main_entry_time)}</div>
-                            <div class="text-xs text-blue-600">by ${activity.main_entry_user}</div>
+                            <div class="text-xs text-blue-600">${byLabel} ${activity.main_entry_user}</div>
                         </td>
                         <td class="p-3 border-2 border-black text-sm">
                             ${hasRoom ? `
                                 <div class="font-semibold">${formatDateTime(activity.room_entry_time)}</div>
-                                <div class="text-xs text-purple-600">by ${activity.room_entry_user}</div>
+                                <div class="text-xs text-purple-600">${byLabel} ${activity.room_entry_user}</div>
                             ` : '<span class="text-gray-400">-</span>'}
                         </td>
                         <td class="p-3 border-2 border-black">
@@ -338,7 +361,7 @@
             } catch (error) {
                 console.error('Error loading activity log:', error);
                 document.getElementById('activityLogBody').innerHTML =
-                    '<tr><td colspan="10" class="text-center p-4 text-red-600">Error loading data</td></tr>';
+                    '<tr><td colspan="10" class="text-center p-4 text-red-600">' + i18n.t('error_loading_data', 'Error loading data') + '</td></tr>';
             }
         }
 
@@ -388,7 +411,7 @@
             // Show notification
             const notification = document.createElement('div');
             notification.className = 'fixed top-4 right-4 bg-[#a8e0ff] neu-border p-4 rounded-md';
-            notification.textContent = 'Data refreshed successfully!';
+            notification.textContent = i18n.t('data_refreshed', 'Data refreshed successfully!');
             document.body.appendChild(notification);
             setTimeout(() => notification.remove(), 3000);
         }
@@ -403,11 +426,11 @@
             const toggleBtn = document.getElementById('viewToggle');
 
             if (showAllEvents) {
-                toggleText.textContent = 'Show Recent Events';
+                toggleText.textContent = i18n.t('show_recent_events', 'Show Recent Events');
                 toggleBtn.classList.remove('bg-[#FFD93D]');
                 toggleBtn.classList.add('bg-[#FF6B9D]');
             } else {
-                toggleText.textContent = 'Show All Events';
+                toggleText.textContent = i18n.t('show_all_events', 'Show All Events');
                 toggleBtn.classList.remove('bg-[#FF6B9D]');
                 toggleBtn.classList.add('bg-[#FFD93D]');
             }

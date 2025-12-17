@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Cold Storage</title>
+    <title data-i18n-page-title="page_title_admin">Admin Dashboard - Cold Storage</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
@@ -49,6 +49,10 @@
             border: 2px solid #000;
             box-shadow: 3px 3px 0 #000;
         }
+        .lang-selector {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
     </style>
 </head>
 <body class="bg-[#FFEBEB] min-h-screen p-8">
@@ -58,20 +62,26 @@
                 <div class="flex items-center gap-3">
                     <i class="bi bi-shield-lock-fill text-4xl text-purple-600"></i>
                     <div>
-                        <h1 class="text-4xl font-bold">Admin Dashboard</h1>
-                        <p class="text-gray-600">System Administrator Control Panel</p>
+                        <h1 class="text-4xl font-bold" data-i18n="admin_dashboard">Admin Dashboard</h1>
+                        <p class="text-gray-600" data-i18n="system_admin_panel">System Administrator Control Panel</p>
                     </div>
                 </div>
                 <div class="mt-2 admin-badge inline-block">
-                    <i class="bi bi-person-badge"></i> <span id="adminName">Loading...</span> (Administrator)
+                    <i class="bi bi-person-badge"></i> <span id="adminName">Loading...</span> (<span data-i18n="administrator">Administrator</span>)
                 </div>
             </div>
-            <nav class="flex gap-4">
+            <nav class="flex gap-4 items-center">
+                <!-- Language Selector -->
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
                 <button class="neu-border bg-[#FFB4B4] px-6 py-2" onclick="window.location.href='/home'">
-                    <i class="bi bi-house-door"></i> Home
+                    <i class="bi bi-house-door"></i> <span data-i18n="home">Home</span>
                 </button>
                 <button class="neu-border bg-[#FF6B6B] text-white px-6 py-2" onclick="logout()">
-                    <i class="bi bi-box-arrow-right"></i> Logout
+                    <i class="bi bi-box-arrow-right"></i> <span data-i18n="logout">Logout</span>
                 </button>
             </nav>
         </header>
@@ -79,9 +89,9 @@
         <!-- Admin-Only Features -->
         <div class="mb-8 neu-border bg-yellow-100 p-4">
             <h3 class="font-bold text-lg mb-2">
-                <i class="bi bi-star-fill text-yellow-600"></i> Administrator Access
+                <i class="bi bi-star-fill text-yellow-600"></i> <span data-i18n="admin_access">Administrator Access</span>
             </h3>
-            <p class="text-sm">You have full system access including reports, employee management, and system settings.</p>
+            <p class="text-sm" data-i18n="admin_access_notice">You have full system access including reports, employee management, and system settings.</p>
         </div>
 
         <!-- Admin Sections -->
@@ -89,20 +99,20 @@
             <!-- Management Section -->
             <div class="neu-border bg-white p-6">
                 <h3 class="text-xl font-bold mb-4 text-purple-600">
-                    <i class="bi bi-gear-fill"></i> System Management
+                    <i class="bi bi-gear-fill"></i> <span data-i18n="system_management">System Management</span>
                 </h3>
                 <div class="space-y-3">
                     <button class="page-button bg-[#FFB4B4] w-full" onclick="navigate('/employees')">
                         <i class="bi bi-people"></i>
-                        <span>Employee Management</span>
+                        <span data-i18n="employee_management">Employee Management</span>
                     </button>
                     <button class="page-button bg-[#FFE5CA] w-full" onclick="navigate('/admin/report')">
                         <i class="bi bi-file-earmark-bar-graph"></i>
-                        <span>Admin Reports</span>
+                        <span data-i18n="admin_reports">Admin Reports</span>
                     </button>
                     <button class="page-button bg-[#D4ADFC] w-full" onclick="navigate('/system-settings')">
                         <i class="bi bi-sliders"></i>
-                        <span>System Settings</span>
+                        <span data-i18n="system_settings">System Settings</span>
                     </button>
                 </div>
             </div>
@@ -110,28 +120,28 @@
             <!-- Operations Section -->
             <div class="neu-border bg-white p-6">
                 <h3 class="text-xl font-bold mb-4 text-blue-600">
-                    <i class="bi bi-box-seam"></i> Operations
+                    <i class="bi bi-box-seam"></i> <span data-i18n="operations">Operations</span>
                 </h3>
                 <div class="space-y-3">
                     <button class="page-button bg-[#98EECC] w-full" onclick="navigate('/item-search')">
                         <i class="bi bi-compass"></i>
-                        <span>Item Locator</span>
+                        <span data-i18n="item_locator">Item Locator</span>
                     </button>
                     <button class="page-button bg-[#7DEDFF] w-full" onclick="navigate('/entry-room')">
                         <i class="bi bi-door-open"></i>
-                        <span>Entry Room</span>
+                        <span data-i18n="entry_room_page">Entry Room</span>
                     </button>
                     <button class="page-button bg-[#A8E6CF] w-full" onclick="navigate('/room-config-1')">
                         <i class="bi bi-thermometer-snow"></i>
-                        <span>Room Configuration 1</span>
+                        <span data-i18n="room_configuration">Room Configuration 1</span>
                     </button>
                     <button class="page-button bg-[#FFB3BA] w-full" onclick="navigate('/gate-pass-entry')">
                         <i class="bi bi-box-arrow-right"></i>
-                        <span>Gate Pass Entry</span>
+                        <span data-i18n="gate_pass_entry_page">Gate Pass Entry</span>
                     </button>
                     <button class="page-button bg-[#FFDFBA] w-full" onclick="navigate('/unloading-tickets')">
                         <i class="bi bi-clipboard-check"></i>
-                        <span>Unloading Tickets</span>
+                        <span data-i18n="unloading_tickets_page">Unloading Tickets</span>
                     </button>
                 </div>
             </div>
@@ -139,28 +149,28 @@
             <!-- Monitoring Section -->
             <div class="neu-border bg-white p-6">
                 <h3 class="text-xl font-bold mb-4 text-green-600">
-                    <i class="bi bi-activity"></i> Monitoring
+                    <i class="bi bi-activity"></i> <span data-i18n="monitoring">Monitoring</span>
                 </h3>
                 <div class="space-y-3">
                     <button class="page-button bg-[#FF6B9D] w-full" onclick="navigate('/infrastructure')">
                         <i class="bi bi-hdd-network"></i>
-                        <span>Infrastructure Monitoring</span>
+                        <span data-i18n="infrastructure_monitoring">Infrastructure Monitoring</span>
                     </button>
                     <button class="page-button bg-[#DFCCFB] w-full" onclick="navigate('/events')">
                         <i class="bi bi-calendar-event"></i>
-                        <span>All Events</span>
+                        <span data-i18n="all_events">All Events</span>
                     </button>
                     <button class="page-button bg-[#B4FF9F] w-full" onclick="navigate('/analytics')">
                         <i class="bi bi-graph-up"></i>
-                        <span>Analytics</span>
+                        <span data-i18n="analytics">Analytics</span>
                     </button>
                     <button class="page-button bg-[#FFD3B6] w-full" onclick="navigate('/rent-management')">
                         <i class="bi bi-wallet2"></i>
-                        <span>Account</span>
+                        <span data-i18n="account">Account</span>
                     </button>
                     <button class="page-button bg-[#C9F4AA] w-full" onclick="navigate('/verify-receipt')">
                         <i class="bi bi-shield-check"></i>
-                        <span>Verify Receipt</span>
+                        <span data-i18n="verify_receipt">Verify Receipt</span>
                     </button>
                 </div>
             </div>
@@ -169,22 +179,22 @@
 
         <!-- Quick Stats (Admin View) -->
         <div class="neu-border bg-white p-6 mb-8">
-            <h3 class="text-2xl font-bold mb-4">System Overview</h3>
+            <h3 class="text-2xl font-bold mb-4" data-i18n="system_overview">System Overview</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="p-4 bg-blue-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Total Users</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_users">Total Users</p>
                     <p id="totalUsers" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-green-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Total Customers</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_customers">Total Customers</p>
                     <p id="totalCustomers" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-purple-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Total Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
                     <p id="totalEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-red-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Room Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="room_entries">Room Entries</p>
                     <p id="totalRoomEntries" class="text-3xl font-bold">...</p>
                 </div>
             </div>
@@ -192,28 +202,30 @@
 
         <!-- Today's Summary -->
         <div class="neu-border bg-white p-6">
-            <h3 class="text-2xl font-bold mb-4">Today's Summary</h3>
+            <h3 class="text-2xl font-bold mb-4" data-i18n="todays_summary">Today's Summary</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="p-4 bg-blue-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Today's Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="todays_entries">Today's Entries</p>
                     <p id="todayEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-green-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Today's Room Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
                     <p id="todayRoomEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-purple-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Active Users</p>
+                    <p class="text-sm text-gray-600" data-i18n="active_users">Active Users</p>
                     <p id="activeUsers" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-orange-50 border-2 border-black">
-                    <p class="text-sm text-gray-600">Total Bags</p>
+                    <p class="text-sm text-gray-600" data-i18n="total_bags">Total Bags</p>
                     <p id="totalBags" class="text-3xl font-bold">...</p>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
         // Capitalize first letter of text
         function capitalizeText(text) {
@@ -231,7 +243,7 @@
 
             const user = JSON.parse(userStr);
             if (user.role !== 'admin') {
-                alert('Access Denied: Admin access required');
+                alert(i18n.t('access_denied', 'Access Denied') + ': ' + i18n.t('admin_access_required', 'Admin access required'));
                 window.location.href = '/dashboard';
                 return;
             }
@@ -241,6 +253,10 @@
             if (nameElement) {
                 nameElement.textContent = capitalizeText(user.name) || user.email || 'Admin';
             }
+
+            // Update language selector
+            const lang = localStorage.getItem('lang') || 'en';
+            document.getElementById('langSelector').value = lang;
         })();
 
         function navigate(path) {
@@ -248,7 +264,8 @@
         }
 
         function logout() {
-            if (confirm('Are you sure you want to logout?')) {
+            const confirmMsg = i18n.t('confirm_logout', 'Are you sure you want to logout?');
+            if (confirm(confirmMsg)) {
                 window.location.href = '/logout';
             }
         }
@@ -302,11 +319,12 @@
 
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
+                const errorText = i18n.t('error', 'Error');
                 // Set error state
                 ['totalUsers', 'totalCustomers', 'totalEntries', 'totalRoomEntries',
                  'todayEntries', 'todayRoomEntries', 'activeUsers', 'totalBags'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.textContent = 'Error';
+                    if (el) el.textContent = errorText;
                 });
             }
         }

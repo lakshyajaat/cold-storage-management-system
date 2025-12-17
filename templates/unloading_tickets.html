@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unloading Tickets - Cold Storage</title>
+    <title data-i18n-page-title="page_title_unloading">Unloading Tickets - Cold Storage</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
@@ -61,6 +61,10 @@
             background-color: #FDE68A !important;
             border-left: 4px solid #F59E0B;
         }
+        .lang-selector {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-8">
@@ -70,82 +74,53 @@
                 <div class="flex items-center gap-3">
                     <i class="bi bi-ticket-perforated text-4xl text-purple-600"></i>
                     <div>
-                        <h1 class="text-3xl font-bold">Unloading Tickets</h1>
-                        <p class="text-gray-600">Approve and process gate passes</p>
+                        <h1 class="text-3xl font-bold" data-i18n="unloading_title">Unloading Tickets</h1>
+                        <p class="text-gray-600" data-i18n="approve_process_passes">Approve and process gate passes</p>
                     </div>
                 </div>
             </div>
-            <button onclick="goBack()" class="neu-button bg-gray-200">
-                <i class="bi bi-arrow-left"></i> Back
-            </button>
+            <div class="flex gap-3 items-center">
+                <!-- Language Selector -->
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
+                <button onclick="goBack()" class="neu-button bg-gray-200">
+                    <i class="bi bi-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
         </header>
 
-        <div class="grid grid-cols-3 gap-8">
-            <!-- Left: Pending Tickets (2 columns) -->
-            <div class="col-span-2">
-                <div class="neu-border bg-white p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold flex items-center gap-2">
-                            <i class="bi bi-list-check text-yellow-600"></i>
-                            Pending Gate Passes
-                        </h2>
-                        <button onclick="loadPendingGatePasses()" class="neu-button bg-blue-500 text-white text-sm px-3 py-2">
-                            <i class="bi bi-arrow-clockwise"></i> Refresh
-                        </button>
-                    </div>
-                    <div id="pendingTickets" class="overflow-auto" style="max-height: 800px;">
-                        <table class="w-full text-sm">
-                            <thead class="sticky top-0 bg-white">
-                                <tr class="border-b-2 border-black">
-                                    <th class="text-left p-2 font-bold">Thock NO</th>
-                                    <th class="text-left p-2 font-bold">Customer</th>
-                                    <th class="text-left p-2 font-bold">Recipient</th>
-                                    <th class="text-left p-2 font-bold">Room</th>
-                                    <th class="text-left p-2 font-bold">Floor</th>
-                                    <th class="text-left p-2 font-bold">Gatar</th>
-                                    <th class="text-left p-2 font-bold">Qty</th>
-                                    <th class="text-left p-2 font-bold">Expires In</th>
-                                    <th class="text-left p-2 font-bold">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ticketsTableBody">
-                                <tr>
-                                    <td colspan="9" class="text-center p-4 text-gray-500">Loading pending tickets...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Approval Form (1 column) -->
-            <div class="col-span-1">
+        <div class="grid grid-cols-10 gap-6">
+            <!-- Left: Approval Form (60%) -->
+            <div class="col-span-6">
                 <div class="neu-border bg-white p-6">
                     <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                         <i class="bi bi-check2-circle text-green-600"></i>
-                        Approval Form
+                        <span data-i18n="approval_form">Approval Form</span>
                     </h2>
 
                     <div id="noSelection" class="p-8 text-center text-gray-500">
                         <i class="bi bi-hand-index text-6xl mb-4"></i>
-                        <p>Select a gate pass to approve</p>
+                        <p data-i18n="select_gate_pass_approve">Select a gate pass to approve</p>
                     </div>
 
                     <form id="approvalForm" class="hidden" onsubmit="approveGatePass(event)">
                         <input type="hidden" id="gatePassId">
 
                         <div class="mb-4 p-4 bg-yellow-50 neu-border">
-                            <p class="text-sm font-semibold text-gray-700 mb-1">Thock NO:</p>
+                            <p class="text-sm font-semibold text-gray-700 mb-1"><span data-i18n="thock_number">Thock NO</span>:</p>
                             <p class="text-xl font-bold text-purple-700" id="selectedTruckNumber">-</p>
                             <p class="text-xs text-gray-600 mt-2" id="selectedCustomer"></p>
                         </div>
 
                         <div class="mb-4 p-3 bg-white neu-border">
-                            <p class="text-sm font-semibold text-gray-700 mb-2">Storage Location:</p>
+                            <p class="text-sm font-semibold text-gray-700 mb-2"><span data-i18n="storage_location_label">Storage Location</span>:</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <!-- Left: Room Selection Display -->
                                 <div>
-                                    <p class="text-xs text-gray-600 mb-1 font-semibold">Room No</p>
+                                    <p class="text-xs text-gray-600 mb-1 font-semibold" data-i18n="room_no">Room No</p>
                                     <div class="space-y-1">
                                         <div class="grid grid-cols-2 gap-1">
                                             <div class="location-box room-2 neu-border bg-gray-100 text-gray-400 py-2 text-center text-sm font-bold">
@@ -171,7 +146,7 @@
 
                                 <!-- Right: Floor Display -->
                                 <div>
-                                    <p class="text-xs text-gray-600 mb-1 font-semibold">Floor</p>
+                                    <p class="text-xs text-gray-600 mb-1 font-semibold" data-i18n="floor">Floor</p>
                                     <div class="grid grid-cols-1 gap-1">
                                         <div class="location-box floor-5 neu-border bg-gray-100 text-gray-400 py-2 text-center text-sm font-bold">5</div>
                                         <div class="location-box floor-4 neu-border bg-gray-100 text-gray-400 py-2 text-center text-sm font-bold">4</div>
@@ -184,14 +159,14 @@
 
                             <!-- Gatar Display -->
                             <div class="mt-3">
-                                <p class="text-xs text-gray-600 mb-1 font-semibold">Gatar No</p>
+                                <p class="text-xs text-gray-600 mb-1 font-semibold" data-i18n="gatar_no">Gatar No</p>
                                 <div class="neu-border bg-gray-100 text-gray-700 p-2 text-center font-bold" id="selectedGatar">-</div>
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Approved Quantity *
+                                <span data-i18n="approved_quantity">Approved Quantity</span> *
                             </label>
                             <input
                                 type="number"
@@ -202,35 +177,58 @@
                                 placeholder="Enter approved quantity"
                             >
                             <p class="text-xs text-gray-600 mt-1">
-                                Requested: <span id="requestedQty" class="font-bold">-</span>
+                                <span data-i18n="requested">Requested</span>: <span id="requestedQty" class="font-bold">-</span>
                             </p>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Gate Number *
-                            </label>
-                            <input
-                                type="text"
-                                id="gateNo"
-                                required
-                                class="w-full neu-input"
-                                placeholder="Enter gate number"
-                            >
+                        <!-- Pickup Gatar Selection - Visual Grid -->
+                        <div class="mb-4 p-3 bg-green-50 neu-border">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-sm font-semibold text-gray-700">
+                                    <i class="bi bi-geo-alt"></i> <span data-i18n="select_pickup_gatar">Select Pickup Gatar(s)</span> *
+                                </label>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="selectAllPickupGatars()" class="px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold">
+                                        <i class="bi bi-check-all"></i> <span data-i18n="select_all">All</span>
+                                    </button>
+                                    <button type="button" onclick="clearAllPickupGatars()" class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">
+                                        <i class="bi bi-x-circle"></i> <span data-i18n="clear">Clear</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Selection Summary -->
+                            <div id="pickupSelectionSummary" class="bg-white rounded p-2 mb-2 border border-green-300 text-center">
+                                <p class="text-gray-500 text-sm" data-i18n="select_gate_pass_first">Select a gate pass first</p>
+                            </div>
+
+                            <!-- Gatar Grid Container -->
+                            <div id="pickupGatarList" class="max-h-48 overflow-y-auto">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+
+                            <input type="hidden" id="gateNo" value="">
+
+                            <!-- Total Selected -->
+                            <div class="mt-2 p-2 bg-blue-100 rounded text-center">
+                                <span class="text-sm font-bold text-blue-800">
+                                    <span data-i18n="total_selected">Total Selected</span>: <span id="selectedGatarCount" class="text-lg">0 <span data-i18n="items">items</span></span>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Status *
+                                <span data-i18n="status">Status</span> *
                             </label>
                             <select id="status" required class="w-full neu-input">
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
+                                <option value="approved" data-i18n="approved">Approved</option>
+                                <option value="rejected" data-i18n="rejected">Rejected</option>
                             </select>
                         </div>
 
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="remarks">
                                 Remarks
                             </label>
                             <textarea
@@ -243,10 +241,10 @@
 
                         <div class="flex gap-3">
                             <button type="submit" class="neu-button bg-green-500 text-white flex-1">
-                                <i class="bi bi-check-circle"></i> Approve
+                                <i class="bi bi-check-circle"></i> <span data-i18n="approve">Approve</span>
                             </button>
                             <button type="button" onclick="clearSelection()" class="neu-button bg-gray-300">
-                                <i class="bi bi-x-circle"></i> Cancel
+                                <i class="bi bi-x-circle"></i> <span data-i18n="cancel">Cancel</span>
                             </button>
                         </div>
                     </form>
@@ -256,20 +254,52 @@
                 <div class="neu-border bg-white p-6 mt-8">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
                         <i class="bi bi-clipboard-check text-blue-600"></i>
-                        Approved Passes - Record Pickup
+                        <span data-i18n="approved_passes_pickup">Approved Passes - Record Pickup</span>
                     </h2>
                     <div id="approvedPasses" class="overflow-auto" style="max-height: 400px;">
                         <table class="w-full text-sm">
                             <thead class="sticky top-0 bg-white">
                                 <tr class="border-b-2 border-black">
-                                    <th class="text-left p-2 font-bold">Thock</th>
-                                    <th class="text-left p-2 font-bold">Progress</th>
-                                    <th class="text-left p-2 font-bold">Action</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="thock_number">Thock</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="progress">Progress</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="action">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="approvedTableBody">
                                 <tr>
-                                    <td colspan="3" class="text-center p-4 text-gray-500">No approved passes</td>
+                                    <td colspan="3" class="text-center p-4 text-gray-500" data-i18n="no_approved_passes">No approved passes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Pending Tickets (40%) -->
+            <div class="col-span-4">
+                <div class="neu-border bg-white p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="bi bi-list-check text-yellow-600"></i>
+                            <span data-i18n="pending_gate_passes">Pending Gate Passes</span>
+                        </h2>
+                        <button onclick="loadPendingGatePasses()" class="neu-button bg-blue-500 text-white text-xs px-2 py-1">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div id="pendingTickets" class="overflow-auto" style="max-height: 700px;">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b-2 border-black">
+                                    <th class="text-left p-2 font-bold" data-i18n="thock_number">Thock</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="customer_name">Customer</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="expires">Expires</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketsTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -284,7 +314,7 @@
         <div class="neu-border bg-white p-8 max-w-md w-full mx-4">
             <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
                 <i class="bi bi-box-arrow-up text-green-600"></i>
-                Record Pickup
+                <span data-i18n="record_pickup_title">Record Pickup</span>
             </h3>
             <form id="pickupForm" onsubmit="submitPickup(event)">
                 <input type="hidden" id="pickupGatePassId">
@@ -292,17 +322,17 @@
                 <div class="mb-4 p-4 bg-blue-50 neu-border">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-gray-600">Truck:</p>
+                            <p class="text-sm text-gray-600"><span data-i18n="truck">Truck</span>:</p>
                             <p class="font-bold text-xl" id="pickupTruckNumber"></p>
-                            <p class="text-sm text-gray-600 mt-2">Recipient:</p>
+                            <p class="text-sm text-gray-600 mt-2"><span data-i18n="recipient">Recipient</span>:</p>
                             <p class="font-bold text-purple-600" id="pickupRecipient"></p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-600">Approved:</p>
+                            <p class="text-sm text-gray-600"><span data-i18n="approved">Approved</span>:</p>
                             <p class="font-bold" id="pickupApprovedQty"></p>
-                            <p class="text-sm text-gray-600 mt-1">Picked Up:</p>
+                            <p class="text-sm text-gray-600 mt-1"><span data-i18n="pickup">Picked Up</span>:</p>
                             <p class="font-bold text-green-600" id="pickupAlreadyPickedUp"></p>
-                            <p class="text-sm text-gray-600 mt-1">Remaining:</p>
+                            <p class="text-sm text-gray-600 mt-1"><span data-i18n="remaining_quantity">Remaining</span>:</p>
                             <p class="font-bold text-orange-600" id="pickupRemaining"></p>
                         </div>
                     </div>
@@ -310,15 +340,15 @@
 
                 <!-- Storage Location -->
                 <div class="mb-4 p-4 bg-yellow-50 neu-border">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">📍 Storage Location (Items are stored here):</p>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">📍 <span data-i18n="storage_location_items">Storage Location (Items are stored here)</span>:</p>
                     <div id="storageLocationInfo" class="text-center">
-                        <span class="text-gray-500">Loading...</span>
+                        <span class="text-gray-500" data-i18n="loading">Loading...</span>
                     </div>
                 </div>
 
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Pickup Quantity *
+                        <span data-i18n="pickup_quantity">Pickup Quantity</span> *
                     </label>
                     <input
                         type="number"
@@ -326,26 +356,27 @@
                         required
                         min="1"
                         class="w-full neu-input"
+                        data-i18n-placeholder="enter_pickup_qty"
                         placeholder="Enter quantity being picked up now"
                     >
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Room No</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="room_no">Room No</label>
                         <select id="pickupRoomNo" class="w-full neu-input">
-                            <option value="">Select Room</option>
+                            <option value="" data-i18n="select_room">Select Room</option>
                             <option value="1">Room 1</option>
                             <option value="2">Room 2</option>
                             <option value="3">Room 3</option>
                             <option value="4">Room 4</option>
-                            <option value="G">Gallery</option>
+                            <option value="G" data-i18n="gallery">Gallery</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Floor</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="floor">Floor</label>
                         <select id="pickupFloor" class="w-full neu-input">
-                            <option value="">Select Floor</option>
+                            <option value="" data-i18n="select_floor">Select Floor</option>
                             <option value="1">Floor 1</option>
                             <option value="2">Floor 2</option>
                             <option value="3">Floor 3</option>
@@ -356,26 +387,29 @@
                 </div>
 
                 <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Remarks (Optional)</label>
-                    <textarea id="pickupRemarks" class="w-full neu-input" rows="2" placeholder="Any notes"></textarea>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2"><span data-i18n="remarks">Remarks</span> (<span data-i18n="any_notes">Optional</span>)</label>
+                    <textarea id="pickupRemarks" class="w-full neu-input" rows="2" data-i18n-placeholder="any_notes" placeholder="Any notes"></textarea>
                 </div>
 
                 <div class="flex gap-4">
                     <button type="submit" class="neu-button bg-green-500 text-white flex-1">
-                        <i class="bi bi-check-circle"></i> Record Pickup
+                        <i class="bi bi-check-circle"></i> <span data-i18n="record_pickup">Record Pickup</span>
                     </button>
                     <button type="button" onclick="closePickupModal()" class="neu-button bg-gray-300">
-                        <i class="bi bi-x-circle"></i> Cancel
+                        <i class="bi bi-x-circle"></i> <span data-i18n="cancel">Cancel</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
         const token = localStorage.getItem('token');
         let selectedGatePass = null;
         let allGatePasses = [];
+        let pickupRoomEntries = []; // Store room entries for pickup gatar selection
 
         async function loadPendingGatePasses() {
             try {
@@ -393,7 +427,7 @@
             } catch (error) {
                 console.error('Error loading pending gate passes:', error);
                 document.getElementById('ticketsTableBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load tickets</td></tr>';
+                    `<tr><td colspan="7" class="text-center p-4 text-red-500">${i18n.t('failed_load_tickets', 'Failed to load tickets')}</td></tr>`;
             }
         }
 
@@ -406,7 +440,7 @@
             const diff = expires - now;
 
             if (diff <= 0) {
-                return { text: 'EXPIRED', color: 'text-red-600 font-bold' };
+                return { text: i18n.t('expired', 'EXPIRED').toUpperCase(), color: 'text-red-600 font-bold' };
             }
 
             const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -431,50 +465,241 @@
             const tbody = document.getElementById('ticketsTableBody');
 
             if (gatePasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-gray-500">No pending tickets</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-500">${i18n.t('no_pending_tickets', 'No pending tickets')}</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = gatePasses.map(gp => {
-                const date = new Date(gp.issued_at);
-                const formattedDate = date.toLocaleString('en-IN', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                // Extract recipient from remarks
-                let recipient = '-';
-                if (gp.remarks) {
-                    const match = gp.remarks.match(/Recipient:\s*([^|]+)/i);
-                    if (match) recipient = match[1].trim();
-                }
-
                 // Calculate remaining time
                 const remaining = getRemainingTime(gp.expires_at);
 
                 // If expired, add visual indicator
-                const rowClass = gp.is_expired ? 'clickable-row border-b border-gray-200 bg-red-50' : 'clickable-row border-b border-gray-200';
+                const rowClass = gp.is_expired ? 'clickable-row border-b border-gray-200 bg-red-50 hover:bg-red-100' : 'clickable-row border-b border-gray-200 hover:bg-blue-50';
 
                 // Color code truck number based on expiration time
                 const truckColor = remaining.color;
 
                 return `
-                    <tr class="${rowClass}"
+                    <tr class="${rowClass} cursor-pointer"
                         onclick='selectTicket(${JSON.stringify(gp)})'>
                         <td class="p-2 font-bold ${truckColor}">${gp.truck_number}</td>
-                        <td class="p-2">${gp.customer_name}</td>
-                        <td class="p-2 font-semibold text-purple-600">${recipient}</td>
-                        <td class="p-2 font-semibold text-blue-600">${gp.room_no || '-'}</td>
-                        <td class="p-2 font-semibold text-blue-600">${gp.floor || '-'}</td>
-                        <td class="p-2 font-semibold text-blue-600">${gp.gate_no || '-'}</td>
+                        <td class="p-2 text-sm truncate max-w-[120px]" title="${gp.customer_name}">${gp.customer_name}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
                         <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
-                        <td class="p-2 text-xs">${formattedDate}</td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        // Store selected gatars with quantities
+        let selectedPickupGatars = {};
+
+        // Load pickup gatar options for a selected gate pass
+        async function loadPickupGatars(truckNumber) {
+            const container = document.getElementById('pickupGatarList');
+            const summaryDiv = document.getElementById('pickupSelectionSummary');
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center p-4">Loading storage locations...</p>';
+            summaryDiv.innerHTML = '<p class="text-gray-500 text-sm">Loading...</p>';
+            selectedPickupGatars = {};
+
+            try {
+                const response = await fetch('/api/room-entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load room entries');
+
+                const roomEntries = await response.json();
+                pickupRoomEntries = roomEntries.filter(re => re.truck_number === truckNumber);
+
+                if (pickupRoomEntries.length === 0) {
+                    container.innerHTML = '<p class="text-red-500 text-sm text-center p-4">No storage locations found for this truck</p>';
+                    summaryDiv.innerHTML = '<p class="text-red-500 text-sm">No items in storage</p>';
+                    return;
+                }
+
+                // Group by Room and Floor
+                const grouped = {};
+                pickupRoomEntries.forEach((re, idx) => {
+                    const key = `R${re.room_no}-F${re.floor}`;
+                    if (!grouped[key]) {
+                        grouped[key] = {
+                            room: re.room_no,
+                            floor: re.floor,
+                            entries: []
+                        };
+                    }
+                    grouped[key].entries.push({ ...re, idx });
+                });
+
+                // Create visual grid like room configurator
+                let html = '';
+                let cellIndex = 0;
+
+                Object.keys(grouped).forEach(key => {
+                    const group = grouped[key];
+                    const totalQty = group.entries.reduce((sum, e) => sum + e.quantity, 0);
+
+                    html += `
+                        <div class="mb-3 bg-green-50 border-2 border-green-400 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <span class="text-green-800 font-bold">
+                                        <i class="bi bi-geo-alt-fill mr-1"></i>
+                                        Room ${group.room} - Floor ${group.floor}
+                                    </span>
+                                </div>
+                                <span class="text-xs text-green-700 font-bold">${totalQty} items available</span>
+                            </div>
+
+                            <!-- Gatar Number Grid -->
+                            <div class="bg-white rounded-lg p-2 border border-green-300">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs text-gray-500">
+                                        <i class="bi bi-hand-index-thumb mr-1"></i> CLICK TO SELECT, THEN ENTER QTY
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto">
+                    `;
+
+                    // Generate individual clickable cells for EACH gatar number
+                    group.entries.forEach(re => {
+                        // Split gate_no if it contains multiple numbers (comma or space separated)
+                        const gateNos = re.gate_no.toString().split(/[,\s]+/).filter(g => g.trim());
+
+                        gateNos.forEach(gateNo => {
+                            const trimmedGate = gateNo.trim();
+                            if (trimmedGate) {
+                                html += `
+                                    <div id="gatar-cell-${cellIndex}"
+                                         class="gatar-cell p-2 rounded border-2 border-gray-200 transition-all bg-white"
+                                         data-idx="${cellIndex}"
+                                         data-room="${re.room_no}"
+                                         data-floor="${re.floor}"
+                                         data-gate="${trimmedGate}"
+                                         data-entry-id="${re.id}">
+                                        <div class="text-center cursor-pointer" onclick="toggleGatarCell(${cellIndex})">
+                                            <span class="font-mono text-lg font-bold text-purple-700">${trimmedGate}</span>
+                                        </div>
+                                        <div id="qty-row-${cellIndex}" class="hidden mt-2">
+                                            <input type="number"
+                                                   id="qty-${cellIndex}"
+                                                   class="w-full p-1 text-center border-2 border-green-400 rounded text-sm font-bold"
+                                                   min="1"
+                                                   placeholder="Qty"
+                                                   onchange="updateGatarQty(${cellIndex})"
+                                                   onclick="event.stopPropagation()">
+                                        </div>
+                                    </div>
+                                `;
+                                cellIndex++;
+                            }
+                        });
+                    });
+
+                    html += `
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                summaryDiv.innerHTML = '<p class="text-gray-500 text-sm">Click gatar → Enter quantity</p>';
+
+            } catch (error) {
+                console.error('Error loading pickup gatars:', error);
+                container.innerHTML = '<p class="text-red-500 text-sm text-center p-4">Failed to load storage locations</p>';
+            }
+        }
+
+        function toggleGatarCell(idx) {
+            const cell = document.getElementById(`gatar-cell-${idx}`);
+            const qtyRow = document.getElementById(`qty-row-${idx}`);
+            const qtyInput = document.getElementById(`qty-${idx}`);
+
+            if (selectedPickupGatars[idx] !== undefined) {
+                // Deselect
+                delete selectedPickupGatars[idx];
+                cell.classList.remove('border-green-500', 'bg-green-50');
+                cell.classList.add('border-gray-200', 'bg-white');
+                qtyRow.classList.add('hidden');
+                qtyInput.value = '';
+            } else {
+                // Select - show quantity input
+                selectedPickupGatars[idx] = 0;
+                cell.classList.add('border-green-500', 'bg-green-50');
+                cell.classList.remove('border-gray-200', 'bg-white');
+                qtyRow.classList.remove('hidden');
+                qtyInput.focus();
+            }
+            updatePickupGatarCount();
+        }
+
+        function updateGatarQty(idx) {
+            const qtyInput = document.getElementById(`qty-${idx}`);
+            const qty = parseInt(qtyInput.value) || 0;
+            if (qty > 0) {
+                selectedPickupGatars[idx] = qty;
+            } else {
+                selectedPickupGatars[idx] = 0;
+            }
+            updatePickupGatarCount();
+        }
+
+        function updatePickupGatarCount() {
+            let totalItems = 0;
+            let gatarDetails = [];
+            let summaryParts = [];
+
+            Object.keys(selectedPickupGatars).forEach(idx => {
+                const cell = document.getElementById(`gatar-cell-${idx}`);
+                if (cell) {
+                    const qty = selectedPickupGatars[idx];
+                    const gate = cell.dataset.gate;
+                    totalItems += qty;
+                    gatarDetails.push(`${gate}:${qty}`);
+                    summaryParts.push(`<span class="inline-block bg-green-500 text-white px-2 py-1 rounded text-xs font-bold m-1">G${gate}: ${qty}</span>`);
+                }
+            });
+
+            document.getElementById('selectedGatarCount').textContent = totalItems + ' items';
+            document.getElementById('gateNo').value = gatarDetails.join(',');
+
+            const summaryDiv = document.getElementById('pickupSelectionSummary');
+            if (summaryParts.length > 0) {
+                summaryDiv.innerHTML = summaryParts.join('');
+            } else {
+                summaryDiv.innerHTML = '<p class="text-gray-500 text-sm">Click on gatar numbers to select</p>';
+            }
+        }
+
+        function selectAllPickupGatars() {
+            document.querySelectorAll('.gatar-cell').forEach(cell => {
+                const idx = parseInt(cell.dataset.idx);
+                const qtyRow = document.getElementById(`qty-row-${idx}`);
+
+                selectedPickupGatars[idx] = 0;
+                cell.classList.add('border-green-500', 'bg-green-50');
+                cell.classList.remove('border-gray-200', 'bg-white');
+                qtyRow.classList.remove('hidden');
+            });
+            updatePickupGatarCount();
+        }
+
+        function clearAllPickupGatars() {
+            document.querySelectorAll('.gatar-cell').forEach(cell => {
+                const idx = parseInt(cell.dataset.idx);
+                const qtyRow = document.getElementById(`qty-row-${idx}`);
+                const qtyInput = document.getElementById(`qty-${idx}`);
+
+                cell.classList.remove('border-green-500', 'bg-green-50');
+                cell.classList.add('border-gray-200', 'bg-white');
+                qtyRow.classList.add('hidden');
+                if (qtyInput) qtyInput.value = '';
+            });
+            selectedPickupGatars = {};
+            updatePickupGatarCount();
         }
 
         function selectTicket(gatePass) {
@@ -535,10 +760,14 @@
                 gatarElement.classList.remove('bg-red-500', 'text-white');
                 gatarElement.classList.add('bg-gray-100', 'text-gray-700');
             }
+
+            // Load pickup gatar options
+            loadPickupGatars(gatePass.truck_number);
         }
 
         function clearSelection() {
             selectedGatePass = null;
+            pickupRoomEntries = [];
 
             // Remove selection
             document.querySelectorAll('.clickable-row').forEach(row => {
@@ -561,16 +790,50 @@
             gatarElement.textContent = '-';
             gatarElement.classList.remove('bg-red-500', 'text-white');
             gatarElement.classList.add('bg-gray-100', 'text-gray-700');
+
+            // Reset pickup gatar selection
+            selectedPickupGatars = {};
+            document.getElementById('pickupGatarList').innerHTML = '';
+            document.getElementById('pickupSelectionSummary').innerHTML = '<p class="text-gray-500 text-sm">Select a gate pass first</p>';
+            document.getElementById('selectedGatarCount').textContent = '0 items';
+            document.getElementById('gateNo').value = '';
         }
 
         async function approveGatePass(event) {
             event.preventDefault();
 
+            // Validate gatar selection (only for approvals, not rejections)
+            const status = document.getElementById('status').value;
+            if (status === 'approved') {
+                const selectedCount = Object.keys(selectedPickupGatars).length;
+                if (selectedCount === 0) {
+                    alert(i18n.t('select_gatar_first', 'Please select at least one pickup gatar location!'));
+                    return;
+                }
+
+                // Calculate total selected quantity
+                const approvedQty = parseInt(document.getElementById('approvedQuantity').value);
+                let selectedQty = 0;
+                Object.values(selectedPickupGatars).forEach(qty => {
+                    selectedQty += qty;
+                });
+
+                if (selectedQty === 0) {
+                    alert(i18n.t('enter_qty_gatar', 'Please enter quantity for at least one gatar!'));
+                    return;
+                }
+
+                if (approvedQty > selectedQty) {
+                    alert(i18n.t('approved_exceeds_selected', `Approved quantity (${approvedQty}) exceeds selected gatar quantity (${selectedQty} items). Please increase gatar quantities or reduce approved quantity.`));
+                    return;
+                }
+            }
+
             const gatePassId = parseInt(document.getElementById('gatePassId').value);
             const approvalData = {
                 approved_quantity: parseInt(document.getElementById('approvedQuantity').value),
                 gate_no: document.getElementById('gateNo').value.trim(),
-                status: document.getElementById('status').value,
+                status: status,
                 remarks: document.getElementById('approvalRemarks').value.trim()
             };
 
@@ -589,13 +852,13 @@
                     throw new Error(error);
                 }
 
-                alert('Gate pass approved successfully!');
+                alert(i18n.t('gate_pass_approved', 'Gate pass approved successfully!'));
                 clearSelection();
                 loadPendingGatePasses();
                 loadApprovedPasses();
 
             } catch (error) {
-                alert('Error approving gate pass: ' + error.message);
+                alert(i18n.t('error_approving', 'Error approving gate pass') + ': ' + error.message);
             }
         }
 
@@ -626,7 +889,7 @@
             );
 
             if (activePasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">No approved passes waiting for pickup</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-500">${i18n.t('no_approved_waiting', 'No approved passes waiting for pickup')}</td></tr>`;
                 return;
             }
 
@@ -771,17 +1034,17 @@
                     throw new Error(error);
                 }
 
-                alert('Pickup recorded successfully! Inventory updated.');
+                alert(i18n.t('pickup_recorded', 'Pickup recorded successfully! Inventory updated.'));
                 closePickupModal();
                 loadApprovedPasses();
 
             } catch (error) {
-                alert('Error recording pickup: ' + error.message);
+                alert(i18n.t('error_recording_pickup', 'Error recording pickup') + ': ' + error.message);
             }
         }
 
         async function completeGatePass(gatePassId) {
-            if (!confirm('Mark this gate pass as completed? All items have been picked up.')) {
+            if (!confirm(i18n.t('confirm_complete', 'Mark this gate pass as completed? All items have been picked up.'))) {
                 return;
             }
 
@@ -799,11 +1062,11 @@
                     throw new Error(error);
                 }
 
-                alert('Gate pass completed successfully!');
+                alert(i18n.t('gate_pass_completed', 'Gate pass completed successfully!'));
                 loadApprovedPasses();
 
             } catch (error) {
-                alert('Error completing gate pass: ' + error.message);
+                alert(i18n.t('error_completing', 'Error completing gate pass') + ': ' + error.message);
             }
         }
 

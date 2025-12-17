@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Room Configuration - Cold Storage</title>
+    <title data-i18n-page-title="page_title_room_config">Room Configuration - Cold Storage</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
@@ -81,14 +81,21 @@
                 <div class="flex items-center gap-3">
                     <i class="bi bi-door-open text-4xl text-blue-600"></i>
                     <div>
-                        <h1 class="text-3xl font-bold">Room Configuration</h1>
-                        <p class="text-gray-600">Assign entries to storage locations</p>
+                        <h1 class="text-3xl font-bold" data-i18n="room_config_title">Room Configuration</h1>
+                        <p class="text-gray-600" data-i18n="assign_entries">Assign entries to storage locations</p>
                     </div>
                 </div>
             </div>
-            <button onclick="goBack()" class="neu-button bg-gray-200">
-                <i class="bi bi-arrow-left"></i> Back
-            </button>
+            <nav class="flex gap-4 items-center">
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
+                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer border-2 border-black shadow-[2px_2px_0px_#000]">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
+                <button onclick="goBack()" class="neu-button bg-gray-200">
+                    <i class="bi bi-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </nav>
         </header>
 
         <div class="grid grid-cols-3 gap-8">
@@ -97,14 +104,14 @@
                 <div class="neu-border bg-white p-6 mb-8">
                     <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                         <i class="bi bi-door-closed"></i>
-                        Room Entry Form
+                        <span data-i18n="room_entry_form">Room Entry Form</span>
                     </h2>
 
                     <form id="roomEntryForm" onsubmit="submitRoomEntry(event)">
                         <input type="hidden" id="entryId" />
 
                         <div class="mb-6 p-4 bg-yellow-50 neu-border">
-                            <p class="text-sm font-semibold text-gray-700 mb-2">Selected Truck Number:</p>
+                            <p class="text-sm font-semibold text-gray-700 mb-2" data-i18n="selected_truck">Selected Truck Number:</p>
                             <p class="text-2xl font-bold text-blue-700" id="selectedTruckNumber">-</p>
                             <p class="text-xs text-gray-600 mt-1" id="selectedEntryDetails"></p>
                             <p class="text-sm text-purple-700 font-semibold mt-1" id="selectedEntrySO"></p>
@@ -115,32 +122,37 @@
                             <!-- Left: Room Selection -->
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Room No *
+                                    <span data-i18n="room_no">Room No</span> *
                                 </label>
                                 <input type="hidden" id="roomNo" required>
                                 <div class="space-y-2">
-                                    <!-- Row 1: Room 2 and Room 1 -->
+                                    <!-- Row 1: Room 2 and Room 1 (SEED - Green) -->
                                     <div class="grid grid-cols-2 gap-3">
-                                        <button type="button" onclick="selectRoom('2')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
-                                            Room 2
+                                        <button type="button" id="room-btn-2" onclick="selectRoom('2')" data-room="2" data-type="seed" class="room-btn neu-button bg-green-100 border-2 border-green-400 hover:bg-green-200 py-3 text-lg font-bold transition-all">
+                                            <div>Room 2</div>
+                                            <div class="text-xs text-green-700 font-normal">बीज</div>
                                         </button>
-                                        <button type="button" onclick="selectRoom('1')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
-                                            Room 1
+                                        <button type="button" id="room-btn-1" onclick="selectRoom('1')" data-room="1" data-type="seed" class="room-btn neu-button bg-green-100 border-2 border-green-400 hover:bg-green-200 py-3 text-lg font-bold transition-all">
+                                            <div>Room 1</div>
+                                            <div class="text-xs text-green-700 font-normal">बीज</div>
                                         </button>
                                     </div>
-                                    <!-- Row 2: Gallery (centered) -->
+                                    <!-- Row 2: Gallery (SELL - Orange) -->
                                     <div class="flex justify-center">
-                                        <button type="button" onclick="selectRoom('G')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 px-8 text-lg font-bold w-full">
-                                            Gallery
+                                        <button type="button" id="room-btn-G" onclick="selectRoom('G')" data-room="G" data-type="sell" class="room-btn neu-button bg-orange-100 border-2 border-orange-400 hover:bg-orange-200 py-3 px-8 text-lg font-bold w-full transition-all">
+                                            <div>Gallery</div>
+                                            <div class="text-xs text-orange-700 font-normal">बिक्री</div>
                                         </button>
                                     </div>
-                                    <!-- Row 3: Room 3 and Room 4 -->
+                                    <!-- Row 3: Room 3 and Room 4 (SELL - Orange) -->
                                     <div class="grid grid-cols-2 gap-3">
-                                        <button type="button" onclick="selectRoom('3')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
-                                            Room 3
+                                        <button type="button" id="room-btn-3" onclick="selectRoom('3')" data-room="3" data-type="sell" class="room-btn neu-button bg-orange-100 border-2 border-orange-400 hover:bg-orange-200 py-3 text-lg font-bold transition-all">
+                                            <div>Room 3</div>
+                                            <div class="text-xs text-orange-700 font-normal">बिक्री</div>
                                         </button>
-                                        <button type="button" onclick="selectRoom('4')" class="room-btn neu-button bg-white hover:bg-green-100 py-4 text-lg font-bold">
-                                            Room 4
+                                        <button type="button" id="room-btn-4" onclick="selectRoom('4')" data-room="4" data-type="sell" class="room-btn neu-button bg-orange-100 border-2 border-orange-400 hover:bg-orange-200 py-3 text-lg font-bold transition-all">
+                                            <div>Room 4</div>
+                                            <div class="text-xs text-orange-700 font-normal">बिक्री</div>
                                         </button>
                                     </div>
                                 </div>
@@ -153,76 +165,78 @@
                         <!-- Room Layout Display -->
                         <div id="roomLayoutDisplay" class="mb-6">
                             <div class="text-center p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded">
-                                <p class="text-gray-500">Select a room to see gatar layout</p>
+                                <p class="text-gray-500" data-i18n="select_room_see_layout">Select a room to see gatar layout</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-6 mb-6">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Gatar No *
+                                    <span data-i18n="gatar_no">Gatar No</span> *
                                 </label>
                                 <input
                                     type="text"
                                     id="gateNo"
                                     required
                                     class="w-full neu-input"
-                                    placeholder="Enter gate number"
+                                    data-i18n-placeholder="enter_gatar_number"
+                                    placeholder="Enter gatar number"
                                 >
                                 <div id="gatarHint" class="mt-2 text-sm hidden"></div>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Quantity *
+                                    <span data-i18n="quantity">Quantity</span> *
                                 </label>
                                 <!-- Hidden input for form submission -->
                                 <input type="hidden" id="quantity" required min="1">
                                 <!-- Quantity Display (Calculator is below Recent Main Entries) -->
                                 <div class="neu-border bg-blue-50 p-4 text-center">
-                                    <p class="text-sm text-gray-600 mb-1">Current Total</p>
+                                    <p class="text-sm text-gray-600 mb-1" data-i18n="current_total">Current Total</p>
                                     <p class="text-3xl font-bold text-blue-700" id="totalQuantityDisplay">0</p>
-                                    <p class="text-xs text-gray-500 mt-2">Use calculator below ↓</p>
+                                    <p class="text-xs text-gray-500 mt-2" data-i18n="use_calculator_below">Use calculator below ↓</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="remark">
                                 Remark
                             </label>
                             <div class="grid grid-cols-4 gap-4 mb-2">
                                 <label class="neu-border p-3 cursor-pointer hover:bg-red-50 transition-colors">
                                     <input type="radio" name="remarkType" value="red" class="mr-2">
-                                    <span class="font-bold text-red-600">Red</span>
+                                    <span class="font-bold text-red-600" data-i18n="remark_red">Red</span>
                                 </label>
                                 <label class="neu-border p-3 cursor-pointer hover:bg-yellow-50 transition-colors">
                                     <input type="radio" name="remarkType" value="yellow" class="mr-2">
-                                    <span class="font-bold text-yellow-600">Yellow</span>
+                                    <span class="font-bold text-yellow-600" data-i18n="remark_yellow">Yellow</span>
                                 </label>
                                 <label class="neu-border p-3 cursor-pointer hover:bg-gray-50 transition-colors">
                                     <input type="radio" name="remarkType" value="white" class="mr-2">
-                                    <span class="font-bold text-gray-600">White</span>
+                                    <span class="font-bold text-gray-600" data-i18n="remark_white">White</span>
                                 </label>
                                 <label class="neu-border p-3 cursor-pointer hover:bg-blue-50 transition-colors">
                                     <input type="radio" name="remarkType" value="custom" class="mr-2" onchange="toggleCustomRemark()">
-                                    <span class="font-bold text-blue-600">Custom</span>
+                                    <span class="font-bold text-blue-600" data-i18n="remark_custom">Custom</span>
                                 </label>
                             </div>
                             <input
                                 type="text"
                                 id="customRemark"
                                 class="w-full neu-input hidden"
+                                data-i18n-placeholder="enter_custom_remark"
                                 placeholder="Enter custom remark"
                             >
                         </div>
 
                         <div class="flex gap-4">
                             <button type="submit" class="neu-button bg-blue-500 text-white flex-1">
-                                <i class="bi bi-check-circle"></i> Submit Room Entry
+                                <i class="bi bi-check-circle"></i> <span data-i18n="submit_room_entry">Submit Room Entry</span>
                             </button>
                             <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
-                                <i class="bi bi-x-circle"></i> Reset
+                                <i class="bi bi-x-circle"></i> <span data-i18n="reset">Reset</span>
                             </button>
                         </div>
                     </form>
@@ -232,24 +246,24 @@
                 <div class="neu-border bg-white p-6">
                     <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <i class="bi bi-list-check"></i>
-                        Recent Room Entries
+                        <span data-i18n="recent_room_entries">Recent Room Entries</span>
                     </h2>
                     <div class="overflow-auto" style="max-height: 400px;">
                         <table class="w-full">
                             <thead class="sticky top-0 bg-white">
                                 <tr class="border-b-2 border-black">
-                                    <th class="text-left p-2 font-bold">Truck No</th>
-                                    <th class="text-left p-2 font-bold">Room</th>
-                                    <th class="text-left p-2 font-bold">Floor</th>
-                                    <th class="text-left p-2 font-bold">Gatar</th>
-                                    <th class="text-left p-2 font-bold">Remark</th>
-                                    <th class="text-left p-2 font-bold">Qty</th>
-                                    <th class="text-left p-2 font-bold">Date</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="truck_number">Truck No</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="room">Room</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="floor">Floor</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="gatar">Gatar</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="remark">Remark</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
                                 </tr>
                             </thead>
                             <tbody id="roomEntriesTableBody">
                                 <tr>
-                                    <td colspan="7" class="text-center p-4 text-gray-500">Loading...</td>
+                                    <td colspan="7" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -263,25 +277,25 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold flex items-center gap-2">
                             <i class="bi bi-inbox"></i>
-                            Recent Main Entries
+                            <span data-i18n="recent_main_entries">Recent Main Entries</span>
                         </h2>
                         <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 border-2 border-black flex items-center gap-1">
-                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto-refresh (5s)
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> <span data-i18n="auto_refresh">Auto-refresh</span> (5s)
                         </span>
                     </div>
-                    <p class="text-sm text-gray-600 mb-4">Click an entry to assign to room</p>
+                    <p class="text-sm text-gray-600 mb-4" data-i18n="click_entry_assign">Click an entry to assign to room</p>
                     <div class="overflow-auto" style="max-height: 800px;">
                         <table class="w-full">
                             <thead class="sticky top-0 bg-white">
                                 <tr class="border-b-2 border-black">
-                                    <th class="text-left p-2 font-bold">Truck No</th>
-                                    <th class="text-left p-2 font-bold">Name</th>
-                                    <th class="text-left p-2 font-bold">Qty</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="truck_number">Truck No</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="name">Name</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
                                 </tr>
                             </thead>
                             <tbody id="unassignedEntriesTableBody">
                                 <tr>
-                                    <td colspan="3" class="text-center p-4 text-gray-500">Loading...</td>
+                                    <td colspan="3" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -292,7 +306,7 @@
                 <div class="mt-6 neu-border bg-white p-6">
                     <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                         <i class="bi bi-calculator text-purple-600"></i>
-                        Quantity Calculator
+                        <span data-i18n="quantity_calculator">Quantity Calculator</span>
                     </h2>
 
                     <!-- Preset Value Buttons -->
@@ -310,7 +324,7 @@
                             24
                         </button>
                         <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-3 text-base font-bold w-full">
-                            Custom
+                            <span data-i18n="custom">Custom</span>
                         </button>
                     </div>
 
@@ -325,38 +339,46 @@
                                 placeholder="Enter custom value"
                             >
                             <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-4 text-sm">
-                                <i class="bi bi-plus-circle"></i> Add
+                                <i class="bi bi-plus-circle"></i> <span data-i18n="add">Add</span>
                             </button>
                             <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-4 text-sm">
-                                <i class="bi bi-x-circle"></i> Cancel
+                                <i class="bi bi-x-circle"></i> <span data-i18n="cancel">Cancel</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Selected Values (Chips) -->
                     <div class="mb-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="selected_values">Selected Values:</label>
                         <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
-                            <span class="text-sm text-gray-400 self-center">Click values above to add...</span>
+                            <span class="text-sm text-gray-400 self-center" data-i18n="click_values_add">Click values above to add...</span>
                         </div>
                     </div>
 
                     <!-- Total Display -->
                     <div class="flex justify-between items-center bg-green-50 p-4 border-3 border-green-600 rounded mb-4">
-                        <span class="text-base font-bold">Total Quantity:</span>
+                        <span class="text-base font-bold" data-i18n="total_quantity_label">Total Quantity:</span>
                         <span class="text-3xl font-bold text-green-700" id="totalQuantity">0</span>
                     </div>
 
                     <!-- Clear All Button -->
                     <button type="button" onclick="clearAllQuantities()" class="neu-button bg-red-500 text-white w-full py-2 text-base font-bold">
-                        <i class="bi bi-trash"></i> Clear All Values
+                        <i class="bi bi-trash"></i> <span data-i18n="clear_all_values">Clear All Values</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
+        // Update language selector on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const lang = localStorage.getItem('lang') || 'hi';
+            document.getElementById('langSelector').value = lang;
+        });
+
         // Capitalize first letter function
         function capitalizeFirstLetter(input) {
             const value = input.value;
@@ -413,6 +435,83 @@
 
         // Track selected gatar numbers (multiple)
         let selectedGatars = [];
+
+        // Track current entry type (seed or sell)
+        let currentEntryType = null;
+
+        // Room type mapping
+        const roomTypes = {
+            '1': 'seed',
+            '2': 'seed',
+            '3': 'sell',
+            '4': 'sell',
+            'G': 'sell'
+        };
+
+        // Get entry type from truck number
+        function getEntryType(truckNumber) {
+            if (!truckNumber) return null;
+            const num = parseInt(truckNumber.split('/')[0]);
+            return num <= 1500 ? 'seed' : 'sell';
+        }
+
+        // Enable a room button
+        function enableRoom(roomId) {
+            const btn = document.getElementById(`room-btn-${roomId}`);
+            if (!btn) return;
+
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-200', 'border-gray-300');
+
+            // Restore original colors
+            if (roomTypes[roomId] === 'seed') {
+                btn.classList.add('bg-green-100', 'border-green-400', 'hover:bg-green-200');
+            } else {
+                btn.classList.add('bg-orange-100', 'border-orange-400', 'hover:bg-orange-200');
+            }
+            btn.title = '';
+        }
+
+        // Disable a room button
+        function disableRoom(roomId, reason) {
+            const btn = document.getElementById(`room-btn-${roomId}`);
+            if (!btn) return;
+
+            btn.disabled = true;
+            btn.classList.remove('bg-green-100', 'border-green-400', 'hover:bg-green-200',
+                                 'bg-orange-100', 'border-orange-400', 'hover:bg-orange-200',
+                                 'selected', 'bg-green-500', 'bg-orange-500', 'text-white');
+            btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-200', 'border-gray-300');
+            btn.title = reason;
+        }
+
+        // Update room availability based on entry type
+        function updateRoomAvailability(entryType) {
+            const seedRooms = ['1', '2'];
+            const sellRooms = ['3', '4', 'G'];
+
+            // Clear current room selection if it doesn't match
+            const currentRoom = document.getElementById('roomNo').value;
+            if (currentRoom && roomTypes[currentRoom] !== entryType) {
+                document.getElementById('roomNo').value = '';
+                document.querySelectorAll('.room-btn').forEach(btn => {
+                    btn.classList.remove('selected', 'bg-green-500', 'bg-orange-500', 'text-white', 'border-green-600', 'border-orange-600');
+                });
+            }
+
+            if (entryType === 'seed') {
+                // Enable rooms 1, 2 - Disable rooms 3, 4, G
+                seedRooms.forEach(r => enableRoom(r));
+                sellRooms.forEach(r => disableRoom(r, 'बीज entries केवल Room 1 & 2 में store होते हैं'));
+            } else if (entryType === 'sell') {
+                // Enable rooms 3, 4, G - Disable rooms 1, 2
+                sellRooms.forEach(r => enableRoom(r));
+                seedRooms.forEach(r => disableRoom(r, 'बिक्री entries केवल Room 3, 4 & Gallery में store होते हैं'));
+            } else {
+                // No entry selected - enable all
+                [...seedRooms, ...sellRooms].forEach(r => enableRoom(r));
+            }
+        }
 
         // Function to toggle gatar selection
         function selectGatar(gatarNo) {
@@ -762,7 +861,7 @@
                 addQuantity(value);
                 hideCustomInput();
             } else {
-                alert('Please enter a valid quantity greater than 0');
+                alert(i18n.t('error', 'Error') + ': ' + i18n.t('quantity', 'Quantity') + ' > 0');
             }
         }
 
@@ -796,7 +895,8 @@
 
             // Update chips display
             if (quantityValues.length === 0) {
-                chipsContainer.innerHTML = '<span class="text-sm text-gray-400 self-center">Click values above to add...</span>';
+                const clickMsg = i18n.t('click_values_add', 'Click values above to add...');
+                chipsContainer.innerHTML = `<span class="text-sm text-gray-400 self-center">${clickMsg}</span>`;
             } else {
                 chipsContainer.innerHTML = quantityValues.map((val, index) => `
                     <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full text-lg font-bold border-3 border-black">
@@ -854,8 +954,9 @@
                 displayUnassignedEntries(entries);
             } catch (error) {
                 console.error('Error loading unassigned entries:', error);
+                const errorMsg = i18n.t('failed_load_entries', 'Failed to load entries');
                 document.getElementById('unassignedEntriesTableBody').innerHTML =
-                    '<tr><td colspan="3" class="text-center p-4 text-red-500">Failed to load entries</td></tr>';
+                    `<tr><td colspan="3" class="text-center p-4 text-red-500">${errorMsg}</td></tr>`;
             } finally {
                 // Stop loading animation
                 if (refreshIcon) {
@@ -870,7 +971,8 @@
             const tbody = document.getElementById('unassignedEntriesTableBody');
 
             if (entries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">No unassigned entries</td></tr>';
+                const noEntriesMsg = i18n.t('no_unassigned_entries', 'No unassigned entries');
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-500">${noEntriesMsg}</td></tr>`;
                 return;
             }
 
@@ -890,10 +992,18 @@
         function selectEntry(entryId, truckNumber, name, expectedQty, so = '') {
             selectedEntry = { entryId, truckNumber, name, expectedQty, so };
 
+            // Detect entry type and update room availability
+            currentEntryType = getEntryType(truckNumber);
+            updateRoomAvailability(currentEntryType);
+
             // Update UI
             document.getElementById('entryId').value = entryId;
             document.getElementById('selectedTruckNumber').textContent = truckNumber;
-            document.getElementById('selectedEntryDetails').textContent = `${name} - Expected: ${expectedQty}`;
+
+            // Show entry type badge
+            const typeLabel = currentEntryType === 'seed' ? 'बीज' : 'बिक्री';
+            const typeColor = currentEntryType === 'seed' ? 'bg-green-500' : 'bg-orange-500';
+            document.getElementById('selectedEntryDetails').innerHTML = `${name} - Expected: ${expectedQty} <span class="${typeColor} text-white text-xs px-2 py-1 rounded ml-2">${typeLabel}</span>`;
 
             // Display S/O (Son Of / Father's Name)
             const soElement = document.getElementById('selectedEntrySO');
@@ -924,8 +1034,9 @@
                 displayRoomEntries(roomEntries);
             } catch (error) {
                 console.error('Error loading room entries:', error);
+                const errorMsg = i18n.t('failed_load_room_entries', 'Failed to load room entries');
                 document.getElementById('roomEntriesTableBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center p-4 text-red-500">Failed to load room entries</td></tr>';
+                    `<tr><td colspan="7" class="text-center p-4 text-red-500">${errorMsg}</td></tr>`;
             }
         }
 
@@ -933,7 +1044,8 @@
             const tbody = document.getElementById('roomEntriesTableBody');
 
             if (roomEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No room entries yet</td></tr>';
+                const noEntriesMsg = i18n.t('no_room_entries', 'No room entries yet');
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">${noEntriesMsg}</td></tr>`;
                 return;
             }
 
@@ -982,7 +1094,7 @@
             event.preventDefault();
 
             if (!selectedEntry) {
-                alert('Please select an entry from Recent Main Entries');
+                alert(i18n.t('select_entry_first', 'Please select an entry from Recent Main Entries'));
                 return;
             }
 
@@ -1028,14 +1140,20 @@
                 }
 
                 const result = await response.json();
-                alert(`Room entry created successfully!\nTruck: ${result.truck_number}\nLocation: Room ${result.room_no}, Floor ${result.floor}, Gatar ${result.gate_no}`);
+                const successMsg = i18n.t('room_entry_success', 'Room entry created successfully!');
+                const truckLabel = i18n.t('truck', 'Truck');
+                const locationLabel = i18n.t('location', 'Location');
+                const roomLabel = i18n.t('room', 'Room');
+                const floorLabel = i18n.t('floor', 'Floor');
+                const gatarLabel = i18n.t('gatar', 'Gatar');
+                alert(`${successMsg}\n${truckLabel}: ${result.truck_number}\n${locationLabel}: ${roomLabel} ${result.room_no}, ${floorLabel} ${result.floor}, ${gatarLabel} ${result.gate_no}`);
 
                 // Reload data
                 loadUnassignedEntries();
                 loadRoomEntries();
                 resetForm();
             } catch (error) {
-                alert('Error creating room entry: ' + error.message);
+                alert(i18n.t('error', 'Error') + ': ' + error.message);
             }
         }
 
@@ -1090,6 +1208,13 @@
         }
 
         function selectRoom(roomNumber) {
+            const btn = document.getElementById(`room-btn-${roomNumber}`);
+
+            // Check if room is disabled
+            if (btn && btn.disabled) {
+                return; // Don't allow selecting disabled rooms
+            }
+
             // Update hidden input
             document.getElementById('roomNo').value = roomNumber;
 
@@ -1097,14 +1222,28 @@
             selectedGatars = [];
             document.getElementById('gateNo').value = '';
 
-            // Remove selected class from all buttons
-            document.querySelectorAll('.room-btn').forEach(btn => {
-                btn.classList.remove('selected');
+            // Remove selected styling from all room buttons and restore default colors
+            document.querySelectorAll('.room-btn').forEach(b => {
+                b.classList.remove('selected', 'bg-green-500', 'bg-orange-500', 'text-white', 'border-green-600', 'border-orange-600');
+                const roomType = b.getAttribute('data-type');
+                if (!b.disabled) {
+                    if (roomType === 'seed') {
+                        b.classList.add('bg-green-100', 'border-green-400');
+                    } else {
+                        b.classList.add('bg-orange-100', 'border-orange-400');
+                    }
+                }
             });
 
-            // Add selected class to clicked button
-            if (event && event.target) {
-                event.target.classList.add('selected');
+            // Add selected styling to clicked button with correct color
+            if (btn) {
+                btn.classList.add('selected', 'text-white');
+                btn.classList.remove('bg-green-100', 'bg-orange-100', 'border-green-400', 'border-orange-400');
+                if (roomTypes[roomNumber] === 'seed') {
+                    btn.classList.add('bg-green-500', 'border-green-600');
+                } else {
+                    btn.classList.add('bg-orange-500', 'border-orange-600');
+                }
             }
 
             // Update gatar hint and room layout display
