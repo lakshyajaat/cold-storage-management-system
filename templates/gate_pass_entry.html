@@ -268,13 +268,14 @@
                             <th class="text-left p-2 font-bold">Phone</th>
                             <th class="text-left p-2 font-bold">Thock NO</th>
                             <th class="text-left p-2 font-bold">Qty Requested</th>
+                            <th class="text-left p-2 font-bold">Expires In</th>
                             <th class="text-left p-2 font-bold">Remarks</th>
                             <th class="text-left p-2 font-bold">Action</th>
                         </tr>
                     </thead>
                     <tbody id="customerRequestsTableBody">
                         <tr>
-                            <td colspan="7" class="text-center p-4 text-gray-500">Loading customer requests...</td>
+                            <td colspan="8" class="text-center p-4 text-gray-500">Loading customer requests...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1183,7 +1184,7 @@
             const section = document.getElementById('customerRequestsSection');
 
             if (requests.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No customer requests pending approval</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No customer requests pending approval</td></tr>';
                 return;
             }
 
@@ -1197,6 +1198,9 @@
                     minute: '2-digit'
                 });
 
+                // Calculate remaining time for customer requests
+                const remaining = getRemainingTime(req.expires_at);
+
                 return `
                     <tr class="border-b border-gray-200 hover:bg-blue-50">
                         <td class="p-2 text-xs">${formattedDate}</td>
@@ -1204,6 +1208,7 @@
                         <td class="p-2 text-sm">${req.customer_phone}</td>
                         <td class="p-2 font-bold text-blue-600">${req.truck_number}</td>
                         <td class="p-2 font-bold text-lg">${req.requested_quantity}</td>
+                        <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
                         <td class="p-2 text-sm">${req.remarks || '-'}</td>
                         <td class="p-2">
                             <button onclick='openApprovalModal(${JSON.stringify(req)})'

@@ -50,10 +50,6 @@
             box-shadow: 2px 2px 0 #000;
         }
         .hidden { display: none; }
-        .floor-btn.selected {
-            background-color: #3B82F6 !important;
-            color: white !important;
-        }
         .room-btn.selected {
             background-color: #10B981 !important;
             color: white !important;
@@ -138,31 +134,16 @@
                         </div>
                     </div>
 
-                    <!-- Right: Floor Selection (As Building) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Floor (As Building) *
-                        </label>
-                        <input type="hidden" id="floor" required>
-                        <div class="grid grid-cols-1 gap-2">
-                            <button type="button" onclick="selectFloor(5)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
-                                5
-                            </button>
-                            <button type="button" onclick="selectFloor(4)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
-                                4
-                            </button>
-                            <button type="button" onclick="selectFloor(3)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
-                                3
-                            </button>
-                            <button type="button" onclick="selectFloor(2)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
-                                2
-                            </button>
-                            <button type="button" onclick="selectFloor(1)" class="floor-btn neu-button bg-white hover:bg-blue-100 py-4 text-xl font-bold">
-                                1
-                            </button>
-                        </div>
-                    </div>
+                    <!-- Floor is now selected from the room layout display below -->
+                    <input type="hidden" id="floor" required>
                 </div>
+
+                        <!-- Room Layout Display -->
+                        <div id="roomLayoutDisplay" class="mb-6">
+                            <div class="text-center p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded">
+                                <p class="text-gray-500">Select a room to see gatar layout</p>
+                            </div>
+                        </div>
 
                         <div class="grid grid-cols-2 gap-6 mb-6">
                             <div>
@@ -501,14 +482,10 @@
                     }
                 });
 
-                // Highlight selected floor button
-                document.querySelectorAll('.floor-btn').forEach(btn => {
-                    if (btn.textContent.trim() === roomEntryData.floor.toString()) {
-                        btn.classList.add('selected');
-                    }
-                });
-
                 document.getElementById('gateNo').value = roomEntryData.gate_no;
+
+                // Display room layout with current selection
+                updateGatarHint();
 
                 // Initialize quantity calculator with current quantity
                 if (roomEntryData.quantity > 0) {
@@ -711,30 +688,280 @@
             return 'text-gray-700';
         }
 
-        function selectRoom(roomNumber) {
-            // Update hidden input
-            document.getElementById('roomNo').value = roomNumber;
+        // Gatar ranges mapping: room -> floor -> {start, end}
+        const gatarRanges = {
+            '1': {
+                '0': { start: 1, end: 140 },
+                '1': { start: 141, end: 280 },
+                '2': { start: 281, end: 420 },
+                '3': { start: 421, end: 560 },
+                '4': { start: 561, end: 680 }
+            },
+            '2': {
+                '0': { start: 681, end: 820 },
+                '1': { start: 821, end: 960 },
+                '2': { start: 961, end: 1100 },
+                '3': { start: 1101, end: 1240 },
+                '4': { start: 1241, end: 1360 }
+            },
+            '3': {
+                '0': { start: 1361, end: 1500 },
+                '1': { start: 1501, end: 1640 },
+                '2': { start: 1641, end: 1780 },
+                '3': { start: 1781, end: 1920 },
+                '4': { start: 1921, end: 2040 }
+            },
+            '4': {},
+            'G': {}
+        };
 
-            // Remove selected class from all buttons
+        // Track selected gatar numbers (multiple)
+        let selectedGatars = [];
+
+        // Function to toggle gatar selection
+        function selectGatar(gatarNo) {
+            const index = selectedGatars.indexOf(gatarNo);
+            if (index > -1) {
+                selectedGatars.splice(index, 1);
+            } else {
+                selectedGatars.push(gatarNo);
+            }
+            selectedGatars.sort((a, b) => a - b);
+            document.getElementById('gateNo').value = selectedGatars.join(', ');
+            updateGatarGridSelection();
+            updateSelectionSummary();
+        }
+
+        function updateGatarGridSelection() {
+            document.querySelectorAll('.gatar-cell').forEach(cell => {
+                const gatarNo = parseInt(cell.textContent.trim());
+                if (selectedGatars.includes(gatarNo)) {
+                    cell.classList.remove('bg-white', 'hover:bg-blue-100');
+                    cell.classList.add('bg-green-500', 'text-white');
+                } else {
+                    cell.classList.remove('bg-green-500', 'text-white');
+                    cell.classList.add('bg-white', 'hover:bg-blue-100');
+                }
+            });
+        }
+
+        function updateSelectionSummary() {
+            const summaryDiv = document.getElementById('selectionSummary');
+            if (!summaryDiv) return;
+            if (selectedGatars.length === 0) {
+                summaryDiv.innerHTML = `<p class="text-gray-500 text-sm">No gatars selected - Click on numbers below</p>`;
+            } else {
+                const display = formatGatarSelection(selectedGatars);
+                summaryDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-green-700">${selectedGatars.length} Gatar${selectedGatars.length > 1 ? 's' : ''} Selected:</span>
+                            <span class="ml-2 font-mono text-green-800">${display}</span>
+                        </div>
+                        <button onclick="clearGatarSelection()" class="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm font-bold">
+                            <i class="bi bi-x-circle mr-1"></i>Clear All
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function formatGatarSelection(gatars) {
+            if (gatars.length === 0) return '';
+            if (gatars.length === 1) return gatars[0].toString();
+            const ranges = [];
+            let rangeStart = gatars[0];
+            let rangeEnd = gatars[0];
+            for (let i = 1; i < gatars.length; i++) {
+                if (gatars[i] === rangeEnd + 1) {
+                    rangeEnd = gatars[i];
+                } else {
+                    ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+                    rangeStart = gatars[i];
+                    rangeEnd = gatars[i];
+                }
+            }
+            ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+            return ranges.join(', ');
+        }
+
+        function clearGatarSelection() {
+            selectedGatars = [];
+            document.getElementById('gateNo').value = '';
+            updateGatarGridSelection();
+            updateSelectionSummary();
+        }
+
+        function selectAllGatars() {
+            const roomNo = document.getElementById('roomNo').value;
+            const floor = document.getElementById('floor').value;
+            if (roomNo && floor && gatarRanges[roomNo] && gatarRanges[roomNo][floor]) {
+                const range = gatarRanges[roomNo][floor];
+                for (let g = range.start; g <= range.end; g++) {
+                    if (!selectedGatars.includes(g)) {
+                        selectedGatars.push(g);
+                    }
+                }
+                selectedGatars.sort((a, b) => a - b);
+                document.getElementById('gateNo').value = selectedGatars.join(', ');
+                updateGatarGridSelection();
+                updateSelectionSummary();
+            }
+        }
+
+        function displayRoomLayout(roomNo) {
+            const layoutDiv = document.getElementById('roomLayoutDisplay');
+            if (!layoutDiv) return;
+
+            const roomData = gatarRanges[roomNo];
+            if (!roomData || Object.keys(roomData).length === 0) {
+                layoutDiv.innerHTML = `
+                    <div class="text-center p-4 bg-yellow-50 border-2 border-yellow-400 rounded">
+                        <p class="text-yellow-700 font-bold">Room ${roomNo === 'G' ? 'Gallery' : roomNo} - Layout Pending</p>
+                        <p class="text-sm text-yellow-600">Gatar data will be added soon</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const roomName = roomNo === 'G' ? 'Gallery' : `Room ${roomNo}`;
+            const selectedFloor = document.getElementById('floor').value;
+
+            let totalGatars = 0;
+            let minGatar = Infinity;
+            let maxGatar = 0;
+            for (let f = 0; f <= 4; f++) {
+                const fd = roomData[f.toString()];
+                if (fd) {
+                    totalGatars += (fd.end - fd.start + 1);
+                    if (fd.start < minGatar) minGatar = fd.start;
+                    if (fd.end > maxGatar) maxGatar = fd.end;
+                }
+            }
+
+            let html = `
+                <div class="neu-border bg-gradient-to-b from-blue-50 to-blue-100 p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-blue-800 text-lg">${roomName} - Complete Layout</h4>
+                        <div class="text-right">
+                            <span class="text-sm text-gray-600">Total Gatars:</span>
+                            <span class="font-bold text-blue-700 ml-1">${totalGatars}</span>
+                            <span class="text-xs text-gray-500 ml-2">(${minGatar}-${maxGatar})</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 rounded border-2 border-blue-300 mb-3">
+                        <div class="text-center text-xs text-gray-500 mb-2">SELECT FLOOR - ${roomName.toUpperCase()}</div>
+                        <div class="flex gap-2 justify-center">
+            `;
+
+            for (let floor = 4; floor >= 0; floor--) {
+                const floorData = roomData[floor.toString()];
+                const isSelected = selectedFloor === floor.toString();
+                if (floorData) {
+                    html += `
+                        <button onclick="selectFloor(${floor})"
+                            class="px-4 py-2 rounded-lg font-bold transition-all ${isSelected
+                                ? 'bg-green-500 text-white shadow-lg'
+                                : 'bg-gray-100 hover:bg-blue-100 border border-gray-300'}">
+                            Floor ${floor}
+                            <span class="block text-xs ${isSelected ? 'text-green-100' : 'text-gray-500'}">${floorData.start}-${floorData.end}</span>
+                        </button>
+                    `;
+                } else {
+                    html += `
+                        <button disabled class="px-4 py-2 rounded-lg font-bold bg-gray-200 text-gray-400 cursor-not-allowed">
+                            Floor ${floor}
+                            <span class="block text-xs">N/A</span>
+                        </button>
+                    `;
+                }
+            }
+
+            html += `</div></div>`;
+
+            if (selectedFloor && roomData[selectedFloor]) {
+                const selFloorData = roomData[selectedFloor];
+                const gatarCount = selFloorData.end - selFloorData.start + 1;
+
+                html += `
+                    <div class="bg-green-50 border-2 border-green-400 rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <span class="text-green-800 font-bold text-lg">
+                                    <i class="bi bi-geo-alt-fill mr-2"></i>
+                                    ${roomName} - Floor ${selectedFloor}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="selectAllGatars()" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-bold">
+                                    <i class="bi bi-check-all mr-1"></i>Select All
+                                </button>
+                                <button onclick="clearGatarSelection()" class="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm font-bold">
+                                    <i class="bi bi-x-circle mr-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                        <div id="selectionSummary" class="bg-white rounded p-2 mb-3 border border-green-300">
+                            <p class="text-gray-500 text-sm">No gatars selected - Click on numbers below</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 border border-green-300">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-500"><i class="bi bi-hand-index-thumb mr-1"></i> CLICK TO SELECT/DESELECT</span>
+                                <span class="text-xs text-gray-600 font-bold">Range: ${selFloorData.start} - ${selFloorData.end} (${gatarCount} gatars)</span>
+                            </div>
+                            <div class="grid grid-cols-10 gap-1 max-h-80 overflow-y-auto p-1">
+                `;
+
+                for (let g = selFloorData.start; g <= selFloorData.end; g++) {
+                    const isSelectedGatar = selectedGatars.includes(g);
+                    html += `
+                        <div id="gatar-${g}" onclick="selectGatar(${g})"
+                            class="gatar-cell p-2 text-center rounded cursor-pointer border border-gray-200 font-mono text-sm font-bold transition-all
+                                ${isSelectedGatar ? 'bg-green-500 text-white' : 'bg-white hover:bg-blue-100 hover:border-blue-400'}">
+                            ${g}
+                        </div>
+                    `;
+                }
+
+                html += `</div></div></div>`;
+            } else {
+                html += `
+                    <div class="text-center p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded">
+                        <i class="bi bi-arrow-up text-2xl text-gray-400"></i>
+                        <p class="text-gray-500 mt-2">Select a floor above to see gatar numbers</p>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            layoutDiv.innerHTML = html;
+        }
+
+        function updateGatarHint() {
+            const roomNo = document.getElementById('roomNo').value;
+            if (roomNo) {
+                displayRoomLayout(roomNo);
+            }
+        }
+
+        function selectRoom(roomNumber) {
+            document.getElementById('roomNo').value = roomNumber;
+            selectedGatars = [];
+            document.getElementById('gateNo').value = '';
+
             document.querySelectorAll('.room-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
-
-            // Add selected class to clicked button
             event.target.classList.add('selected');
+
+            updateGatarHint();
         }
 
         function selectFloor(floorNumber) {
-            // Update hidden input
             document.getElementById('floor').value = floorNumber;
-
-            // Remove selected class from all buttons
-            document.querySelectorAll('.floor-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-
-            // Add selected class to clicked button
-            event.target.classList.add('selected');
+            selectedGatars = [];
+            document.getElementById('gateNo').value = '';
+            updateGatarHint();
         }
 
         function goBack() {

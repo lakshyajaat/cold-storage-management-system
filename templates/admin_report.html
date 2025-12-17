@@ -138,6 +138,9 @@
             <button class="tab-button" onclick="switchTab('adminactions')">
                 <i class="bi bi-shield-check"></i> Admin Actions
             </button>
+            <button class="tab-button" onclick="switchTab('employeeactions')">
+                <i class="bi bi-person-gear"></i> Employee Actions
+            </button>
             <button class="tab-button" onclick="switchTab('entries')">
                 <i class="bi bi-box"></i> Entry Logs
             </button>
@@ -279,6 +282,52 @@
                     <tbody id="adminActionsBody">
                         <tr>
                             <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Employee Actions Tab -->
+        <div id="employeeactions-tab" class="tab-content neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-person-gear text-blue-600"></i>
+                    Employee Actions Log
+                </h2>
+                <div class="flex gap-2">
+                    <select id="employeeFilter" class="neu-border p-2" onchange="filterEmployeeActions()">
+                        <option value="">All Employees</option>
+                    </select>
+                    <select id="actionTypeFilter" class="neu-border p-2" onchange="filterEmployeeActions()">
+                        <option value="">All Actions</option>
+                        <option value="ENTRY_CREATED">Entry Created</option>
+                        <option value="ROOM_ASSIGNED">Room Assigned</option>
+                        <option value="PAYMENT_PROCESSED">Payment Processed</option>
+                        <option value="GATE_PASS_ISSUED">Gate Pass Issued</option>
+                        <option value="GATE_PASS_APPROVED">Gate Pass Approved</option>
+                        <option value="ROOM_EDITED">Room Edited</option>
+                    </select>
+                    <input type="text" id="employeeActionSearch" placeholder="Search..." class="neu-border p-2" onkeyup="filterEmployeeActions()">
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Detailed log of all employee actions: entries, room assignments, payments, gate passes, and edits</p>
+            <div class="overflow-x-auto" style="max-height: 600px; overflow-y: auto;">
+                <table class="w-full border-collapse">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-2 text-left">Employee</th>
+                            <th class="p-2 text-left">ID</th>
+                            <th class="p-2 text-left">Role</th>
+                            <th class="p-2 text-left">Action</th>
+                            <th class="p-2 text-left">Target</th>
+                            <th class="p-2 text-left">Details</th>
+                            <th class="p-2 text-left">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeActionsBody">
+                        <tr>
+                            <td colspan="7" class="text-center p-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -531,6 +580,7 @@
 
             updateStatistics();
             displayEmployeeActivity();
+            generateEmployeeActions();
         }
 
         async function loadUsers() {
@@ -1345,6 +1395,211 @@
             rows.forEach(row => {
                 const text = row.textContent.toLowerCase();
                 row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        // Employee Actions - combined from all activities
+        let allEmployeeActions = [];
+
+        function generateEmployeeActions() {
+            allEmployeeActions = [];
+
+            const userMap = {};
+            allUsers.forEach(u => {
+                userMap[u.id] = {
+                    name: capitalizeText(u.name),
+                    role: u.role
+                };
+            });
+
+            // Entries created
+            allEntries.forEach(entry => {
+                if (entry.created_by_user_id) {
+                    const user = userMap[entry.created_by_user_id] || { name: 'Unknown', role: 'unknown' };
+                    allEmployeeActions.push({
+                        user_id: entry.created_by_user_id,
+                        user_name: user.name,
+                        role: user.role,
+                        action_type: 'ENTRY_CREATED',
+                        target: entry.truck_number,
+                        details: `Customer: ${capitalizeText(entry.name)}, Qty: ${entry.expected_quantity}`,
+                        timestamp: new Date(entry.created_at)
+                    });
+                }
+            });
+
+            // Room assignments
+            allRoomEntries.forEach(room => {
+                if (room.created_by_user_id) {
+                    const user = userMap[room.created_by_user_id] || { name: 'Unknown', role: 'unknown' };
+                    allEmployeeActions.push({
+                        user_id: room.created_by_user_id,
+                        user_name: user.name,
+                        role: user.role,
+                        action_type: 'ROOM_ASSIGNED',
+                        target: room.truck_number,
+                        details: `Room: ${room.room_no}, Floor: ${room.floor}, Gatar: ${room.gate_no}, Qty: ${room.quantity}`,
+                        timestamp: new Date(room.created_at)
+                    });
+                }
+            });
+
+            // Payments processed
+            allPayments.forEach(payment => {
+                if (payment.processed_by_user_id) {
+                    const user = userMap[payment.processed_by_user_id] || { name: 'Unknown', role: 'unknown' };
+                    allEmployeeActions.push({
+                        user_id: payment.processed_by_user_id,
+                        user_name: user.name,
+                        role: user.role,
+                        action_type: 'PAYMENT_PROCESSED',
+                        target: `Receipt #${payment.receipt_number}`,
+                        details: `Customer: ${capitalizeText(payment.customer_name)}, Amount: ₹${payment.amount_paid.toLocaleString('en-IN')}`,
+                        timestamp: new Date(payment.payment_date)
+                    });
+                }
+            });
+
+            // Gate passes issued
+            allGatePasses.forEach(gp => {
+                if (gp.issued_by_id && gp.request_source !== 'customer_portal') {
+                    const user = userMap[gp.issued_by_id] || { name: 'Unknown', role: 'unknown' };
+                    allEmployeeActions.push({
+                        user_id: gp.issued_by_id,
+                        user_name: user.name,
+                        role: user.role,
+                        action_type: 'GATE_PASS_ISSUED',
+                        target: gp.truck_number,
+                        details: `Customer: ${capitalizeText(gp.customer_name)}, Qty: ${gp.requested_quantity}`,
+                        timestamp: new Date(gp.issued_at)
+                    });
+                }
+
+                // Gate passes approved
+                if (gp.approved_by_id) {
+                    const user = userMap[gp.approved_by_id] || { name: 'Unknown', role: 'unknown' };
+                    allEmployeeActions.push({
+                        user_id: gp.approved_by_id,
+                        user_name: user.name,
+                        role: user.role,
+                        action_type: 'GATE_PASS_APPROVED',
+                        target: gp.truck_number,
+                        details: `Approved: ${gp.approved_quantity || gp.requested_quantity} items, Status: ${gp.status}`,
+                        timestamp: new Date(gp.updated_at || gp.issued_at)
+                    });
+                }
+            });
+
+            // Room edits
+            allEditLogs.forEach(log => {
+                const user = userMap[log.edited_by_user_id] || { name: log.editor_name || 'Unknown', role: 'unknown' };
+                const changes = [];
+                if (log.old_room_no !== log.new_room_no) changes.push(`Room: ${log.old_room_no}→${log.new_room_no}`);
+                if (log.old_floor !== log.new_floor) changes.push(`Floor: ${log.old_floor}→${log.new_floor}`);
+                if (log.old_gate_no !== log.new_gate_no) changes.push(`Gatar: ${log.old_gate_no}→${log.new_gate_no}`);
+                if (log.old_quantity !== log.new_quantity) changes.push(`Qty: ${log.old_quantity}→${log.new_quantity}`);
+                if (log.old_remark !== log.new_remark) changes.push(`Remark changed`);
+
+                if (changes.length > 0) {
+                    allEmployeeActions.push({
+                        user_id: log.edited_by_user_id,
+                        user_name: capitalizeText(user.name),
+                        role: user.role,
+                        action_type: 'ROOM_EDITED',
+                        target: log.truck_number,
+                        details: changes.join(', '),
+                        timestamp: new Date(log.edited_at)
+                    });
+                }
+            });
+
+            // Sort by timestamp descending (most recent first)
+            allEmployeeActions.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Populate employee filter dropdown
+            const employeeFilter = document.getElementById('employeeFilter');
+            const uniqueEmployees = [...new Set(allEmployeeActions.map(a => a.user_name))].sort();
+            employeeFilter.innerHTML = '<option value="">All Employees</option>' +
+                uniqueEmployees.map(name => `<option value="${name}">${name}</option>`).join('');
+
+            displayEmployeeActions();
+        }
+
+        function displayEmployeeActions() {
+            const tbody = document.getElementById('employeeActionsBody');
+
+            if (allEmployeeActions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No employee actions found</td></tr>';
+                return;
+            }
+
+            const actionColors = {
+                'ENTRY_CREATED': 'bg-green-100 text-green-700',
+                'ROOM_ASSIGNED': 'bg-blue-100 text-blue-700',
+                'PAYMENT_PROCESSED': 'bg-yellow-100 text-yellow-700',
+                'GATE_PASS_ISSUED': 'bg-purple-100 text-purple-700',
+                'GATE_PASS_APPROVED': 'bg-orange-100 text-orange-700',
+                'ROOM_EDITED': 'bg-pink-100 text-pink-700'
+            };
+
+            const roleColors = {
+                'admin': 'bg-red-500',
+                'employee': 'bg-blue-500',
+                'accountant': 'bg-green-500'
+            };
+
+            tbody.innerHTML = allEmployeeActions.map(action => {
+                const timestamp = action.timestamp.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const actionColor = actionColors[action.action_type] || 'bg-gray-100 text-gray-700';
+                const roleColor = roleColors[action.role] || 'bg-gray-500';
+                const truckColor = getTruckColor(action.target);
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-blue-50" data-employee="${action.user_name}" data-action="${action.action_type}">
+                        <td class="p-2 font-semibold">${action.user_name}</td>
+                        <td class="p-2">#${action.user_id}</td>
+                        <td class="p-2">
+                            <span class="px-2 py-1 rounded text-white text-xs ${roleColor}">
+                                ${action.role.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="p-2">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${actionColor}">
+                                ${action.action_type.replace(/_/g, ' ')}
+                            </span>
+                        </td>
+                        <td class="p-2 font-bold ${truckColor}">${action.target}</td>
+                        <td class="p-2 text-sm">${action.details}</td>
+                        <td class="p-2 text-sm">${timestamp}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterEmployeeActions() {
+            const employeeFilter = document.getElementById('employeeFilter').value;
+            const actionTypeFilter = document.getElementById('actionTypeFilter').value;
+            const searchText = document.getElementById('employeeActionSearch').value.toLowerCase();
+
+            const rows = document.querySelectorAll('#employeeActionsBody tr');
+
+            rows.forEach(row => {
+                const employee = row.getAttribute('data-employee') || '';
+                const actionType = row.getAttribute('data-action') || '';
+                const text = row.textContent.toLowerCase();
+
+                const matchesEmployee = !employeeFilter || employee === employeeFilter;
+                const matchesAction = !actionTypeFilter || actionType === actionTypeFilter;
+                const matchesSearch = !searchText || text.includes(searchText);
+
+                row.style.display = (matchesEmployee && matchesAction && matchesSearch) ? '' : 'none';
             });
         }
 

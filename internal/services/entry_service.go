@@ -61,9 +61,18 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 			Name:    req.Name,
 			Phone:   req.Phone,
 			Village: req.Village,
+			SO:      req.SO,
 		}
 		if err := s.CustomerRepo.Create(ctx, customer); err != nil {
 			return nil, errors.New("failed to create customer: " + err.Error())
+		}
+	} else {
+		// Update existing customer's S/O if provided and different
+		if req.SO != "" && req.SO != customer.SO {
+			customer.SO = req.SO
+			customer.Name = req.Name
+			customer.Village = req.Village
+			s.CustomerRepo.Update(ctx, customer)
 		}
 	}
 

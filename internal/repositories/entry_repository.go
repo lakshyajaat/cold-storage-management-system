@@ -115,11 +115,21 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 }
 
 func (r *EntryRepository) GetCountByCategory(ctx context.Context, category string) (int, error) {
-	var count int
+	// Return the current sequence value (last used number) instead of COUNT
+	// This matches the actual truck number generation which uses sequences
+	var sequenceName string
+	if category == "seed" {
+		sequenceName = "seed_entry_sequence"
+	} else if category == "sell" {
+		sequenceName = "sell_entry_sequence"
+	} else {
+		return 0, fmt.Errorf("invalid category: %s", category)
+	}
+
+	var lastValue int
 	err := r.DB.QueryRow(ctx,
-		`SELECT COUNT(*) FROM entries WHERE truck_category=$1`,
-		category).Scan(&count)
-	return count, err
+		fmt.Sprintf(`SELECT last_value FROM %s`, sequenceName)).Scan(&lastValue)
+	return lastValue, err
 }
 
 func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, error) {
