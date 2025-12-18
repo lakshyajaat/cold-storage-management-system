@@ -488,8 +488,12 @@
                 // Display room layout with current selection
                 updateGatarHint();
 
-                // Initialize quantity calculator with current quantity
-                if (roomEntryData.quantity > 0) {
+                // Initialize quantity calculator with breakdown or current quantity
+                if (roomEntryData.quantity_breakdown && roomEntryData.quantity_breakdown.trim()) {
+                    // Parse breakdown like "20, 20, 16" into array
+                    quantityValues = roomEntryData.quantity_breakdown.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+                    updateQuantityDisplay();
+                } else if (roomEntryData.quantity > 0) {
                     quantityValues = [roomEntryData.quantity];
                     updateQuantityDisplay();
                 }
@@ -539,6 +543,8 @@
                 const capitalizedRemark = roomEntryData.remark ?
                     roomEntryData.remark.charAt(0).toUpperCase() + roomEntryData.remark.slice(1).toLowerCase() : '';
 
+                const breakdownText = roomEntryData.quantity_breakdown ? ` (${roomEntryData.quantity_breakdown})` : '';
+
                 historyBody.innerHTML = `
                     <div class="p-3 mb-2 bg-green-50 border-l-4 border-green-600">
                         <div class="flex justify-between items-start mb-1">
@@ -547,7 +553,7 @@
                         </div>
                         <div class="text-sm text-gray-700">
                             <p>Room: ${roomEntryData.room_no}, Floor: ${roomEntryData.floor}</p>
-                            <p>Gatar: ${roomEntryData.gate_no}, Qty: ${roomEntryData.quantity}</p>
+                            <p>Gatar: ${roomEntryData.gate_no}, Qty: ${roomEntryData.quantity}${breakdownText}</p>
                             ${capitalizedRemark ? `<p>Remark: ${capitalizedRemark}</p>` : ''}
                         </div>
                     </div>
@@ -577,11 +583,15 @@
                 }
             }
 
+            // Get quantity breakdown
+            const quantityBreakdown = quantityValues.join(', ');
+
             const updateData = {
                 room_no: document.getElementById('roomNo').value.trim(),
                 floor: document.getElementById('floor').value.trim(),
                 gate_no: document.getElementById('gateNo').value.trim(),
                 quantity: parseInt(document.getElementById('quantity').value),
+                quantity_breakdown: quantityBreakdown,
                 remark: remark
             };
 
@@ -635,6 +645,7 @@
 
                 const capitalizedRemark = updateData.remark ?
                     updateData.remark.charAt(0).toUpperCase() + updateData.remark.slice(1).toLowerCase() : '';
+                const breakdownText = updateData.quantity_breakdown ? ` (${updateData.quantity_breakdown})` : '';
 
                 const changeEntry = document.createElement('div');
                 changeEntry.className = 'p-3 mb-2 bg-blue-50 border-l-4 border-blue-600';
@@ -646,7 +657,7 @@
                     <div class="text-sm text-gray-700">
                         <p><strong>Updated by:</strong> ${userName} (ID: ${userId})</p>
                         <p>Room: ${updateData.room_no}, Floor: ${updateData.floor}</p>
-                        <p>Gatar: ${updateData.gate_no}, Qty: ${updateData.quantity}</p>
+                        <p>Gatar: ${updateData.gate_no}, Qty: ${updateData.quantity}${breakdownText}</p>
                         ${capitalizedRemark ? `<p>Remark: ${capitalizedRemark}</p>` : ''}
                     </div>
                 `;

@@ -69,6 +69,7 @@ func NewRouter(
 	r.HandleFunc("/employees", pageHandler.EmployeesPage).Methods("GET")
 	r.HandleFunc("/system-settings", pageHandler.SystemSettingsPage).Methods("GET")
 	r.HandleFunc("/admin/report", pageHandler.AdminReportPage).Methods("GET")
+	r.HandleFunc("/admin/logs", pageHandler.AdminLogsPage).Methods("GET")
 	r.HandleFunc("/infrastructure", pageHandler.InfrastructureMonitoringPage).Methods("GET")
 
 	// Protected API routes - System Settings

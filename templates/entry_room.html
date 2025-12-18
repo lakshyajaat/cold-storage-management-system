@@ -971,6 +971,8 @@
                 });
                 const truckColor = getTruckColor(entry.thock_number);
 
+                const breakdownDisplay = entry.quantity_breakdown ? `<span class="text-xs text-gray-500 block">(${entry.quantity_breakdown})</span>` : '';
+
                 return `
                     <tr class="border-b border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
                         onclick="printReceipt(${entry.entry_id}, ${entry.id})"
@@ -979,7 +981,7 @@
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no}</td>
-                        <td class="p-2 font-bold">${entry.quantity}</td>
+                        <td class="p-2 font-bold">${entry.quantity} ${breakdownDisplay}</td>
                         <td class="p-2 text-xs">${formattedDate}</td>
                         <td class="p-2" onclick="event.stopPropagation()">
                             <div class="flex gap-1">

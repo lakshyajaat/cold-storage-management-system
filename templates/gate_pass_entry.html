@@ -610,16 +610,38 @@
 
                 if (response.ok) {
                     customerPayments = await response.json();
+
+                    if (customerPayments.length > 0) {
+                        // Payments are sorted by date DESC - use LATEST record's values
+                        // DO NOT SUM total_rent - each record has the CURRENT total rent at that time
+                        totalRentOwed = customerPayments[0].total_rent || 0;
+
+                        // Sum all individual payments to get total paid
+                        totalPaid = customerPayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0);
+
+                        // Use latest payment's balance (most current)
+                        balanceDue = customerPayments[0].balance || 0;
+                    } else {
+                        totalRentOwed = 0;
+                        totalPaid = 0;
+                        balanceDue = 0;
+                    }
                 } else {
                     customerPayments = [];
+                    totalRentOwed = 0;
+                    totalPaid = 0;
+                    balanceDue = 0;
                 }
 
-                // Calculate payment-based availability
-                calculatePaymentBasedAvailability();
+                // Update availability display
+                updateAvailabilityDisplay();
 
             } catch (error) {
                 console.error('Error loading customer payments:', error);
                 customerPayments = [];
+                totalRentOwed = 0;
+                totalPaid = 0;
+                balanceDue = 0;
                 document.getElementById('paymentAllowedQuantity').textContent = 'N/A';
             }
         }
@@ -629,25 +651,8 @@
             const customerId = document.getElementById('customerId').value;
             if (!customerId) return 0;
 
-            // Get all customer entries to calculate total rent owed
-            const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
-
-            // Calculate total rent based on entries
-            totalRentOwed = customerEntries.reduce((sum, entry) => {
-                // If entry has rent_amount, use it; otherwise calculate based on quantity
-                const entryRent = entry.rent_amount || (entry.expected_quantity * customerRentRate);
-                return sum + entryRent;
-            }, 0);
-
-            // Calculate total paid
-            totalPaid = customerPayments.reduce((sum, payment) => {
-                return sum + (payment.amount_paid || 0);
-            }, 0);
-
-            // Calculate balance due
-            balanceDue = totalRentOwed - totalPaid;
-
-            // Update availability display (considers selected truck if any)
+            // Balance and totals are already calculated by loadCustomerPayments() using backend data
+            // Just update the display
             updateAvailabilityDisplay();
 
             // Return payment-based allowance
@@ -684,18 +689,10 @@
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
-            // Calculate total payment available (existing + current)
-            const totalPaymentAvailable = totalPaid + paymentAmount;
-
-            // Calculate how many items customer can take with total payment
-            const allowedItems = Math.floor(totalPaymentAvailable / customerRentRate);
-
-            // Actual allowance is minimum of inventory and payment allowance
-            const actualAllowance = Math.min(totalInInventory, allowedItems);
-
-            // Calculate new balance after this withdrawal and payment
-            const rentForRequest = requestedQty * customerRentRate;
-            const newBalance = balanceDue - paymentAmount + rentForRequest;
+            // CORRECT: Use balance to determine if customer can take items
+            // If balance is 0 or negative (has advance), customer can take all inventory
+            // If balance > 0 (owes money), customer can't take items until paid
+            const allowedItems = (balanceDue <= 0) ? totalInInventory : 0;
 
             // Validation checks
             if (requestedQty > totalInInventory) {
@@ -708,32 +705,24 @@
                 } else {
                     showValidationMessage('⚠️ Requested quantity exceeds available inventory!', 'bg-red-100', 'text-red-700');
                 }
-            } else if (requestedQty > allowedItems) {
-                // Not enough payment - customer needs to pay more before withdrawal
-                const shortfall = requestedQty - allowedItems;
-                const neededPayment = shortfall * customerRentRate;
+            } else if (balanceDue > 0) {
+                // Customer owes money - must pay balance first
                 showValidationMessage(
-                    `⚠️ Insufficient balance! Customer needs to pay ₹${neededPayment.toFixed(0)} more to withdraw ${requestedQty} items (₹${customerRentRate}/item).`,
+                    `⚠️ Outstanding balance! Customer must pay ₹${balanceDue.toFixed(0)} before withdrawing items.`,
                     'bg-red-100',
                     'text-red-700'
                 );
             } else {
-                // Approved - show new balance after withdrawal
-                if (newBalance > 0) {
+                // Approved - customer is paid up or has advance
+                if (balanceDue < 0) {
                     showValidationMessage(
-                        `✓ Approved! New balance due after withdrawal: ₹${newBalance.toFixed(0)}`,
-                        'bg-green-100',
-                        'text-green-700'
-                    );
-                } else if (newBalance < 0) {
-                    showValidationMessage(
-                        `✓ Approved! Remaining advance after withdrawal: ₹${Math.abs(newBalance).toFixed(0)}`,
+                        `✓ Approved! Customer has ₹${Math.abs(balanceDue).toFixed(0)} advance credit.`,
                         'bg-green-100',
                         'text-green-700'
                     );
                 } else {
                     showValidationMessage(
-                        `✓ Approved! Balance will be cleared after withdrawal.`,
+                        `✓ Approved! Balance is clear.`,
                         'bg-green-100',
                         'text-green-700'
                     );
@@ -880,11 +869,15 @@
                 // Update inventory display
                 document.getElementById('availableQuantity').textContent = availableInventory;
 
-                // Calculate payment-based availability
-                const paymentBasedAllowance = Math.floor(totalPaid / customerRentRate);
-
-                // Can take out is minimum of inventory and payment allowance
-                const canTakeOut = Math.min(availableInventory, paymentBasedAllowance);
+                // CORRECT: Use balance to determine if customer can take items
+                let canTakeOut;
+                if (balanceDue <= 0) {
+                    // Customer is paid up or has advance - can take all available inventory
+                    canTakeOut = availableInventory;
+                } else {
+                    // Customer owes money - can't take items until paid
+                    canTakeOut = 0;
+                }
 
                 // Update display
                 const paymentSpan = document.getElementById('paymentAllowedQuantity');
@@ -956,12 +949,7 @@
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
-            // Calculate total payment available (existing + current)
-            const totalPaymentAvailable = totalPaid + paymentAmount;
-
-            // Calculate how many items customer can take with total payment
-            const allowedItems = Math.floor(totalPaymentAvailable / customerRentRate);
-
+            // CORRECT: Use balance to determine if customer can take items
             if (requestedQty > totalInInventory) {
                 if (selectedThockEntry) {
                     alert(i18n.t('error', 'Error') + ': ' + i18n.t('truck_has_only_items', 'Truck {truck} has only {qty} items!').replace('{truck}', selectedThockEntry.thock_number).replace('{qty}', totalInInventory));
@@ -971,10 +959,9 @@
                 return;
             }
 
-            if (requestedQty > allowedItems) {
-                const shortfall = requestedQty - allowedItems;
-                const neededPayment = shortfall * customerRentRate;
-                alert(i18n.t('error', 'Error') + ': ' + i18n.t('insufficient_balance', 'Insufficient balance!') + ' ' + i18n.t('customer_needs_pay', 'Customer needs to pay ₹{amount} more to withdraw {qty} items').replace('{amount}', neededPayment.toFixed(0)).replace('{qty}', requestedQty));
+            // If customer has outstanding balance, they can't withdraw
+            if (balanceDue > 0) {
+                alert(i18n.t('error', 'Error') + ': ' + i18n.t('outstanding_balance', 'Outstanding balance!') + ' ' + i18n.t('customer_must_pay', 'Customer must pay ₹{amount} before withdrawing items.').replace('{amount}', balanceDue.toFixed(0)));
                 return;
             }
 
@@ -1501,8 +1488,8 @@
         }
 
         // Load on page load
-        window.addEventListener('load', function() {
-            loadRentRate();
+        window.addEventListener('load', async function() {
+            await loadRentRate();  // Wait for rent rate before other operations
             loadAllCustomers();
             loadAllEntries();
             loadRecentGatePasses();

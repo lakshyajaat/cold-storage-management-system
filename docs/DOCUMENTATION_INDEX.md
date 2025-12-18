@@ -3,8 +3,8 @@
 Complete documentation for the Cold Storage Management System.
 
 **Project:** Cold Storage Management System
-**Version:** 1.0.0
-**Last Updated:** 2025-12-13
+**Version:** 1.4.75
+**Last Updated:** 2025-12-18
 
 ---
 
@@ -339,7 +339,7 @@ Test Accountant:
 ### Server URLs
 ```
 Development: http://localhost:8080
-Production: http://192.168.15.195:8080
+Production: http://192.168.15.200:8080
 ```
 
 ### Key Directories
@@ -443,6 +443,7 @@ Contributions to documentation are welcome:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2025-12-13 | Initial complete documentation |
+| 1.4.75 | 2025-12-18 | Multi-language support, offline mode, room config improvements |
 
 ---
 
@@ -456,5 +457,5 @@ All documentation is proprietary and confidential.
 
 All core documentation is complete and up-to-date. The system is ready for use with comprehensive guides for setup, development, API integration, testing, and deployment.
 
-**Last Updated:** 2025-12-13
+**Last Updated:** 2025-12-18
 **Maintained By:** Cold Storage Development Team

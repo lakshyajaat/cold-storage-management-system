@@ -200,6 +200,7 @@
                         floor: roomEntry.floor,
                         gateNo: roomEntry.gate_no,
                         quantity: roomEntry.quantity,
+                        quantityBreakdown: roomEntry.quantity_breakdown || '',
                         remark: roomEntry.remark || '-',
                         date: new Date(roomEntry.created_at).toLocaleString('en-IN', {
                             day: '2-digit',
@@ -259,6 +260,8 @@
                 // Color code thock number based on pattern
                 const thockColor = getThockColor(entry.thockNumber);
 
+                const breakdownDisplay = entry.quantityBreakdown ? `<span class="text-xs text-gray-500 block">(${entry.quantityBreakdown})</span>` : '';
+
                 row.innerHTML = `
                     <td class="p-2 font-bold ${thockColor}">${entry.thockNumber}</td>
                     <td class="p-2">${capitalizeText(entry.name)}</td>
@@ -267,7 +270,7 @@
                     <td class="p-2">${entry.room}</td>
                     <td class="p-2">${entry.floor}</td>
                     <td class="p-2">${entry.gateNo}</td>
-                    <td class="p-2">${entry.quantity}</td>
+                    <td class="p-2">${entry.quantity} ${breakdownDisplay}</td>
                     <td class="p-2">${capitalizeText(entry.remark)}</td>
                     <td class="p-2 text-sm">${entry.date}</td>
                     <td class="p-2">
@@ -408,6 +411,7 @@
                 'Floor': entry.floor,
                 'Gatar Number': entry.gateNo,
                 'Quantity': entry.quantity,
+                'Breakdown': entry.quantityBreakdown || '',
                 'Remark': entry.remark,
                 'Date': entry.date
             }));

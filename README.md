@@ -1,31 +1,49 @@
 # Cold Storage Management System
 
-Web-based management system for cold storage facilities with role-based access, inventory tracking, and payment processing.
+Web-based management system for cold storage facilities with role-based access, inventory tracking, payment processing, and multi-language support.
+
+**Version:** 1.4.75
+**Last Updated:** December 18, 2025
+
+## Features
+
+- **Multi-Language Support:** English and Hindi (i18n)
+- **Role-Based Access Control:** Admin, Employee, Accountant roles
+- **Inventory Management:** Track items across rooms and gatars
+- **Gate Pass System:** Issue, approve, and track item withdrawals
+- **Payment Processing:** Rent calculations and payment tracking
+- **Offline Mode:** Works on local network without internet
+- **Customer Portal:** Self-service for customers to request gate passes
 
 ## Tech Stack
 
-- **Backend:** Go 1.22, Gorilla Mux, pgx/v5
-- **Frontend:** HTML5, Tailwind CSS, Vanilla JS
-- **Database:** PostgreSQL 17
-- **Infrastructure:** K3s, Longhorn, CloudNative-PG, MetalLB
+- **Backend:** Go 1.23, Gorilla Mux, pgx/v5
+- **Frontend:** HTML5, Tailwind CSS, Vanilla JS, Bootstrap Icons
+- **Database:** PostgreSQL 17 (CloudNative-PG)
+- **Infrastructure:** K3s, Longhorn, MetalLB
+- **Monitoring:** Node Exporter, Custom metrics
 
 ## Project Structure
 
 ```
 cold-backend/
-├── cmd/server/          # Entry point
-├── configs/             # Configuration
+├── cmd/server/          # Application entry point
+├── configs/             # Configuration files
 ├── docs/                # Documentation
 ├── internal/
-│   ├── handlers/        # HTTP handlers
+│   ├── handlers/        # HTTP request handlers
+│   ├── http/            # Router and middleware
 │   ├── models/          # Data models
-│   ├── repositories/    # Database layer
+│   ├── repositories/    # Database operations
 │   └── services/        # Business logic
 ├── k8s/                 # Kubernetes manifests
 ├── migrations/          # SQL migrations
-├── scripts/
-│   ├── deploy/          # Deployment scripts
-│   └── test/            # Test scripts
+├── scripts/             # Deployment and utility scripts
+├── static/              # Static assets (CSS, JS, fonts)
+│   ├── css/             # Tailwind, Bootstrap Icons
+│   ├── fonts/           # Web fonts
+│   ├── js/              # JavaScript (i18n)
+│   └── locales/         # Translation files (en.json, hi.json)
 └── templates/           # HTML templates
 ```
 
@@ -42,8 +60,8 @@ docker run --name cold-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=col
 for f in migrations/*.sql; do docker exec -i cold-postgres psql -U postgres -d cold_db < "$f"; done
 
 # Build & run
-go build -o bin/server cmd/server/main.go
-./bin/server
+go build -o server ./cmd/server/
+./server
 ```
 
 Access at `http://localhost:8080`
@@ -52,46 +70,115 @@ Access at `http://localhost:8080`
 
 | Role | Access |
 |------|--------|
-| Employee | Create entries, room assignments |
-| Accountant | Payment processing |
-| Admin | Full access + user management |
+| Employee | Create entries, room assignments, gate pass entry |
+| Accountant | Payment processing, rent management |
+| Admin | Full access + user management, reports, system settings |
 
 ## Default Login
 
 - **Email:** admin@cold.com
 - **Password:** admin123
 
+## Storage Layout
+
+The facility has 5 storage areas:
+
+| Room | Type | Gatars | Status |
+|------|------|--------|--------|
+| Room 1 | Seed | 1-680 | Active |
+| Room 2 | Seed | 681-1360 | Active |
+| Room 3 | Sell | 1361-2040 | Active |
+| Room 4 | Sell | TBD | Pending |
+| Gallery | Sell | TBD | Pending |
+
+Each room has 5 floors (0-4) with gatar ranges defined per floor.
+
 ## API Endpoints
 
+### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /auth/login | User login |
+| GET | /logout | User logout |
+
+### Core APIs
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | GET | /api/entries | List entries |
 | POST | /api/entries | Create entry |
 | GET | /api/room-entries | List room entries |
 | POST | /api/room-entries | Create room entry |
+| PUT | /api/room-entries/:id | Update room entry |
 | POST | /api/rent-payments | Create payment |
 | GET | /api/gate-passes | List gate passes |
+| POST | /api/gate-passes | Create gate pass |
+
+### Admin APIs
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/users | List users |
+| POST | /api/users | Create user |
+| GET | /api/customers | List customers |
+
+## Multi-Language Support
+
+The application supports English and Hindi. Translation files are located in:
+- `static/locales/en.json` - English translations
+- `static/locales/hi.json` - Hindi translations
+
+Users can switch languages using the dropdown in the header. The selected language is persisted in localStorage.
 
 ## Production Deployment
 
 ```bash
-# Build image
-docker build -t cold-backend:latest .
+# Build Docker image
+docker build -t cold-backend:v1.4.75 .
 
 # Deploy to K3s
 kubectl apply -f k8s/
+
+# Or use deployment script
+./scripts/deploy/deploy.sh v1.4.75
 ```
 
 **Production URL:** http://192.168.15.200:8080
 
+### K3s Cluster
+
+| Node | IP | Role |
+|------|-----|------|
+| k3s-master | 192.168.15.110 | Control Plane |
+| k3s-worker-1 | 192.168.15.111 | Worker |
+| k3s-worker-2 | 192.168.15.112 | Worker |
+| k3s-worker-3 | 192.168.15.113 | Worker |
+| k3s-worker-4 | 192.168.15.114 | Worker |
+
+**VIP:** 192.168.15.200 (MetalLB)
+
 ## Documentation
 
-See `docs/` folder:
-- [API Documentation](docs/API_DOCUMENTATION.md)
-- [Database Schema](docs/DATABASE_SCHEMA.md)
-- [K3s Infrastructure](docs/K3S_INFRASTRUCTURE_DOCUMENTATION.md)
-- [Room Layout](docs/ROOM_LAYOUT.md)
+See `docs/` folder for detailed documentation:
+
+- [API Documentation](docs/API_DOCUMENTATION.md) - Complete API reference
+- [Database Schema](docs/DATABASE_SCHEMA.md) - Database design
+- [K3s Infrastructure](docs/K3S_INFRASTRUCTURE_DOCUMENTATION.md) - Cluster setup
+- [Room Layout](docs/ROOM_LAYOUT.md) - Gatar mapping
+- [Documentation Index](docs/DOCUMENTATION_INDEX.md) - Full index
+
+## Environment Variables
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=cold_db
+
+# Server
+PORT=8080
+JWT_SECRET=your-secret-key
+```
 
 ## License
 

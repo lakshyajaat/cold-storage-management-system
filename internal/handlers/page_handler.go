@@ -125,6 +125,11 @@ func (h *PageHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "admin_report.html", nil)
 }
 
+// AdminLogsPage serves system logs page
+func (h *PageHandler) AdminLogsPage(w http.ResponseWriter, r *http.Request) {
+	h.templates.ExecuteTemplate(w, "admin_logs.html", nil)
+}
+
 // GatePassEntryPage serves gate pass entry page (unloading mode)
 func (h *PageHandler) GatePassEntryPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "gate_pass_entry.html", nil)

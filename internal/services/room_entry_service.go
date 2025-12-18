@@ -71,14 +71,15 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 
 	// Create room entry
 	roomEntry := &models.RoomEntry{
-		EntryID:         req.EntryID,
-		ThockNumber:     req.ThockNumber,
-		RoomNo:          req.RoomNo,
-		Floor:           req.Floor,
-		GateNo:          req.GateNo,
-		Remark:          req.Remark,
-		Quantity:        req.Quantity,
-		CreatedByUserID: userID,
+		EntryID:           req.EntryID,
+		ThockNumber:       req.ThockNumber,
+		RoomNo:            req.RoomNo,
+		Floor:             req.Floor,
+		GateNo:            req.GateNo,
+		Remark:            req.Remark,
+		Quantity:          req.Quantity,
+		QuantityBreakdown: req.QuantityBreakdown,
+		CreatedByUserID:   userID,
 	}
 
 	if err := s.RoomEntryRepo.Create(ctx, roomEntry); err != nil {
@@ -139,6 +140,7 @@ func (s *RoomEntryService) UpdateRoomEntry(ctx context.Context, id int, req *mod
 	roomEntry.GateNo = req.GateNo
 	roomEntry.Remark = req.Remark
 	roomEntry.Quantity = req.Quantity
+	roomEntry.QuantityBreakdown = req.QuantityBreakdown
 
 	// Update in database
 	if err := s.RoomEntryRepo.Update(ctx, id, roomEntry); err != nil {

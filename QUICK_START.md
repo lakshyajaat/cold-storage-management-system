@@ -7,7 +7,7 @@ Get the Cold Storage Management System running in 5 minutes!
 ## Prerequisites
 
 - Docker installed
-- Go 1.22+ installed
+- Go 1.23+ installed
 - Git installed
 
 ---
@@ -32,7 +32,7 @@ docker run --name cold-storage-postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=cold_db \
   -p 5432:5432 \
-  -d postgres:15
+  -d postgres:17
 ```
 
 **Verify database is running:**

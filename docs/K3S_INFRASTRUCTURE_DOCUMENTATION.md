@@ -1,6 +1,6 @@
 # K3s Infrastructure Documentation - Cold Storage Backend POC
 
-**Date:** December 15, 2025
+**Date:** December 18, 2025
 **Testing Domain:** ailakshya.in
 **Production Domain:** gurukripacoldstore.in
 

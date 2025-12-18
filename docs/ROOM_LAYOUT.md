@@ -638,8 +638,9 @@ Layout data extracted from the following images in this folder:
 | v1.0 | Dec 17, 2025 | Initial layout for Room 1, 2, 3 |
 | v1.1 | Dec 17, 2025 | Added application integration details |
 | v1.2 | Dec 17, 2025 | Added detailed gatar grid layouts for all floors (Room 1, 2, 3) |
+| v1.3 | Dec 18, 2025 | Multi-language support for room labels |
 
 ---
 
-*Last Updated: December 17, 2025*
+*Last Updated: December 18, 2025*
 *Pending: Room 4 and Gallery layout data*
