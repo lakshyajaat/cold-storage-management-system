@@ -126,7 +126,7 @@ func RunMigrations(pool *pgxpool.Pool) error {
 		CREATE TABLE IF NOT EXISTS gate_passes (
 			id SERIAL PRIMARY KEY,
 			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-			truck_number VARCHAR(20) NOT NULL,
+			thock_number VARCHAR(20) NOT NULL,
 			entry_id INTEGER REFERENCES entries(id) ON DELETE SET NULL,
 			requested_quantity INTEGER NOT NULL,
 			approved_quantity INTEGER,
@@ -209,4 +209,39 @@ func RunMigrations(pool *pgxpool.Pool) error {
 
 	log.Println("Migrations completed successfully")
 	return nil
+}
+
+// ConnectG connects to the gallery database
+func ConnectG(cfg *config.Config) *pgxpool.Pool {
+	if !cfg.G.Enabled {
+		return nil
+	}
+
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s",
+		cfg.G.DB.User,
+		cfg.G.DB.Password,
+		cfg.G.DB.Host,
+		cfg.G.DB.Port,
+		cfg.G.DB.Name,
+	)
+
+	poolConfig, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		log.Printf("G db config parse failed: %v", err)
+		return nil
+	}
+
+	poolConfig.MaxConns = 5
+	poolConfig.MinConns = 1
+	poolConfig.MaxConnLifetime = time.Hour
+	poolConfig.MaxConnIdleTime = 15 * time.Minute
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
+	if err != nil {
+		log.Printf("G db connect failed: %v", err)
+		return nil
+	}
+
+	return pool
 }

@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Management - Cold Storage</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
 
     <style>
         * {
@@ -118,8 +119,8 @@
             <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm opacity-90">Total Trucks</p>
-                        <p class="text-3xl font-bold mt-2" id="totalTrucks">0</p>
+                        <p class="text-sm opacity-90">Total Thoks</p>
+                        <p class="text-3xl font-bold mt-2" id="totalThocks">0</p>
                     </div>
                     <i class="bi bi-truck text-5xl opacity-50"></i>
                 </div>
@@ -442,7 +443,7 @@
                             name: entry.name,
                             phone: entry.phone,
                             village: entry.village || 'N/A',
-                            trucks: [],
+                            thocks: [],
                             payments: [],
                             totalQuantity: 0,
                             totalRent: 0,
@@ -456,9 +457,9 @@
                     const quantity = entry.expected_quantity || 0;
                     const rent = quantity * rentPerItem;
 
-                    customer.trucks.push({
+                    customer.thocks.push({
                         id: entry.id,
-                        truck_number: entry.truck_number,
+                        thock_number: entry.thock_number,
                         quantity: quantity,
                         rent: rent,
                         date: new Date(entry.created_at).toLocaleDateString('en-IN'),
@@ -478,9 +479,9 @@
                         const quantity = gatePass.total_picked_up || gatePass.requested_quantity || 0;
                         const rent = quantity * rentPerItem;
 
-                        customer.trucks.push({
+                        customer.thocks.push({
                             id: gatePass.id,
-                            truck_number: gatePass.truck_number,
+                            thock_number: gatePass.thock_number,
                             quantity: -quantity,  // Negative for outgoing
                             rent: -rent,          // Negative for outgoing
                             date: new Date(gatePass.completed_at || gatePass.updated_at).toLocaleDateString('en-IN'),
@@ -555,49 +556,49 @@
 
             container.innerHTML = accounts.map((customer, index) => {
                 // Calculate SEED and SELL totals
-                const seedTrucks = customer.trucks.filter(t => {
-                    const num = parseInt(t.truck_number);
+                const seedThocks = customer.thocks.filter(t => {
+                    const num = parseInt(t.thock_number);
                     return num >= 1 && num <= 1500;
                 });
-                const sellTrucks = customer.trucks.filter(t => {
-                    const num = parseInt(t.truck_number);
+                const sellThocks = customer.thocks.filter(t => {
+                    const num = parseInt(t.thock_number);
                     return num >= 1501 && num <= 3000;
                 });
 
-                const seedQuantity = seedTrucks.reduce((sum, t) => sum + t.quantity, 0);
-                const seedRent = seedTrucks.reduce((sum, t) => sum + t.rent, 0);
-                const sellQuantity = sellTrucks.reduce((sum, t) => sum + t.quantity, 0);
-                const sellRent = sellTrucks.reduce((sum, t) => sum + t.rent, 0);
+                const seedQuantity = seedThocks.reduce((sum, t) => sum + t.quantity, 0);
+                const seedRent = seedThocks.reduce((sum, t) => sum + t.rent, 0);
+                const sellQuantity = sellThocks.reduce((sum, t) => sum + t.quantity, 0);
+                const sellRent = sellThocks.reduce((sum, t) => sum + t.rent, 0);
 
-                // Calculate per-truck inventory (incoming vs outgoing)
-                const truckInventory = new Map();
-                customer.trucks.forEach(truck => {
-                    if (!truckInventory.has(truck.truck_number)) {
-                        truckInventory.set(truck.truck_number, {
-                            truck_number: truck.truck_number,
+                // Calculate per-thock inventory (incoming vs outgoing)
+                const thockInventory = new Map();
+                customer.thocks.forEach(thock => {
+                    if (!thockInventory.has(thock.thock_number)) {
+                        thockInventory.set(thock.thock_number, {
+                            thock_number: thock.thock_number,
                             incoming: 0,
                             outgoing: 0,
                             incomingRent: 0,
                             outgoingRent: 0
                         });
                     }
-                    const inv = truckInventory.get(truck.truck_number);
-                    if (truck.type === 'incoming') {
-                        inv.incoming += truck.quantity;
-                        inv.incomingRent += truck.rent;
+                    const inv = thockInventory.get(thock.thock_number);
+                    if (thock.type === 'incoming') {
+                        inv.incoming += thock.quantity;
+                        inv.incomingRent += thock.rent;
                     } else {
-                        inv.outgoing += Math.abs(truck.quantity);
-                        inv.outgoingRent += Math.abs(truck.rent);
+                        inv.outgoing += Math.abs(thock.quantity);
+                        inv.outgoingRent += Math.abs(thock.rent);
                     }
                 });
-                const inventoryArray = Array.from(truckInventory.values());
+                const inventoryArray = Array.from(thockInventory.values());
                 const hasOutgoing = inventoryArray.some(inv => inv.outgoing > 0);
 
                 // Debug logging
                 if (customer.name.toLowerCase().includes('rakesh')) {
                     console.log('=== RAKESH DEBUG ===');
-                    console.log('Total trucks:', customer.trucks.length);
-                    console.log('Trucks:', customer.trucks);
+                    console.log('Total thocks:', customer.thocks.length);
+                    console.log('Thocks:', customer.thocks);
                     console.log('Has outgoing:', hasOutgoing);
                     console.log('Inventory array:', inventoryArray);
                 }
@@ -630,7 +631,7 @@
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-truck"></i>
-                                        <span>${customer.trucks.length} Trucks</span>
+                                        <span>${customer.thocks.length} Thoks</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-box"></i>
@@ -660,26 +661,26 @@
                                         <i class="bi bi-cash"></i> Collect Payment
                                     </button>
                                 ` : ''}
-                                <button onclick="toggleTruckList(${index})" class="neu-button bg-blue-500 text-white">
-                                    <i class="bi bi-list"></i> <span id="toggleText${index}">Show Trucks</span>
+                                <button onclick="toggleThockList(${index})" class="neu-button bg-blue-500 text-white">
+                                    <i class="bi bi-list"></i> <span id="toggleText${index}">Show Thoks</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Truck List and Payment History (Hidden by default) -->
-                        <div id="truckList${index}" class="truck-list mt-4">
-                            <!-- Current Inventory Per Truck Section -->
+                        <!-- Thok List and Payment History (Hidden by default) -->
+                        <div id="thockList${index}" class="truck-list mt-4">
+                            <!-- Current Inventory Per Thok Section -->
                             ${hasOutgoing ? `
                                 <div class="mb-6 pb-6 border-b-4 border-blue-300">
                                     <h4 class="font-bold mb-3 flex items-center gap-2 text-blue-700">
                                         <i class="bi bi-box-seam"></i>
-                                        Current Inventory Per Truck (After Outgoing)
+                                        Current Inventory Per Thok (After Outgoing)
                                     </h4>
                                     <div class="overflow-auto" style="max-height: 400px;">
                                     <table class="w-full">
                                         <thead class="bg-blue-100 border-2 border-blue-500 sticky top-0">
                                             <tr>
-                                                <th class="text-left p-3 font-bold">Truck Number</th>
+                                                <th class="text-left p-3 font-bold">Thok Number</th>
                                                 <th class="text-left p-3 font-bold">Entered Qty</th>
                                                 <th class="text-left p-3 font-bold">Outgoing</th>
                                                 <th class="text-left p-3 font-bold">Inventory Qty</th>
@@ -690,12 +691,12 @@
                                             ${inventoryArray.map(inv => {
                                                 const current = inv.incoming - inv.outgoing;
                                                 const currentRent = inv.incomingRent - inv.outgoingRent;
-                                                const truckColorClass = getTruckColor(inv.truck_number);
+                                                const thockColorClass = getThockColor(inv.thock_number);
                                                 const currentClass = current === 0 ? 'text-gray-500 line-through' : (current < inv.incoming ? 'text-blue-700 font-bold' : '');
 
                                                 return `
                                                 <tr class="border-b border-blue-200 ${current === 0 ? 'bg-gray-50' : 'bg-white'}">
-                                                    <td class="p-3 font-bold ${truckColorClass}">${inv.truck_number}</td>
+                                                    <td class="p-3 font-bold ${thockColorClass}">${inv.thock_number}</td>
                                                     <td class="p-3">${inv.incoming}</td>
                                                     <td class="p-3 text-red-600 font-bold">${inv.outgoing}</td>
                                                     <td class="p-3 ${currentClass}">${current} ${current === 0 ? '(Empty)' : ''}</td>
@@ -709,37 +710,37 @@
                             ` : ''}
 
                             <div class="grid grid-cols-2 gap-6">
-                                <!-- Trucks -->
+                                <!-- Thoks -->
                                 <div>
                                     <h4 class="font-bold mb-3 flex items-center gap-2">
                                         <i class="bi bi-truck"></i>
-                                        All Trucks for ${capitalizeText(customer.name)}
+                                        All Thoks for ${capitalizeText(customer.name)}
                                     </h4>
                                     <div class="overflow-auto" style="max-height: 400px;">
                                     <table class="w-full">
                                         <thead class="bg-gray-100 border-2 border-black sticky top-0">
                                             <tr>
-                                                <th class="text-left p-3 font-bold">Truck Number</th>
+                                                <th class="text-left p-3 font-bold">Thok Number</th>
                                                 <th class="text-left p-3 font-bold">Quantity</th>
                                                 <th class="text-left p-3 font-bold">Rent</th>
                                                 <th class="text-left p-3 font-bold">Date</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            ${customer.trucks.map(truck => {
-                                                const isOutgoing = truck.type === 'outgoing';
+                                            ${customer.thocks.map(thock => {
+                                                const isOutgoing = thock.type === 'outgoing';
                                                 const rowClass = isOutgoing ? 'bg-red-50 border-l-4 border-red-500' : '';
-                                                const truckColorClass = isOutgoing ? 'text-red-700' : getTruckColor(truck.truck_number);
+                                                const thockColorClass = isOutgoing ? 'text-red-700' : getThockColor(thock.thock_number);
                                                 const quantityClass = isOutgoing ? 'text-red-700 font-bold' : '';
                                                 const rentClass = isOutgoing ? 'text-red-700' : '';
                                                 const typeLabel = isOutgoing ? ' ⬅️ OUT' : ' ➡️ IN';
 
                                                 return `
                                                 <tr class="border-b border-gray-200 ${rowClass}">
-                                                    <td class="p-3 font-bold ${truckColorClass}">${truck.truck_number}${typeLabel}</td>
-                                                    <td class="p-3 ${quantityClass}">${Math.abs(truck.quantity)}</td>
-                                                    <td class="p-3 font-bold ${rentClass}">₹${Math.abs(truck.rent).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                                    <td class="p-3 text-sm">${truck.date}</td>
+                                                    <td class="p-3 font-bold ${thockColorClass}">${thock.thock_number}${typeLabel}</td>
+                                                    <td class="p-3 ${quantityClass}">${Math.abs(thock.quantity)}</td>
+                                                    <td class="p-3 font-bold ${rentClass}">₹${Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                                    <td class="p-3 text-sm">${thock.date}</td>
                                                 </tr>
                                             `}).join('')}
                                             ${seedQuantity > 0 ? `
@@ -812,21 +813,21 @@
             }).join('');
         }
 
-        function toggleTruckList(index) {
-            const truckList = document.getElementById(`truckList${index}`);
+        function toggleThockList(index) {
+            const thockList = document.getElementById(`thockList${index}`);
             const toggleText = document.getElementById(`toggleText${index}`);
 
-            if (truckList.classList.contains('expanded')) {
-                truckList.classList.remove('expanded');
-                toggleText.textContent = 'Show Trucks';
+            if (thockList.classList.contains('expanded')) {
+                thockList.classList.remove('expanded');
+                toggleText.textContent = 'Show Thoks';
             } else {
-                truckList.classList.add('expanded');
-                toggleText.textContent = 'Hide Trucks';
+                thockList.classList.add('expanded');
+                toggleText.textContent = 'Hide Thoks';
             }
         }
 
-        function getTruckColor(truckNumber) {
-            const numMatch = truckNumber.match(/^(\d+)/);
+        function getThockColor(thockNumber) {
+            const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';
@@ -853,12 +854,12 @@
 
         function updateSummary() {
             const totalCustomers = allCustomerAccounts.length;
-            const totalTrucks = allCustomerAccounts.reduce((sum, c) => sum + c.trucks.length, 0);
+            const totalThocks = allCustomerAccounts.reduce((sum, c) => sum + c.thocks.length, 0);
             const totalOutstanding = allCustomerAccounts.reduce((sum, c) => sum + c.balance, 0);
             const totalCollected = allCustomerAccounts.reduce((sum, c) => sum + c.totalPaid, 0);
 
             document.getElementById('totalCustomers').textContent = totalCustomers;
-            document.getElementById('totalTrucks').textContent = totalTrucks;
+            document.getElementById('totalThocks').textContent = totalThocks;
             document.getElementById('totalOutstanding').textContent = '₹' + totalOutstanding.toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('totalCollected').textContent = '₹' + totalCollected.toLocaleString('en-IN', {minimumFractionDigits: 2});
         }
@@ -944,7 +945,7 @@
 
             try {
                 // Get first entry ID for this customer
-                const entryId = currentPaymentCustomer.trucks[0].id;
+                const entryId = currentPaymentCustomer.thocks[0].id;
 
                 // Calculate new balance
                 const newBalance = currentPaymentCustomer.balance - amount;

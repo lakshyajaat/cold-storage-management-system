@@ -5,7 +5,7 @@ import "time"
 type RoomEntry struct {
 	ID              int       `json:"id"`
 	EntryID         int       `json:"entry_id"`
-	TruckNumber     string    `json:"truck_number"`
+	ThockNumber     string    `json:"thock_number"`
 	RoomNo          string    `json:"room_no"`
 	Floor           string    `json:"floor"`
 	GateNo          string    `json:"gate_no"`
@@ -18,7 +18,7 @@ type RoomEntry struct {
 
 type CreateRoomEntryRequest struct {
 	EntryID     int    `json:"entry_id"`
-	TruckNumber string `json:"truck_number"`
+	ThockNumber string `json:"thock_number"`
 	RoomNo      string `json:"room_no"`
 	Floor       string `json:"floor"`
 	GateNo      string `json:"gate_no"`

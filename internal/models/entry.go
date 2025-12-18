@@ -10,8 +10,8 @@ type Entry struct {
 	Village          string    `json:"village"`
 	SO               string    `json:"so"` // Son Of / Father's Name
 	ExpectedQuantity int       `json:"expected_quantity"`
-	TruckCategory    string    `json:"truck_category"` // 'seed' or 'sell'
-	TruckNumber      string    `json:"truck_number"`
+	ThockCategory    string    `json:"thock_category"` // 'seed' or 'sell'
+	ThockNumber      string    `json:"thock_number"`
 	CreatedByUserID  int       `json:"created_by_user_id"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
@@ -25,5 +25,5 @@ type CreateEntryRequest struct {
 	Village          string `json:"village"`
 	SO               string `json:"so"`
 	ExpectedQuantity int    `json:"expected_quantity"`
-	TruckCategory    string `json:"truck_category"`
+	ThockCategory    string `json:"thock_category"`
 }

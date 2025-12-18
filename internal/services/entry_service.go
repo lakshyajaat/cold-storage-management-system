@@ -29,8 +29,8 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 	}
 
 	// Validate category
-	if req.TruckCategory != "seed" && req.TruckCategory != "sell" {
-		return nil, errors.New("truck category must be 'seed' or 'sell'")
+	if req.ThockCategory != "seed" && req.ThockCategory != "sell" {
+		return nil, errors.New("thock category must be 'seed' or 'sell'")
 	}
 
 	// Validate phone number (must be exactly 10 digits)
@@ -84,7 +84,7 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 		Village:          req.Village,
 		SO:               req.SO,
 		ExpectedQuantity: req.ExpectedQuantity,
-		TruckCategory:    req.TruckCategory,
+		ThockCategory:    req.ThockCategory,
 		CreatedByUserID:  userID,
 	}
 

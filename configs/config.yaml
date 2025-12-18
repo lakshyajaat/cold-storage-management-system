@@ -26,3 +26,12 @@ jwt:
   secret: ${JWT_SECRET}
   expiration_hours: 24
   issuer: "cold-backend"
+
+g:
+  enabled: false
+  db:
+    host: localhost
+    port: 5432
+    user: g_user
+    password: ${G_DB_PASSWORD}
+    name: g_db

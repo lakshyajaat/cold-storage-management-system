@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cold Storage Management</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/fonts.css" rel="stylesheet">
 
     <style>
         body {
@@ -79,7 +80,7 @@
             </div>
             
             <div>
-                <label class="block mb-2">Thock Number</label>
+                <label class="block mb-2">Thok Number</label>
                 <input type="text" class="w-full p-2 neu-brutal" required>
             </div>
             <div>
@@ -103,7 +104,7 @@
                 <table class="w-full">
                     <thead class="table-header">
                         <tr>
-                            <th class="p-2 text-left">Thock Number</th>
+                            <th class="p-2 text-left">Thok Number</th>
                             <th class="p-2 text-left">Location</th>
                             <th class="p-2 text-left">Gatar Numbers</th>
                             <th class="p-2 text-left">Quantity</th>
@@ -122,7 +123,7 @@
                 <table class="w-full">
                     <thead class="table-header">
                         <tr>
-                            <th class="p-2 text-left">Thock Number</th>
+                            <th class="p-2 text-left">Thok Number</th>
                             <th class="p-2 text-left">Name</th>
                             <th class="p-2 text-left">Village</th>
                             <th class="p-2 text-left">Quantity</th>
@@ -144,7 +145,7 @@
             const now = new Date();
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
-                <td class="p-2">Thock{Math.floor(Math.random() * 1000)}</td>
+                <td class="p-2">Thok{Math.floor(Math.random() * 1000)}</td>
                 <td class="p-2">Room ${document.querySelector('select').value}</td>
                 <td class="p-2">${document.querySelector('input[type="text"]').value}</td>
                 <td class="p-2">${document.querySelector('input[type="number"]').value}</td>
@@ -159,15 +160,15 @@
 
         // Sample data for main entries
         const sampleMainEntries = [
-            { Thock: '200/45', name: 'John Doe', village: 'Village A', quantity: 100 },
-            { Thock: '1/23', name: 'Jane Smith', village: 'Village B', quantity: 150 }
+            { Thok: '200/45', name: 'John Doe', village: 'Village A', quantity: 100 },
+            { Thok: '1/23', name: 'Jane Smith', village: 'Village B', quantity: 150 }
         ];
 
         // Populate main entries table
         sampleMainEntries.forEach(entry => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="p-2">${entry.Thock}</td>
+                <td class="p-2">${entry.Thok}</td>
                 <td class="p-2">${entry.name}</td>
                 <td class="p-2">${entry.village}</td>
                 <td class="p-2">${entry.quantity}</td>

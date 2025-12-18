@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Add Entry</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .floor-btn {
+            width: 70px;
+            height: 70px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .floor-btn.selected {
+            background: #22c55e !important;
+            color: white;
+        }
+        .item-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .item-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .item-option {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 2px solid #eee;
+            transition: background 0.2s;
+        }
+        .item-option:hover {
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+        .item-option:last-child {
+            border-bottom: none;
+        }
+        .item-option.highlighted {
+            background: #fbbf24;
+            font-weight: 600;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
+        .qty-chip {
+            display: inline-block;
+            background: #e0f2fe;
+            border: 2px solid #000;
+            padding: 0.25rem 0.75rem;
+            margin: 0.25rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .qty-chip:hover {
+            background: #bae6fd;
+        }
+        .qty-chip.selected {
+            background: #22c55e;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-[#e8f5e9] min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <i class="bi bi-box-arrow-in-right text-4xl text-green-600"></i>
+                <div>
+                    <h1 class="text-3xl font-bold">Add Entry</h1>
+                    <p class="text-gray-600">Add new items to gallery inventory</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="/g/" class="neu-button bg-gray-200">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+                <button onclick="logout()" class="neu-button bg-red-500 text-white">Exit</button>
+            </div>
+        </header>
+
+        <!-- Main Content Grid: Form (Left) + Recent Entries (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+            <!-- Entry Form (Left - 3 cols) -->
+            <div class="lg:col-span-3 neu-border bg-white p-6">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="bi bi-plus-circle text-green-600"></i>
+                    New Item Entry
+                </h2>
+
+                <form id="entryForm" onsubmit="submitEntry(event)">
+                    <!-- Item Name with Autocomplete -->
+                    <div class="mb-4 relative">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Item Name * <span class="text-sm text-gray-500">(Search or enter new)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="itemName"
+                            required
+                            class="w-full neu-input"
+                            placeholder="Search existing items or enter new name"
+                            autocomplete="off"
+                            onfocus="showItemDropdown()"
+                            oninput="filterItems(); capitalizeFirstLetter(this)"
+                        >
+                        <div id="itemDropdown" class="item-dropdown hidden">
+                            <div id="itemList" class="item-list"></div>
+                        </div>
+                        <div id="itemStatus" class="hidden mt-2 p-2 border-2">
+                            <p class="text-sm font-semibold"></p>
+                        </div>
+                    </div>
+
+                    <!-- SKU -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            SKU / Code <span class="text-sm text-gray-500">(Optional identifier)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="itemSku"
+                            class="w-full neu-input"
+                            placeholder="Enter SKU or leave blank for auto-generate"
+                            oninput="this.value = this.value.toUpperCase()"
+                        >
+                    </div>
+
+                    <!-- Floor Selection -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Select Floor *
+                        </label>
+                        <div class="flex gap-3 flex-wrap">
+                            <button type="button" class="neu-button floor-btn bg-blue-100" data-floor="0" onclick="selectFloor(0)">F0</button>
+                            <button type="button" class="neu-button floor-btn bg-blue-100" data-floor="1" onclick="selectFloor(1)">F1</button>
+                            <button type="button" class="neu-button floor-btn bg-blue-100" data-floor="2" onclick="selectFloor(2)">F2</button>
+                            <button type="button" class="neu-button floor-btn bg-blue-100" data-floor="3" onclick="selectFloor(3)">F3</button>
+                            <button type="button" class="neu-button floor-btn bg-blue-100" data-floor="4" onclick="selectFloor(4)">F4</button>
+                        </div>
+                        <input type="hidden" id="selectedFloor" value="">
+                        <div id="floorInfo" class="mt-2 text-sm text-gray-600 hidden">
+                            <span id="floorItemCount"></span>
+                        </div>
+                    </div>
+
+                    <!-- Quantity with Calculator -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Quantity * <span class="text-sm text-gray-500">(Number of items)</span>
+                        </label>
+                        <div class="flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="qty-chip" onclick="setQuantity(10)">10</button>
+                            <button type="button" class="qty-chip" onclick="setQuantity(20)">20</button>
+                            <button type="button" class="qty-chip" onclick="setQuantity(50)">50</button>
+                            <button type="button" class="qty-chip" onclick="setQuantity(100)">100</button>
+                            <button type="button" class="qty-chip" onclick="addQuantity(10)">+10</button>
+                            <button type="button" class="qty-chip" onclick="addQuantity(50)">+50</button>
+                        </div>
+                        <input
+                            type="number"
+                            id="itemQty"
+                            required
+                            min="1"
+                            max="10000"
+                            class="w-full neu-input"
+                            placeholder="Enter quantity"
+                            oninput="updatePreview()"
+                        >
+                    </div>
+
+                    <!-- Unit Cost -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Unit Cost (₹) * <span class="text-sm text-gray-500">(Purchase price per item)</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="itemCost"
+                            required
+                            min="0"
+                            step="0.01"
+                            class="w-full neu-input"
+                            placeholder="Enter unit cost"
+                            oninput="updatePreview()"
+                        >
+                    </div>
+
+                    <!-- Preview Box -->
+                    <div id="previewBox" class="mb-4 p-4 bg-yellow-50 neu-border hidden">
+                        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <i class="bi bi-eye"></i> Entry Preview
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-gray-600 text-sm">Item:</span>
+                                <div class="font-bold text-lg" id="previewName">-</div>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 text-sm">Floor:</span>
+                                <div class="font-bold text-2xl text-blue-600" id="previewFloor">-</div>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 text-sm">Quantity:</span>
+                                <div class="font-bold text-2xl" id="previewQty">0</div>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 text-sm">Unit Cost:</span>
+                                <div class="font-bold text-lg" id="previewCost">₹0</div>
+                            </div>
+                            <div class="col-span-2">
+                                <span class="text-gray-600 text-sm">Total Value:</span>
+                                <div class="font-bold text-3xl text-green-600" id="previewValue">₹0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="flex gap-3">
+                        <button type="submit" class="neu-button bg-green-500 text-white flex-1 text-lg">
+                            <i class="bi bi-check-circle"></i> Add Entry
+                        </button>
+                        <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
+                            <i class="bi bi-x-circle"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Entries (Right - 2 cols) -->
+            <div class="lg:col-span-2 neu-border bg-white p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="bi bi-clock-history text-blue-600"></i>
+                        Recent Entries
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 neu-border flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto-refresh (5s)
+                        </span>
+                    </div>
+                </div>
+                <div id="recentEntries" class="overflow-auto" style="max-height: 600px;">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left p-2 font-bold">Item</th>
+                                <th class="text-left p-2 font-bold">Floor</th>
+                                <th class="text-left p-2 font-bold">Qty</th>
+                                <th class="text-left p-2 font-bold">Cost</th>
+                                <th class="text-left p-2 font-bold">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center p-4 text-gray-500">Loading entries...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="hidden mb-6 neu-border bg-green-100 p-6">
+            <h3 class="text-2xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                Entry Added Successfully!
+            </h3>
+            <div class="p-4 bg-white neu-border mb-4">
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-gray-600 text-sm">Item</p>
+                        <p class="text-xl font-bold" id="successItem"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">Floor</p>
+                        <p class="text-xl font-bold text-blue-600" id="successFloor"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">Quantity</p>
+                        <p class="text-xl font-bold" id="successQty"></p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="resetForm()" class="neu-button bg-green-500 text-white w-full">
+                <i class="bi bi-plus-circle"></i> Add Another Entry
+            </button>
+        </div>
+
+        <!-- Floor Summary -->
+        <div class="neu-border bg-white p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-building"></i>
+                Floor Summary
+            </h2>
+            <div class="grid grid-cols-5 gap-4" id="floorSummary">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let selectedFloor = null;
+        let selectedItem = null;
+        let floorData = {};
+        let refreshInterval = null;
+
+        // Capitalize first letter
+        function capitalizeFirstLetter(input) {
+            const value = input.value;
+            if (value.length > 0) {
+                input.value = value.charAt(0).toUpperCase() + value.slice(1);
+            }
+        }
+
+        // API helper
+        async function api(path, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: { 'X-Token': token, 'X-DH': dh }
+            };
+            if (body) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(body);
+            }
+            const res = await fetch('/g/api' + path, opts);
+            if (res.status === 401) { logout(); return null; }
+            return res;
+        }
+
+        // Load initial data
+        async function loadData() {
+            await Promise.all([
+                loadItems(),
+                loadRecentEntries(),
+                loadFloorSummary()
+            ]);
+            startAutoRefresh();
+        }
+
+        // Load all items for autocomplete
+        async function loadItems() {
+            const res = await api('/items');
+            if (res && res.ok) {
+                allItems = await res.json() || [];
+            }
+        }
+
+        // Load recent entries
+        async function loadRecentEntries() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('spin-animation');
+
+            try {
+                const res = await api('/txns?limit=50');
+                if (res && res.ok) {
+                    const txns = await res.json() || [];
+                    const inTxns = txns.filter(t => t.type === 'in').slice(0, 20);
+                    displayRecentEntries(inTxns);
+                }
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-animation'), 500);
+                }
+            }
+        }
+
+        function displayRecentEntries(entries) {
+            const tbody = document.getElementById('entriesTableBody');
+
+            if (!entries || entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">No entries yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = entries.map(entry => {
+                const date = new Date(entry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Find item to get floor
+                const item = allItems.find(i => i.id === entry.item_id);
+                const floor = item ? item.floor : '-';
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="p-2 font-semibold">${entry.item_name || '-'}</td>
+                        <td class="p-2"><span class="bg-blue-100 px-2 py-1 rounded font-bold">F${floor}</span></td>
+                        <td class="p-2 font-bold">${entry.qty}</td>
+                        <td class="p-2 text-green-600">₹${entry.total.toFixed(0)}</td>
+                        <td class="p-2 text-xs">${formattedDate}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Load floor summary
+        async function loadFloorSummary() {
+            const res = await api('/summary');
+            if (res && res.ok) {
+                const summary = await res.json();
+                displayFloorSummary(summary);
+            }
+        }
+
+        function displayFloorSummary(summary) {
+            const container = document.getElementById('floorSummary');
+            const floors = [0, 1, 2, 3, 4];
+            const colors = ['bg-blue-100', 'bg-green-100', 'bg-yellow-100', 'bg-orange-100', 'bg-purple-100'];
+
+            floorData = {};
+            if (summary && summary.floor_breakdown) {
+                summary.floor_breakdown.forEach(f => {
+                    floorData[f.floor] = f;
+                });
+            }
+
+            container.innerHTML = floors.map((f, idx) => {
+                const fs = floorData[f] || { item_count: 0, total_qty: 0, value: 0 };
+                return `
+                    <div class="neu-border ${colors[idx]} p-4 text-center">
+                        <div class="text-2xl font-bold">F${f}</div>
+                        <div class="text-sm text-gray-600">${fs.item_count} items</div>
+                        <div class="text-lg font-bold">${fs.total_qty} qty</div>
+                        <div class="text-green-600 font-bold">₹${(fs.value || 0).toFixed(0)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Item dropdown functions
+        function showItemDropdown() {
+            filterItems();
+            document.getElementById('itemDropdown').classList.remove('hidden');
+        }
+
+        function hideItemDropdown() {
+            setTimeout(() => {
+                document.getElementById('itemDropdown').classList.add('hidden');
+            }, 200);
+        }
+
+        function filterItems() {
+            const searchTerm = document.getElementById('itemName').value.toLowerCase();
+            const filtered = allItems.filter(item =>
+                item.name.toLowerCase().includes(searchTerm) ||
+                (item.sku && item.sku.toLowerCase().includes(searchTerm))
+            ).slice(0, 20);
+
+            const itemList = document.getElementById('itemList');
+
+            if (filtered.length > 0) {
+                itemList.innerHTML = filtered.map(item => `
+                    <div class="item-option" onclick='selectItem(${JSON.stringify(item)})'>
+                        <div class="font-bold">${item.name}</div>
+                        <div class="text-xs text-gray-500">
+                            ${item.sku ? 'SKU: ' + item.sku + ' | ' : ''}
+                            Floor F${item.floor} | Stock: ${item.current_qty} | ₹${item.unit_cost}
+                        </div>
+                    </div>
+                `).join('');
+            } else if (searchTerm.length > 0) {
+                itemList.innerHTML = `
+                    <div class="item-option" style="color: #22c55e;">
+                        <i class="bi bi-plus-circle"></i> Create new item: "${document.getElementById('itemName').value}"
+                    </div>
+                `;
+            } else {
+                itemList.innerHTML = '<div class="item-option" style="color: #999;">Start typing to search...</div>';
+            }
+        }
+
+        function selectItem(item) {
+            selectedItem = item;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemSku').value = item.sku || '';
+            selectFloor(item.floor);
+            document.getElementById('itemCost').value = item.unit_cost;
+            document.getElementById('itemDropdown').classList.add('hidden');
+            showItemStatus(`Existing item selected. Current stock: ${item.current_qty}`, 'success');
+            updatePreview();
+        }
+
+        function showItemStatus(message, type) {
+            const statusEl = document.getElementById('itemStatus');
+            const statusText = statusEl.querySelector('p');
+            statusText.textContent = message;
+            statusEl.classList.remove('hidden', 'bg-green-100', 'border-green-600', 'bg-blue-100', 'border-blue-600');
+
+            if (type === 'success') {
+                statusEl.classList.add('bg-green-100', 'border-green-600');
+                statusText.className = 'text-sm font-semibold text-green-700';
+            } else {
+                statusEl.classList.add('bg-blue-100', 'border-blue-600');
+                statusText.className = 'text-sm font-semibold text-blue-700';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const itemInput = document.getElementById('itemName');
+            const itemDropdown = document.getElementById('itemDropdown');
+            if (itemInput && itemDropdown && !itemInput.contains(e.target) && !itemDropdown.contains(e.target)) {
+                itemDropdown.classList.add('hidden');
+            }
+        });
+
+        // Floor selection
+        function selectFloor(floor) {
+            selectedFloor = floor;
+            document.getElementById('selectedFloor').value = floor;
+
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (parseInt(btn.dataset.floor) === floor) {
+                    btn.classList.add('selected');
+                }
+            });
+
+            // Show floor info
+            const fs = floorData[floor] || { item_count: 0, total_qty: 0 };
+            document.getElementById('floorItemCount').textContent = `Floor F${floor}: ${fs.item_count} items, ${fs.total_qty} total qty`;
+            document.getElementById('floorInfo').classList.remove('hidden');
+
+            updatePreview();
+        }
+
+        // Quantity helpers
+        function setQuantity(qty) {
+            document.getElementById('itemQty').value = qty;
+            updatePreview();
+        }
+
+        function addQuantity(qty) {
+            const input = document.getElementById('itemQty');
+            const current = parseInt(input.value) || 0;
+            input.value = current + qty;
+            updatePreview();
+        }
+
+        // Update preview
+        function updatePreview() {
+            const name = document.getElementById('itemName').value || '-';
+            const qty = parseInt(document.getElementById('itemQty').value) || 0;
+            const cost = parseFloat(document.getElementById('itemCost').value) || 0;
+            const floor = selectedFloor !== null ? 'F' + selectedFloor : '-';
+            const total = qty * cost;
+
+            document.getElementById('previewName').textContent = name;
+            document.getElementById('previewFloor').textContent = floor;
+            document.getElementById('previewQty').textContent = qty;
+            document.getElementById('previewCost').textContent = '₹' + cost.toFixed(2);
+            document.getElementById('previewValue').textContent = '₹' + total.toFixed(0);
+
+            // Show preview if we have data
+            if (name !== '-' || qty > 0 || cost > 0) {
+                document.getElementById('previewBox').classList.remove('hidden');
+            }
+        }
+
+        // Submit entry
+        async function submitEntry(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('itemName').value.trim();
+            const sku = document.getElementById('itemSku').value.trim();
+            const floor = selectedFloor;
+            const qty = parseInt(document.getElementById('itemQty').value);
+            const cost = parseFloat(document.getElementById('itemCost').value);
+
+            // Validation
+            if (!name) {
+                alert('Please enter an item name');
+                return;
+            }
+            if (floor === null) {
+                alert('Please select a floor');
+                return;
+            }
+            if (!qty || qty < 1) {
+                alert('Please enter a valid quantity');
+                return;
+            }
+            if (cost === null || cost < 0) {
+                alert('Please enter a valid unit cost');
+                return;
+            }
+
+            try {
+                // Check if item exists
+                let existingItem = allItems.find(i =>
+                    i.name.toLowerCase() === name.toLowerCase() && i.floor === floor
+                );
+
+                if (existingItem) {
+                    // Stock in to existing item
+                    const res = await api('/in', 'POST', {
+                        item_id: existingItem.id,
+                        qty: qty,
+                        unit_price: cost
+                    });
+
+                    if (res && res.ok) {
+                        showSuccess(name, floor, qty);
+                    } else {
+                        const err = await res.text();
+                        alert('Error: ' + err);
+                    }
+                } else {
+                    // Create new item
+                    const res = await api('/items', 'POST', {
+                        name: name,
+                        sku: sku || null,
+                        floor: floor,
+                        qty: qty,
+                        unit_cost: cost
+                    });
+
+                    if (res && res.ok) {
+                        showSuccess(name, floor, qty);
+                    } else {
+                        const err = await res.text();
+                        alert('Error: ' + err);
+                    }
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function showSuccess(name, floor, qty) {
+            document.getElementById('successItem').textContent = name;
+            document.getElementById('successFloor').textContent = 'F' + floor;
+            document.getElementById('successQty').textContent = qty;
+            document.getElementById('successMessage').classList.remove('hidden');
+            document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Reload data
+            loadItems();
+            loadRecentEntries();
+            loadFloorSummary();
+        }
+
+        function resetForm() {
+            document.getElementById('entryForm').reset();
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('previewBox').classList.add('hidden');
+            document.getElementById('itemStatus').classList.add('hidden');
+            document.getElementById('floorInfo').classList.add('hidden');
+
+            selectedFloor = null;
+            selectedItem = null;
+
+            document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('selected'));
+
+            // Reload data
+            loadItems();
+            loadRecentEntries();
+            loadFloorSummary();
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadRecentEntries();
+            }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        function logout() {
+            stopAutoRefresh();
+            fetch('/g/api/logout', { method: 'POST', headers: { 'X-Token': token, 'X-DH': dh } }).finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Stop auto-refresh when leaving page
+        window.addEventListener('beforeunload', stopAutoRefresh);
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

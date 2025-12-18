@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n-page-title="page_title_entry">Entry Room - Cold Storage</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
 
     <style>
         * {
@@ -220,7 +221,7 @@
                         <label class="neu-border p-3 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors">
                             <input
                                 type="radio"
-                                name="truckCategory"
+                                name="thockCategory"
                                 value="seed"
                                 required
                                 class="mr-2"
@@ -234,7 +235,7 @@
                         <label class="neu-border p-3 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors">
                             <input
                                 type="radio"
-                                name="truckCategory"
+                                name="thockCategory"
                                 value="sell"
                                 required
                                 class="mr-2"
@@ -270,7 +271,7 @@
                         <i class="bi bi-truck"></i>
                         <span data-i18n="truck_preview">Truck number preview</span>:
                     </p>
-                    <p class="text-2xl font-bold text-blue-700" id="previewTruckNumber">-</p>
+                    <p class="text-2xl font-bold text-blue-700" id="previewThockNumber">-</p>
                 </div>
 
                 <div class="flex gap-3">
@@ -304,7 +305,7 @@
                     <table class="w-full text-sm">
                         <thead class="sticky top-0 bg-white">
                             <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold" data-i18n="truck_number">Truck No</th>
+                                <th class="text-left p-2 font-bold" data-i18n="thock_number">Truck No</th>
                                 <th class="text-left p-2 font-bold" data-i18n="room">Room</th>
                                 <th class="text-left p-2 font-bold" data-i18n="floor">Floor</th>
                                 <th class="text-left p-2 font-bold" data-i18n="gatar">Gatar</th>
@@ -620,7 +621,7 @@
         });
 
         async function updateCategoryInfo() {
-            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            const categoryRadio = document.querySelector('input[name="thockCategory"]:checked');
             if (!categoryRadio) return;
 
             const category = categoryRadio.value;
@@ -660,7 +661,7 @@
         }
 
         function updateTruckPreview() {
-            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            const categoryRadio = document.querySelector('input[name="thockCategory"]:checked');
             const quantity = parseInt(document.getElementById('expectedQuantity').value);
 
             if (!categoryRadio || !quantity || quantity < 1) {
@@ -670,17 +671,17 @@
 
             const category = categoryRadio.value;
             let nextNumber;
-            let truckNumber;
+            let thockNumber;
 
             if (category === 'seed') {
                 nextNumber = seedCount + 1;
-                truckNumber = String(nextNumber).padStart(3, '0') + '/' + quantity;
+                thockNumber = String(nextNumber).padStart(3, '0') + '/' + quantity;
             } else if (category === 'sell') {
                 nextNumber = 1501 + sellCount;
-                truckNumber = nextNumber + '/' + quantity;
+                thockNumber = nextNumber + '/' + quantity;
             }
 
-            document.getElementById('previewTruckNumber').textContent = truckNumber;
+            document.getElementById('previewThockNumber').textContent = thockNumber;
             document.getElementById('truckPreview').classList.remove('hidden');
         }
 
@@ -724,8 +725,8 @@
             const recentEntries = entries.slice(0, 15);
 
             tbody.innerHTML = recentEntries.map(entry => {
-                const truckColor = getTruckColor(entry.truck_number);
-                const categoryColor = entry.truck_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
+                const truckColor = getTruckColor(entry.thock_number);
+                const categoryColor = entry.thock_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
 
                 const date = new Date(entry.created_at);
                 const formattedDate = date.toLocaleString('en-IN', {
@@ -738,12 +739,12 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${entry.thock_number}</td>
                         <td class="p-2">${capitalizeText(entry.name)}</td>
                         <td class="p-2">${entry.phone}</td>
                         <td class="p-2">${capitalizeText(entry.village) || '-'}</td>
                         <td class="p-2">${entry.expected_quantity}</td>
-                        <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${categoryColor}">${entry.truck_category.toUpperCase()}</span></td>
+                        <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${categoryColor}">${entry.thock_category.toUpperCase()}</span></td>
                         <td class="p-2 text-xs">${formattedDate}</td>
                     </tr>
                 `;
@@ -822,7 +823,7 @@
             }
 
             // Get selected category from radio buttons
-            const categoryRadio = document.querySelector('input[name="truckCategory"]:checked');
+            const categoryRadio = document.querySelector('input[name="thockCategory"]:checked');
             if (!categoryRadio) {
                 alert(i18n.t('select_category_error', 'Please select a category (SEED or SELL)'));
                 return;
@@ -836,7 +837,7 @@
                 village: village,
                 so: so,
                 expected_quantity: quantity,
-                truck_category: category
+                thock_category: category
             };
 
             try {
@@ -856,9 +857,9 @@
 
                 const result = await response.json();
                 console.log('Entry created:', result);
-                const truckNumber = result.truck_number || 'AUTO-' + result.id;
-                console.log('Truck number:', truckNumber);
-                showSuccess(truckNumber);
+                const thockNumber = result.thock_number || 'AUTO-' + result.id;
+                console.log('Truck number:', thockNumber);
+                showSuccess(thockNumber);
             } catch (error) {
                 alert(i18n.t('error_creating_entry', 'Error creating entry') + ': ' + error.message);
             }
@@ -870,13 +871,13 @@
             errorEl.classList.remove('hidden');
         }
 
-        function showSuccess(truckNumber) {
-            console.log('showSuccess called with:', truckNumber);
+        function showSuccess(thockNumber) {
+            console.log('showSuccess called with:', thockNumber);
             const truckEl = document.getElementById('assignedTruck');
             const successEl = document.getElementById('successMessage');
 
             if (truckEl) {
-                truckEl.textContent = truckNumber;
+                truckEl.textContent = thockNumber;
                 console.log('Truck number set to element');
             }
 
@@ -907,7 +908,7 @@
             document.getElementById('sellCount').classList.add('hidden');
 
             // Uncheck all radio buttons
-            const radios = document.querySelectorAll('input[name="truckCategory"]');
+            const radios = document.querySelectorAll('input[name="thockCategory"]');
             radios.forEach(radio => radio.checked = false);
 
             currentUser = null;
@@ -968,13 +969,13 @@
                     month: '2-digit',
                     year: 'numeric'
                 });
-                const truckColor = getTruckColor(entry.truck_number);
+                const truckColor = getTruckColor(entry.thock_number);
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
                         onclick="printReceipt(${entry.entry_id}, ${entry.id})"
                         title="Click to print receipt">
-                        <td class="p-2 font-bold ${truckColor}">${entry.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${entry.thock_number}</td>
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no}</td>
@@ -1057,7 +1058,7 @@
                 const randomWeight = Math.floor(Math.random() * (58 - 55) + 55);
 
                 // Determine category from truck number (SEED: 1-1500, SELL: 1501-3000)
-                const truckNum = parseInt(roomEntry.truck_number.split('/')[0]);
+                const truckNum = parseInt(roomEntry.thock_number.split('/')[0]);
                 const category = truckNum <= 1500 ? 'बीज' : 'मोटा';
 
                 // Create receipt HTML (2 copies side by side) - Hindi Format
@@ -1071,7 +1072,7 @@
                         </div>
 
                         <div class="truck-banner">
-                            ${roomEntry.truck_number}
+                            ${roomEntry.thock_number}
                         </div>
 
                         <div class="info-section">
@@ -1134,7 +1135,7 @@
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <title>Entry Receipt - ${roomEntry.truck_number}</title>
+                        <title>Entry Receipt - ${roomEntry.thock_number}</title>
                         <style>
                             @page {
                                 size: landscape;
@@ -1462,8 +1463,8 @@
             }
         }
 
-        function getTruckColor(truckNumber) {
-            const numMatch = truckNumber.match(/^(\d+)/);
+        function getTruckColor(thockNumber) {
+            const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';

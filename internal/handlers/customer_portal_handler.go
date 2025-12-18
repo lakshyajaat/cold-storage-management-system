@@ -33,7 +33,7 @@ func NewCustomerPortalHandler(
 func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Phone        string `json:"phone"`
-		TruckNumber  string `json:"truck_number"`
+		ThockNumber  string `json:"thock_number"`
 		RememberMe   bool   `json:"remember_me"`
 	}
 
@@ -56,7 +56,7 @@ func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Verify truck belongs to customer
-	entry, err := h.CustomerPortalService.EntryRepo.GetByTruckNumber(ctx, req.TruckNumber)
+	entry, err := h.CustomerPortalService.EntryRepo.GetByThockNumber(ctx, req.ThockNumber)
 	if err != nil {
 		// Generic error - don't reveal truck doesn't exist
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -293,8 +293,8 @@ func (h *CustomerPortalHandler) CreateGatePassRequest(w http.ResponseWriter, r *
 	}
 
 	// Validate request
-	if req.TruckNumber == "" || req.RequestedQuantity <= 0 {
-		http.Error(w, "Invalid truck number or quantity", http.StatusBadRequest)
+	if req.ThockNumber == "" || req.RequestedQuantity <= 0 {
+		http.Error(w, "Invalid thock number or quantity", http.StatusBadRequest)
 		return
 	}
 

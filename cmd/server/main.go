@@ -12,6 +12,7 @@ import (
 	"cold-backend/internal/config"
 	"cold-backend/internal/database"
 	"cold-backend/internal/db"
+	"cold-backend/internal/g"
 	h "cold-backend/internal/http"
 	"cold-backend/internal/handlers"
 	"cold-backend/internal/health"
@@ -154,6 +155,38 @@ func main() {
 
 		// Create employee router
 		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, adminActionLogHandler, gatePassHandler, pageHandler, healthHandler, authMiddleware)
+
+		// Add gallery routes if enabled
+		if cfg.G.Enabled {
+			gPool := db.ConnectG(cfg)
+			gRepo := g.NewRepository(gPool)
+			gService := g.NewService(gRepo)
+			gHandler := g.NewHandler(gService)
+
+			gRouter := router.PathPrefix("/g").Subrouter()
+			gRouter.HandleFunc("/auth", gHandler.Auth).Methods("POST")
+			gRouter.HandleFunc("/", gHandler.Dashboard).Methods("GET")
+			gRouter.HandleFunc("/entry", gHandler.EntryPage).Methods("GET")
+			gRouter.HandleFunc("/config", gHandler.ConfigPage).Methods("GET")
+			gRouter.HandleFunc("/pass", gHandler.PassPage).Methods("GET")
+			gRouter.HandleFunc("/search", gHandler.SearchPage).Methods("GET")
+			gRouter.HandleFunc("/accounts", gHandler.AccountsPage).Methods("GET")
+			gRouter.HandleFunc("/events", gHandler.EventsPage).Methods("GET")
+			gRouter.HandleFunc("/unload", gHandler.UnloadPage).Methods("GET")
+			gRouter.HandleFunc("/reports", gHandler.ReportsPage).Methods("GET")
+
+			gAPI := gRouter.PathPrefix("/api").Subrouter()
+			gAPI.Use(gHandler.AuthMiddleware)
+			gAPI.HandleFunc("/items", gHandler.ListItems).Methods("GET")
+			gAPI.HandleFunc("/items", gHandler.AddItem).Methods("POST")
+			gAPI.HandleFunc("/items", gHandler.UpdateItem).Methods("PUT")
+			gAPI.HandleFunc("/items", gHandler.DeleteItem).Methods("DELETE")
+			gAPI.HandleFunc("/in", gHandler.StockIn).Methods("POST")
+			gAPI.HandleFunc("/out", gHandler.StockOut).Methods("POST")
+			gAPI.HandleFunc("/txns", gHandler.ListTxns).Methods("GET")
+			gAPI.HandleFunc("/summary", gHandler.Summary).Methods("GET")
+			gAPI.HandleFunc("/logout", gHandler.Logout).Methods("POST")
+		}
 
 		// Wrap with panic recovery and metrics middleware
 		handler = middleware.PanicRecovery(middleware.MetricsMiddleware(corsMiddleware(router)))

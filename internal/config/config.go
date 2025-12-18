@@ -29,6 +29,17 @@ type Config struct {
 		ExpirationHours int    `mapstructure:"expiration_hours"`
 		Issuer          string `mapstructure:"issuer"`
 	} `mapstructure:"jwt"`
+
+	G struct {
+		Enabled bool `mapstructure:"enabled"`
+		DB      struct {
+			Host     string `mapstructure:"host"`
+			Port     int    `mapstructure:"port"`
+			User     string `mapstructure:"user"`
+			Password string `mapstructure:"password"`
+			Name     string `mapstructure:"name"`
+		} `mapstructure:"db"`
+	} `mapstructure:"g"`
 }
 
 func Load() *Config {
@@ -56,6 +67,13 @@ func Load() *Config {
 		cfg.JWT.Secret = os.Getenv("JWT_SECRET")
 		if cfg.JWT.Secret == "" {
 			log.Fatal("JWT_SECRET environment variable is required")
+		}
+	}
+
+	// Override G DB password from environment if enabled
+	if cfg.G.Enabled {
+		if cfg.G.DB.Password == "" || cfg.G.DB.Password == "${G_DB_PASSWORD}" {
+			cfg.G.DB.Password = os.Getenv("G_DB_PASSWORD")
 		}
 	}
 

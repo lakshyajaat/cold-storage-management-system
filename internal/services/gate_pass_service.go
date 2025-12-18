@@ -67,7 +67,7 @@ func (s *GatePassService) CreateGatePass(ctx context.Context, req *models.Create
 
 	gatePass := &models.GatePass{
 		CustomerID:        req.CustomerID,
-		TruckNumber:       req.TruckNumber,
+		ThockNumber:       req.ThockNumber,
 		EntryID:           req.EntryID,
 		RequestedQuantity: req.RequestedQuantity,
 		PaymentVerified:   req.PaymentVerified,
@@ -131,7 +131,7 @@ func (s *GatePassService) ApproveGatePass(ctx context.Context, id int, req *mode
 	// Validate approved quantity against available inventory
 	if req.Status == "approved" && gatePass.EntryID != nil {
 		// Get current inventory from room entries
-		currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, gatePass.TruckNumber)
+		currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, gatePass.ThockNumber)
 		if err != nil {
 			currentInventory = 0
 		}
@@ -266,12 +266,12 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 
 	if roomNo == "" || floor == "" {
 		// Get actual storage location from room_entries
-		roomEntries, err := s.RoomEntryRepo.ListByTruckNumber(ctx, gatePass.TruckNumber)
+		roomEntries, err := s.RoomEntryRepo.ListByThockNumber(ctx, gatePass.ThockNumber)
 		if err != nil {
 			return errors.New("failed to get storage location: " + err.Error())
 		}
 		if len(roomEntries) == 0 {
-			return errors.New("no storage location found for truck " + gatePass.TruckNumber + " - items must be assigned to storage first")
+			return errors.New("no storage location found for truck " + gatePass.ThockNumber + " - items must be assigned to storage first")
 		}
 
 		// Use the first room entry with available quantity
@@ -321,11 +321,11 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 	}
 
 	// Step 3: ALWAYS reduce room inventory - this is mandatory now
-	err = s.RoomEntryRepo.ReduceQuantity(ctx, gatePass.TruckNumber, roomNo, floor, req.PickupQuantity)
+	err = s.RoomEntryRepo.ReduceQuantity(ctx, gatePass.ThockNumber, roomNo, floor, req.PickupQuantity)
 	if err != nil {
 		return errors.New("CRITICAL ERROR: gate pass updated but inventory reduction failed - " +
 			"manual inventory adjustment required for room " + roomNo + ", floor " + floor +
-			", truck " + gatePass.TruckNumber + ": " + err.Error())
+			", truck " + gatePass.ThockNumber + ": " + err.Error())
 	}
 
 	return nil

@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Item Search - Cold Storage</title>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="/static/css/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
     <style>
         .neu-brutal {
             background: white;
@@ -62,7 +63,7 @@
                 <i class="bi bi-funnel"></i> Search Filters
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <input type="text" id="filterTruck" placeholder="Thock Number" class="neu-brutal-input">
+                <input type="text" id="filterThock" placeholder="Thok Number" class="neu-brutal-input">
                 <input type="text" id="filterName" placeholder="Customer Name" class="neu-brutal-input">
                 <input type="text" id="filterVillage" placeholder="Village" class="neu-brutal-input">
                 <input type="text" id="filterPhone" placeholder="Phone Number" class="neu-brutal-input">
@@ -112,7 +113,7 @@
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="border-b-2 border-black">
-                            <th class="p-2 text-left">Truck No</th>
+                            <th class="p-2 text-left">Thok No</th>
                             <th class="p-2 text-left">Customer</th>
                             <th class="p-2 text-left">Phone</th>
                             <th class="p-2 text-left">Village</th>
@@ -191,7 +192,7 @@
                 combinedData = allRoomEntries.map(roomEntry => {
                     const entry = allEntries.find(e => e.id === roomEntry.entry_id);
                     return {
-                        truckNumber: roomEntry.truck_number,
+                        thockNumber: roomEntry.thock_number,
                         name: entry?.name || '-',
                         phone: entry?.phone || '-',
                         village: entry?.village || '-',
@@ -255,11 +256,11 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b border-black hover:bg-yellow-50';
 
-                // Color code truck number based on pattern
-                const truckColor = getTruckColor(entry.truckNumber);
+                // Color code thock number based on pattern
+                const thockColor = getThockColor(entry.thockNumber);
 
                 row.innerHTML = `
-                    <td class="p-2 font-bold ${truckColor}">${entry.truckNumber}</td>
+                    <td class="p-2 font-bold ${thockColor}">${entry.thockNumber}</td>
                     <td class="p-2">${capitalizeText(entry.name)}</td>
                     <td class="p-2">${entry.phone}</td>
                     <td class="p-2">${capitalizeText(entry.village)}</td>
@@ -283,9 +284,9 @@
             document.getElementById('totalCount').textContent = filteredData.length;
         }
 
-        function getTruckColor(truckNumber) {
-            // Extract the numeric part from truck number (e.g., "0001/100" -> 0001, "1605/200" -> 1605)
-            const numMatch = truckNumber.match(/^(\d+)/);
+        function getThockColor(thockNumber) {
+            // Extract the numeric part from thock number (e.g., "0001/100" -> 0001, "1605/200" -> 1605)
+            const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
                 // SEED: 1-1500 (green), SELL: 1501-3000 (orange)
@@ -317,7 +318,7 @@
         }
 
         function applyFilter() {
-            const truckFilter = document.getElementById('filterTruck').value;
+            const thockFilter = document.getElementById('filterThock').value;
             const nameFilter = document.getElementById('filterName').value;
             const villageFilter = document.getElementById('filterVillage').value;
             const phoneFilter = document.getElementById('filterPhone').value;
@@ -329,7 +330,7 @@
             filteredData = combinedData.filter(entry => {
                 let matches = true;
 
-                if (!fuzzyMatch(truckFilter, entry.truckNumber)) {
+                if (!fuzzyMatch(thockFilter, entry.thockNumber)) {
                     matches = false;
                 }
                 if (!fuzzyMatch(nameFilter, entry.name)) {
@@ -373,7 +374,7 @@
         }
 
         function clearFilter() {
-            document.getElementById('filterTruck').value = '';
+            document.getElementById('filterThock').value = '';
             document.getElementById('filterName').value = '';
             document.getElementById('filterVillage').value = '';
             document.getElementById('filterPhone').value = '';
@@ -399,7 +400,7 @@
 
             // Prepare data for export
             const exportData = filteredData.map(entry => ({
-                'Truck Number': entry.truckNumber,
+                'Thok Number': entry.thockNumber,
                 'Customer Name': entry.name,
                 'Phone': entry.phone,
                 'Village': entry.village,

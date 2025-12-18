@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Item Search</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border { border: 3px solid #000; box-shadow: 4px 4px 0 #000; transition: all 0.2s ease; }
+        .neu-border:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #000; }
+        .neu-input { border: 2px solid #000; padding: 0.75rem; background: white; color: black; }
+        .neu-input:focus { outline: none; box-shadow: 3px 3px 0 #000; }
+        .neu-btn { border: 3px solid #000; box-shadow: 3px 3px 0 #000; padding: 0.75rem 1.5rem; font-weight: 600; cursor: pointer; }
+        .neu-btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #000; }
+        .filter-btn.active { background: #6366f1 !important; color: white; }
+        .item-card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+    </style>
+</head>
+<body class="bg-[#f3e5f5] min-h-screen p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <a href="/g/" class="neu-btn bg-gray-200"><i class="bi bi-arrow-left"></i></a>
+                <div>
+                    <h1 class="text-2xl font-bold">Item Search</h1>
+                    <p class="text-gray-600">Find items in gallery</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="neu-btn bg-red-500 text-white">Exit</button>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="neu-border bg-white p-6 mb-6">
+            <div class="flex gap-4 flex-wrap">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" id="searchInput" class="neu-input w-full text-lg" placeholder="Search by name or SKU...">
+                </div>
+                <button onclick="search()" class="neu-btn bg-indigo-500 text-white">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="mt-4 flex gap-2 flex-wrap">
+                <span class="text-gray-600 py-2">Floor:</span>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4 active" data-floor="all" onclick="setFloorFilter('all')">All</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-floor="0" onclick="setFloorFilter(0)">F0</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-floor="1" onclick="setFloorFilter(1)">F1</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-floor="2" onclick="setFloorFilter(2)">F2</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-floor="3" onclick="setFloorFilter(3)">F3</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-floor="4" onclick="setFloorFilter(4)">F4</button>
+            </div>
+
+            <div class="mt-4 flex gap-2 flex-wrap">
+                <span class="text-gray-600 py-2">Stock:</span>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4 active" data-stock="all" onclick="setStockFilter('all')">All</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-stock="instock" onclick="setStockFilter('instock')">In Stock</button>
+                <button class="neu-btn filter-btn bg-gray-100 py-2 px-4" data-stock="outstock" onclick="setStockFilter('outstock')">Out of Stock</button>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="mb-4 flex justify-between items-center">
+            <div class="text-gray-600">
+                <span id="resultCount">0</span> items found
+            </div>
+            <div class="flex gap-2">
+                <button onclick="setView('grid')" class="neu-btn bg-white py-2 px-3" id="gridViewBtn">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+                <button onclick="setView('list')" class="neu-btn bg-white py-2 px-3" id="listViewBtn">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Filled by JS -->
+        </div>
+
+        <!-- Results Table -->
+        <div id="resultsTable" class="neu-border bg-white hidden">
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-3 text-left">Item Name</th>
+                        <th class="p-3 text-left">SKU</th>
+                        <th class="p-3 text-left">Floor</th>
+                        <th class="p-3 text-left">Qty</th>
+                        <th class="p-3 text-left">Unit Cost</th>
+                        <th class="p-3 text-left">Total Value</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Item Detail Modal -->
+        <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="neu-border bg-white p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-2xl font-bold" id="detailName"></h3>
+                    <button onclick="closeDetail()" class="text-2xl">&times;</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-100 p-3 rounded">
+                            <div class="text-gray-600 text-sm">SKU</div>
+                            <div class="font-bold" id="detailSku">-</div>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded">
+                            <div class="text-gray-600 text-sm">Floor</div>
+                            <div class="font-bold text-2xl" id="detailFloor">-</div>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded">
+                            <div class="text-gray-600 text-sm">Current Qty</div>
+                            <div class="font-bold text-2xl" id="detailQty">0</div>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded">
+                            <div class="text-gray-600 text-sm">Unit Cost</div>
+                            <div class="font-bold" id="detailCost">₹0</div>
+                        </div>
+                    </div>
+                    <div class="bg-green-200 p-4 rounded">
+                        <div class="text-gray-600 text-sm">Total Value</div>
+                        <div class="font-bold text-3xl text-green-700" id="detailValue">₹0</div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold mb-2">Recent Transactions</h4>
+                        <div class="max-h-40 overflow-y-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-2 text-left">Date</th>
+                                        <th class="p-2 text-left">Type</th>
+                                        <th class="p-2 text-left">Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detailTxns"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <a id="detailAddBtn" href="#" class="neu-btn bg-green-500 text-white flex-1 text-center">
+                            <i class="bi bi-plus"></i> Add Stock
+                        </a>
+                        <a id="detailRemoveBtn" href="#" class="neu-btn bg-red-500 text-white flex-1 text-center">
+                            <i class="bi bi-dash"></i> Remove
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let filteredItems = [];
+        let currentView = 'grid';
+        let floorFilter = 'all';
+        let stockFilter = 'all';
+
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') search();
+        });
+
+        function setFloorFilter(floor) {
+            floorFilter = floor;
+            document.querySelectorAll('.filter-btn[data-floor]').forEach(b => {
+                b.classList.toggle('active', b.dataset.floor == floor);
+            });
+            search();
+        }
+
+        function setStockFilter(stock) {
+            stockFilter = stock;
+            document.querySelectorAll('.filter-btn[data-stock]').forEach(b => {
+                b.classList.toggle('active', b.dataset.stock === stock);
+            });
+            search();
+        }
+
+        function setView(view) {
+            currentView = view;
+            document.getElementById('resultsGrid').classList.toggle('hidden', view !== 'grid');
+            document.getElementById('resultsTable').classList.toggle('hidden', view !== 'list');
+            document.getElementById('gridViewBtn').classList.toggle('bg-indigo-500', view === 'grid');
+            document.getElementById('gridViewBtn').classList.toggle('text-white', view === 'grid');
+            document.getElementById('listViewBtn').classList.toggle('bg-indigo-500', view === 'list');
+            document.getElementById('listViewBtn').classList.toggle('text-white', view === 'list');
+        }
+
+        function search() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredItems = allItems.filter(item => {
+                // Text search
+                const matchesQuery = !query ||
+                    item.name.toLowerCase().includes(query) ||
+                    (item.sku && item.sku.toLowerCase().includes(query));
+
+                // Floor filter
+                const matchesFloor = floorFilter === 'all' || item.floor === floorFilter;
+
+                // Stock filter
+                const matchesStock = stockFilter === 'all' ||
+                    (stockFilter === 'instock' && item.current_qty > 0) ||
+                    (stockFilter === 'outstock' && item.current_qty === 0);
+
+                return matchesQuery && matchesFloor && matchesStock;
+            });
+
+            document.getElementById('resultCount').textContent = filteredItems.length;
+            renderResults();
+        }
+
+        function renderResults() {
+            // Grid view
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = filteredItems.length > 0 ?
+                filteredItems.map(i => `
+                    <div class="item-card bg-white p-4 cursor-pointer hover:bg-gray-50" onclick="showDetail(${i.id})">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg">${i.name}</h3>
+                            <span class="bg-blue-100 px-2 py-1 rounded font-bold text-sm">F${i.floor}</span>
+                        </div>
+                        ${i.sku ? `<div class="text-gray-500 text-sm mb-2">${i.sku}</div>` : ''}
+                        <div class="grid grid-cols-2 gap-2 mt-3">
+                            <div>
+                                <div class="text-gray-500 text-xs">Quantity</div>
+                                <div class="font-bold text-xl ${i.current_qty === 0 ? 'text-red-500' : ''}">${i.current_qty}</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-500 text-xs">Value</div>
+                                <div class="font-bold text-xl text-green-600">₹${(i.current_qty * i.unit_cost).toFixed(0)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') :
+                '<div class="col-span-full text-center text-gray-500 py-8">No items found</div>';
+
+            // Table view
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = filteredItems.length > 0 ?
+                filteredItems.map(i => `
+                    <tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="showDetail(${i.id})">
+                        <td class="p-3 font-semibold">${i.name}</td>
+                        <td class="p-3 text-gray-600">${i.sku || '-'}</td>
+                        <td class="p-3"><span class="bg-blue-100 px-2 py-1 rounded">F${i.floor}</span></td>
+                        <td class="p-3 font-bold ${i.current_qty === 0 ? 'text-red-500' : ''}">${i.current_qty}</td>
+                        <td class="p-3">₹${i.unit_cost.toFixed(2)}</td>
+                        <td class="p-3 text-green-600 font-bold">₹${(i.current_qty * i.unit_cost).toFixed(0)}</td>
+                    </tr>
+                `).join('') :
+                '<tr><td colspan="6" class="p-4 text-center text-gray-500">No items found</td></tr>';
+        }
+
+        async function showDetail(id) {
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('detailName').textContent = item.name;
+            document.getElementById('detailSku').textContent = item.sku || '-';
+            document.getElementById('detailFloor').textContent = 'F' + item.floor;
+            document.getElementById('detailQty').textContent = item.current_qty;
+            document.getElementById('detailCost').textContent = '₹' + item.unit_cost.toFixed(2);
+            document.getElementById('detailValue').textContent = '₹' + (item.current_qty * item.unit_cost).toFixed(0);
+
+            document.getElementById('detailAddBtn').href = '/g/entry';
+            document.getElementById('detailRemoveBtn').href = '/g/pass';
+
+            // Load transactions for this item
+            const res = await fetch('/g/api/txns?limit=50', {
+                headers: { 'X-Token': token, 'X-DH': dh }
+            });
+            if (res.ok) {
+                const txns = await res.json() || [];
+                const itemTxns = txns.filter(t => t.item_id === id).slice(0, 10);
+                document.getElementById('detailTxns').innerHTML = itemTxns.length > 0 ?
+                    itemTxns.map(t => `
+                        <tr class="border-b">
+                            <td class="p-2">${new Date(t.created_at).toLocaleDateString()}</td>
+                            <td class="p-2 ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}">${t.type.toUpperCase()}</td>
+                            <td class="p-2">${t.qty}</td>
+                        </tr>
+                    `).join('') :
+                    '<tr><td colspan="3" class="p-2 text-center text-gray-500">No transactions</td></tr>';
+            }
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeDetail() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        async function loadData() {
+            const res = await fetch('/g/api/items', {
+                headers: { 'X-Token': token, 'X-DH': dh }
+            });
+            if (res.ok) {
+                allItems = await res.json() || [];
+                search();
+            }
+        }
+
+        function logout() {
+            fetch('/g/api/logout', { method: 'POST', headers: { 'X-Token': token, 'X-DH': dh } }).finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

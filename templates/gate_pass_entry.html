@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n-page-title="page_title_gate_pass">Gate Pass Entry - Cold Storage</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
 
     <style>
         * {
@@ -149,19 +150,19 @@
 
                         <div class="relative">
                             <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="thock_no_required">
-                                Thock NO *
+                                Thok NO *
                             </label>
                             <input
                                 type="text"
-                                id="truckNumber"
+                                id="thockNumber"
                                 required
                                 class="w-full neu-input"
                                 data-i18n-placeholder="enter_truck_or_select"
                                 placeholder="Enter truck number or select from customer's entries"
                                 autocomplete="off"
                                 onfocus="showTruckDropdown()"
-                                oninput="filterTruckNumbers()"
-                                onchange="checkTruckNumber()"
+                                oninput="filterThockNumbers()"
+                                onchange="checkThockNumber()"
                             >
                             <div id="truckDropdown" class="search-dropdown hidden">
                                 <div id="truckList"></div>
@@ -249,7 +250,7 @@
                     <table class="w-full text-sm">
                         <thead class="sticky top-0 bg-white">
                             <tr class="border-b-2 border-black">
-                                <th class="text-left p-2 font-bold" data-i18n="thock_number">Thock NO</th>
+                                <th class="text-left p-2 font-bold" data-i18n="thock_number">Thok NO</th>
                                 <th class="text-left p-2 font-bold" data-i18n="customer_name">Customer</th>
                                 <th class="text-left p-2 font-bold" data-i18n="recipient">Recipient</th>
                                 <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
@@ -282,7 +283,7 @@
                             <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
                             <th class="text-left p-2 font-bold" data-i18n="customer_name">Customer</th>
                             <th class="text-left p-2 font-bold" data-i18n="phone">Phone</th>
-                            <th class="text-left p-2 font-bold" data-i18n="thock_number">Thock NO</th>
+                            <th class="text-left p-2 font-bold" data-i18n="thock_number">Thok NO</th>
                             <th class="text-left p-2 font-bold" data-i18n="qty_requested">Qty Requested</th>
                             <th class="text-left p-2 font-bold" data-i18n="expires_in">Expires In</th>
                             <th class="text-left p-2 font-bold" data-i18n="remarks">Remarks</th>
@@ -312,7 +313,7 @@
                         <p class="text-sm text-gray-600" data-i18n="customer_colon">Customer:</p>
                         <p class="font-bold" id="approvalCustomerName"></p>
                         <p class="text-sm text-gray-600 mt-2" data-i18n="truck_colon">Truck:</p>
-                        <p class="font-bold" id="approvalTruckNumber"></p>
+                        <p class="font-bold" id="approvalThockNumber"></p>
                         <p class="text-sm text-gray-600 mt-2" data-i18n="requested_colon">Requested:</p>
                         <p class="font-bold text-xl" id="approvalRequestedQty"></p>
                     </div>
@@ -399,7 +400,7 @@
         let totalRentOwed = 0;
         let totalPaid = 0;
         let balanceDue = 0;
-        let selectedTruckEntry = null; // Track the selected truck's entry
+        let selectedThockEntry = null; // Track the selected truck's entry
         let cachedRoomEntries = []; // Cache room entries - ALWAYS use this for inventory, NEVER expected_quantity
 
         // Fuzzy match function
@@ -496,7 +497,7 @@
 
             // Also search in entries by truck number to find customers
             const entriesFiltered = allEntries.filter(entry =>
-                fuzzyMatch(searchTerm, entry.truck_number)
+                fuzzyMatch(searchTerm, entry.thock_number)
             );
 
             // Merge customer IDs from entries
@@ -536,7 +537,7 @@
             document.getElementById('customerInfo').classList.remove('hidden');
 
             // Clear truck number to show new dropdown
-            document.getElementById('truckNumber').value = '';
+            document.getElementById('thockNumber').value = '';
 
             // Calculate available inventory for this customer
             calculateAvailableInventory(customer.id);
@@ -551,7 +552,7 @@
             const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
 
             // Get truck numbers for this customer
-            const truckNumbers = customerEntries.map(entry => entry.truck_number);
+            const thockNumbers = customerEntries.map(entry => entry.thock_number);
 
             // Fetch current room entries to get ACTUAL inventory (reduced after pickups)
             try {
@@ -567,7 +568,7 @@
 
                     // Filter room entries for this customer's trucks
                     const customerRoomEntries = allRoomEntries.filter(re =>
-                        truckNumbers.includes(re.truck_number)
+                        thockNumbers.includes(re.thock_number)
                     );
 
                     // Sum up CURRENT quantities (already reduced after pickups)
@@ -666,19 +667,19 @@
 
             // Get available inventory from CACHED room_entries - NEVER use expected_quantity
             const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
-            const truckNumbers = customerEntries.map(entry => entry.truck_number);
+            const thockNumbers = customerEntries.map(entry => entry.thock_number);
 
             let totalInInventory;
-            if (selectedTruckEntry) {
+            if (selectedThockEntry) {
                 // Specific truck selected - use only that truck's room_entries quantity
                 const truckRoomEntries = cachedRoomEntries.filter(re =>
-                    re.truck_number === selectedTruckEntry.truck_number
+                    re.thock_number === selectedThockEntry.thock_number
                 );
                 totalInInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             } else {
                 // No truck selected - use total room_entries for all customer trucks
                 const customerRoomEntries = cachedRoomEntries.filter(re =>
-                    truckNumbers.includes(re.truck_number)
+                    thockNumbers.includes(re.thock_number)
                 );
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
@@ -698,9 +699,9 @@
 
             // Validation checks
             if (requestedQty > totalInInventory) {
-                if (selectedTruckEntry) {
+                if (selectedThockEntry) {
                     showValidationMessage(
-                        `⚠️ Truck ${selectedTruckEntry.truck_number} has only ${totalInInventory} items!`,
+                        `⚠️ Thok ${selectedThockEntry.thock_number} has only ${totalInInventory} items!`,
                         'bg-red-100',
                         'text-red-700'
                     );
@@ -757,13 +758,13 @@
 
         // Show truck number dropdown
         function showTruckDropdown() {
-            filterTruckNumbers();
+            filterThockNumbers();
             document.getElementById('truckDropdown').classList.remove('hidden');
         }
 
         // Filter and display truck numbers from customer's entries
-        function filterTruckNumbers() {
-            const searchTerm = document.getElementById('truckNumber').value;
+        function filterThockNumbers() {
+            const searchTerm = document.getElementById('thockNumber').value;
             const customerId = document.getElementById('customerId').value;
 
             if (!customerId) {
@@ -777,7 +778,7 @@
 
             // Further filter by search term if provided
             const filtered = customerEntries.filter(entry =>
-                fuzzyMatch(searchTerm, entry.truck_number)
+                fuzzyMatch(searchTerm, entry.thock_number)
             );
 
             // Limit to 50 results
@@ -791,26 +792,26 @@
                 truckList.innerHTML = '<div class="search-item" style="color: #999;">' + i18n.t('no_matching_trucks', 'No matching truck numbers') + '</div>';
             } else {
                 truckList.innerHTML = displayTrucks.map(entry => {
-                    const displayText = `${entry.truck_number} - ${entry.expected_quantity} ${i18n.t('items', 'items')}`;
-                    return `<div class="search-item" onclick='selectTruckNumber("${entry.truck_number}")'>${displayText}</div>`;
+                    const displayText = `${entry.thock_number} - ${entry.expected_quantity} ${i18n.t('items', 'items')}`;
+                    return `<div class="search-item" onclick='selectThockNumber("${entry.thock_number}")'>${displayText}</div>`;
                 }).join('');
 
                 if (!searchTerm && displayTrucks.length > 0) {
-                    truckList.innerHTML = '<div class="search-item" style="color: #666; font-weight: 600;">' + i18n.t('customer_truck_numbers', "Customer's Truck Numbers:") + '</div>' + truckList.innerHTML;
+                    truckList.innerHTML = '<div class="search-item" style="color: #666; font-weight: 600;">' + i18n.t('customer_thock_numbers', "Customer's Truck Numbers:") + '</div>' + truckList.innerHTML;
                 }
             }
         }
 
         // Select a truck number
-        function selectTruckNumber(truckNumber) {
-            document.getElementById('truckNumber').value = truckNumber;
+        function selectThockNumber(thockNumber) {
+            document.getElementById('thockNumber').value = thockNumber;
             document.getElementById('truckDropdown').classList.add('hidden');
 
             // Find the entry for this truck
             const customerId = document.getElementById('customerId').value;
             if (customerId) {
-                selectedTruckEntry = allEntries.find(entry =>
-                    entry.customer_id == customerId && entry.truck_number === truckNumber
+                selectedThockEntry = allEntries.find(entry =>
+                    entry.customer_id == customerId && entry.thock_number === thockNumber
                 );
 
                 // Update availability displays
@@ -819,19 +820,19 @@
         }
 
         // Check truck number when manually typed
-        function checkTruckNumber() {
-            const truckNumber = document.getElementById('truckNumber').value.trim();
+        function checkThockNumber() {
+            const thockNumber = document.getElementById('thockNumber').value.trim();
             const customerId = document.getElementById('customerId').value;
 
-            if (!customerId || !truckNumber) {
-                selectedTruckEntry = null;
+            if (!customerId || !thockNumber) {
+                selectedThockEntry = null;
                 updateAvailabilityDisplay();
                 return;
             }
 
             // Try to find matching entry for this truck number
-            selectedTruckEntry = allEntries.find(entry =>
-                entry.customer_id == customerId && entry.truck_number === truckNumber
+            selectedThockEntry = allEntries.find(entry =>
+                entry.customer_id == customerId && entry.thock_number === thockNumber
             );
 
             // Update availability displays
@@ -856,17 +857,17 @@
                 if (response.ok) {
                     const allRoomEntries = await response.json();
 
-                    if (selectedTruckEntry) {
+                    if (selectedThockEntry) {
                         // Specific truck selected - sum room entries for this truck only
                         const truckRoomEntries = allRoomEntries.filter(re =>
-                            re.truck_number === selectedTruckEntry.truck_number
+                            re.thock_number === selectedThockEntry.thock_number
                         );
                         availableInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                     } else {
                         // No truck selected - sum all room entries for customer's trucks
-                        const truckNumbers = customerEntries.map(e => e.truck_number);
+                        const thockNumbers = customerEntries.map(e => e.thock_number);
                         const customerRoomEntries = allRoomEntries.filter(re =>
-                            truckNumbers.includes(re.truck_number)
+                            thockNumbers.includes(re.thock_number)
                         );
                         availableInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                     }
@@ -916,7 +917,7 @@
                 customerDropdown.classList.add('hidden');
             }
 
-            const truckInput = document.getElementById('truckNumber');
+            const truckInput = document.getElementById('thockNumber');
             const truckDropdown = document.getElementById('truckDropdown');
             if (truckInput && truckDropdown &&
                 !truckInput.contains(e.target) && !truckDropdown.contains(e.target)) {
@@ -938,19 +939,19 @@
 
             // Get available inventory from CACHED room_entries - NEVER use expected_quantity
             const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
-            const truckNumbers = customerEntries.map(entry => entry.truck_number);
+            const thockNumbers = customerEntries.map(entry => entry.thock_number);
 
             let totalInInventory;
-            if (selectedTruckEntry) {
+            if (selectedThockEntry) {
                 // Specific truck selected - use only that truck's room_entries quantity
                 const truckRoomEntries = cachedRoomEntries.filter(re =>
-                    re.truck_number === selectedTruckEntry.truck_number
+                    re.thock_number === selectedThockEntry.thock_number
                 );
                 totalInInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             } else {
                 // No truck selected - use total room_entries for all customer trucks
                 const customerRoomEntries = cachedRoomEntries.filter(re =>
-                    truckNumbers.includes(re.truck_number)
+                    thockNumbers.includes(re.thock_number)
                 );
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
@@ -962,8 +963,8 @@
             const allowedItems = Math.floor(totalPaymentAvailable / customerRentRate);
 
             if (requestedQty > totalInInventory) {
-                if (selectedTruckEntry) {
-                    alert(i18n.t('error', 'Error') + ': ' + i18n.t('truck_has_only_items', 'Truck {truck} has only {qty} items!').replace('{truck}', selectedTruckEntry.truck_number).replace('{qty}', totalInInventory));
+                if (selectedThockEntry) {
+                    alert(i18n.t('error', 'Error') + ': ' + i18n.t('truck_has_only_items', 'Truck {truck} has only {qty} items!').replace('{truck}', selectedThockEntry.thock_number).replace('{qty}', totalInInventory));
                 } else {
                     alert(i18n.t('error', 'Error') + ': ' + i18n.t('qty_exceeds_inventory', 'Requested quantity exceeds available inventory!'));
                 }
@@ -994,7 +995,7 @@
 
             const gatePassData = {
                 customer_id: customerId,
-                truck_number: document.getElementById('truckNumber').value.trim(),
+                thock_number: document.getElementById('thockNumber').value.trim(),
                 entry_id: null,
                 requested_quantity: requestedQty,
                 payment_verified: true, // Always true now
@@ -1042,7 +1043,7 @@
             document.getElementById('availableQuantity').textContent = '-';
             document.getElementById('paymentAllowedQuantity').textContent = '-';
             customerPayments = [];
-            selectedTruckEntry = null; // Clear selected truck
+            selectedThockEntry = null; // Clear selected truck
             loadRecentGatePasses();
         }
 
@@ -1146,12 +1147,12 @@
                 if (gp.status === 'pending') {
                     actionButtons = `
                         <div class="flex gap-1">
-                            <button onclick='acceptGatePass(${gp.id}, "${gp.truck_number}", ${gp.requested_quantity})'
+                            <button onclick='acceptGatePass(${gp.id}, "${gp.thock_number}", ${gp.requested_quantity})'
                                     class="neu-button bg-green-500 text-white text-xs px-2 py-1"
                                     title="Accept">
                                 <i class="bi bi-check-circle"></i>
                             </button>
-                            <button onclick='declineGatePass(${gp.id}, "${gp.truck_number}")'
+                            <button onclick='declineGatePass(${gp.id}, "${gp.thock_number}")'
                                     class="neu-button bg-red-500 text-white text-xs px-2 py-1"
                                     title="Decline">
                                 <i class="bi bi-x-circle"></i>
@@ -1162,7 +1163,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold ${truckColor}">${gp.truck_number}</td>
+                        <td class="p-2 font-bold ${truckColor}">${gp.thock_number}</td>
                         <td class="p-2">${gp.customer_name}</td>
                         <td class="p-2 font-semibold text-purple-600">${recipient}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
@@ -1229,7 +1230,7 @@
                         <td class="p-2 text-xs">${formattedDate}</td>
                         <td class="p-2 font-bold">${req.customer_name}</td>
                         <td class="p-2 text-sm">${req.customer_phone}</td>
-                        <td class="p-2 font-bold text-blue-600">${req.truck_number}</td>
+                        <td class="p-2 font-bold text-blue-600">${req.thock_number}</td>
                         <td class="p-2 font-bold text-lg">${req.requested_quantity}</td>
                         <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
                         <td class="p-2 text-sm">${req.remarks || '-'}</td>
@@ -1247,7 +1248,7 @@
         async function openApprovalModal(request) {
             document.getElementById('approvalGatePassId').value = request.id;
             document.getElementById('approvalCustomerName').textContent = request.customer_name;
-            document.getElementById('approvalTruckNumber').textContent = request.truck_number;
+            document.getElementById('approvalThockNumber').textContent = request.thock_number;
             document.getElementById('approvalRequestedQty').textContent = request.requested_quantity + ' items';
             document.getElementById('approvalApprovedQty').value = request.requested_quantity;
             document.getElementById('approvalGateNo').value = '';
@@ -1255,12 +1256,12 @@
             document.getElementById('approvalModal').classList.remove('hidden');
 
             // Load and display gatar storage locations
-            await loadGatarForApproval(request.truck_number);
+            await loadGatarForApproval(request.thock_number);
         }
 
         let approvalRoomEntries = []; // Store room entries for approval
 
-        async function loadGatarForApproval(truckNumber) {
+        async function loadGatarForApproval(thockNumber) {
             const gatarDisplay = document.getElementById('approvalGatarDisplay');
             gatarDisplay.innerHTML = '<p class="text-gray-500">' + i18n.t('loading_storage', 'Loading storage locations...') + '</p>';
 
@@ -1272,7 +1273,7 @@
                 if (!response.ok) throw new Error('Failed to fetch room entries');
 
                 const roomEntries = await response.json();
-                approvalRoomEntries = roomEntries.filter(re => re.truck_number === truckNumber && re.quantity > 0);
+                approvalRoomEntries = roomEntries.filter(re => re.thock_number === thockNumber && re.quantity > 0);
 
                 if (approvalRoomEntries.length === 0) {
                     gatarDisplay.innerHTML = '<p class="text-red-500 font-bold">' + i18n.t('no_storage_locations', 'No storage locations found!') + '</p>';
@@ -1428,8 +1429,8 @@
         }
 
         // Accept gate pass directly (for Recent Gate Passes section)
-        async function acceptGatePass(gatePassId, truckNumber, requestedQty) {
-            if (!confirm(i18n.t('accept_gate_pass_confirm', 'Accept gate pass for truck {truck} ({qty} items)?').replace('{truck}', truckNumber).replace('{qty}', requestedQty))) {
+        async function acceptGatePass(gatePassId, thockNumber, requestedQty) {
+            if (!confirm(i18n.t('accept_gate_pass_confirm', 'Accept gate pass for truck {truck} ({qty} items)?').replace('{truck}', thockNumber).replace('{qty}', requestedQty))) {
                 return;
             }
 
@@ -1453,15 +1454,15 @@
                     throw new Error(error);
                 }
 
-                alert(i18n.t('gate_pass_approved_success', 'Gate pass for truck {truck} approved successfully!').replace('{truck}', truckNumber));
+                alert(i18n.t('gate_pass_approved_success', 'Gate pass for truck {truck} approved successfully!').replace('{truck}', thockNumber));
                 loadRecentGatePasses();
             } catch (error) {
                 alert(i18n.t('error_approving_gate_pass', 'Error approving gate pass') + ': ' + error.message);
             }
         }
 
-        async function declineGatePass(gatePassId, truckNumber) {
-            if (!confirm(i18n.t('reject_gate_pass_confirm', 'Are you sure you want to reject gate pass for truck {truck}?').replace('{truck}', truckNumber))) {
+        async function declineGatePass(gatePassId, thockNumber) {
+            if (!confirm(i18n.t('reject_gate_pass_confirm', 'Are you sure you want to reject gate pass for truck {truck}?').replace('{truck}', thockNumber))) {
                 return;
             }
 

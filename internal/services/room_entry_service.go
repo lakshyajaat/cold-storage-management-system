@@ -25,8 +25,8 @@ func NewRoomEntryService(roomEntryRepo *repositories.RoomEntryRepository, entryR
 
 func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.CreateRoomEntryRequest, userID int) (*models.RoomEntry, error) {
 	// Validate required fields
-	if req.TruckNumber == "" {
-		return nil, errors.New("truck number is required")
+	if req.ThockNumber == "" {
+		return nil, errors.New("thock number is required")
 	}
 	if req.RoomNo == "" {
 		return nil, errors.New("room number is required")
@@ -49,7 +49,7 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 
 	// CRITICAL FIX: Validate that room entry quantity doesn't exceed entry quantity
 	// Get total quantity already assigned to rooms for this truck number
-	totalAssigned, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, req.TruckNumber)
+	totalAssigned, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, req.ThockNumber)
 	if err != nil {
 		// If error is just "no records", treat as 0
 		totalAssigned = 0
@@ -72,7 +72,7 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 	// Create room entry
 	roomEntry := &models.RoomEntry{
 		EntryID:         req.EntryID,
-		TruckNumber:     req.TruckNumber,
+		ThockNumber:     req.ThockNumber,
 		RoomNo:          req.RoomNo,
 		Floor:           req.Floor,
 		GateNo:          req.GateNo,

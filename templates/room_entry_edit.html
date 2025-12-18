@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Room Entry - Cold Storage</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
 
     <style>
         * {
@@ -90,10 +91,10 @@
                             Storage Details
                         </h2>
 
-                        <!-- Truck Number (Read-only) -->
+                        <!-- Thok Number (Read-only) -->
                         <div class="mb-6 p-4 bg-yellow-50 neu-border">
-                            <p class="text-sm font-semibold text-gray-700 mb-2">Truck Number:</p>
-                            <p class="text-2xl font-bold" id="truckNumber">-</p>
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Thok Number:</p>
+                            <p class="text-2xl font-bold" id="thockNumber">-</p>
                             <p class="text-sm text-gray-600 mt-1" id="customerName">-</p>
                         </div>
 
@@ -466,9 +467,9 @@
                 }
 
                 // Populate form
-                const truckElement = document.getElementById('truckNumber');
-                truckElement.textContent = roomEntryData.truck_number;
-                truckElement.className = 'text-2xl font-bold ' + getTruckColor(roomEntryData.truck_number);
+                const thockElement = document.getElementById('thockNumber');
+                thockElement.textContent = roomEntryData.thock_number;
+                thockElement.className = 'text-2xl font-bold ' + getThockColor(roomEntryData.thock_number);
 
                 // Set hidden input values
                 document.getElementById('roomNo').value = roomEntryData.room_no;
@@ -679,8 +680,8 @@
             document.getElementById('successMessage').classList.add('hidden');
         }
 
-        function getTruckColor(truckNumber) {
-            const numMatch = truckNumber.match(/^(\d+)/);
+        function getThockColor(thockNumber) {
+            const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';

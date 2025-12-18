@@ -20,7 +20,7 @@ type InvoiceItem struct {
 	ID          int       `json:"id"`
 	InvoiceID   int       `json:"invoice_id"`
 	EntryID     *int      `json:"entry_id"`
-	TruckNumber string    `json:"truck_number"`
+	ThockNumber string    `json:"thock_number"`
 	Quantity    int       `json:"quantity"`
 	Rate        float64   `json:"rate"`
 	Amount      float64   `json:"amount"`

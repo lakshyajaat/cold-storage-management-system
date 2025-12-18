@@ -1,0 +1,56 @@
+/* Arbitrary value classes for Cold Storage */
+/* These classes match Tailwind's arbitrary value syntax */
+
+/* Background colors */
+.bg-\[\#0f3460\] { background-color: #0f3460; }
+.bg-\[\#16213e\] { background-color: #16213e; }
+.bg-\[\#1a1a2e\] { background-color: #1a1a2e; }
+.bg-\[\#1e5128\] { background-color: #1e5128; }
+.bg-\[\#2d132c\] { background-color: #2d132c; }
+.bg-\[\#2ecc71\] { background-color: #2ecc71; }
+.bg-\[\#3498db\] { background-color: #3498db; }
+.bg-\[\#4edcff\] { background-color: #4edcff; }
+.bg-\[\#5c3d2e\] { background-color: #5c3d2e; }
+.bg-\[\#7DEDFF\] { background-color: #7DEDFF; }
+.bg-\[\#81C784\] { background-color: #81C784; }
+.bg-\[\#98EECC\] { background-color: #98EECC; }
+.bg-\[\#a8e0ff\] { background-color: #a8e0ff; }
+.bg-\[\#A8E6CF\] { background-color: #A8E6CF; }
+.bg-\[\#B4FF9F\] { background-color: #B4FF9F; }
+.bg-\[\#C9F4AA\] { background-color: #C9F4AA; }
+.bg-\[\#D4ADFC\] { background-color: #D4ADFC; }
+.bg-\[\#DFCCFB\] { background-color: #DFCCFB; }
+.bg-\[\#e74c3c\] { background-color: #e74c3c; }
+.bg-\[\#e8f5e9\] { background-color: #e8f5e9; }
+.bg-\[\#E8F5E9\] { background-color: #E8F5E9; }
+.bg-\[\#ecf0f1\] { background-color: #ecf0f1; }
+.bg-\[\#f39c12\] { background-color: #f39c12; }
+.bg-\[\#f3e5f5\] { background-color: #f3e5f5; }
+.bg-\[\#faf4ed\] { background-color: #faf4ed; }
+.bg-\[\#FF6B6B\] { background-color: #FF6B6B; }
+.bg-\[\#FF6B9D\] { background-color: #FF6B9D; }
+.bg-\[\#FFB3BA\] { background-color: #FFB3BA; }
+.bg-\[\#FFB4B4\] { background-color: #FFB4B4; }
+.bg-\[\#FFD3B6\] { background-color: #FFD3B6; }
+.bg-\[\#FFD93D\] { background-color: #FFD93D; }
+.bg-\[\#FFDFBA\] { background-color: #FFDFBA; }
+.bg-\[\#FFE45E\] { background-color: #FFE45E; }
+.bg-\[\#FFE5CA\] { background-color: #FFE5CA; }
+.bg-\[\#FFEBEB\] { background-color: #FFEBEB; }
+.bg-\[\#FFF9E6\] { background-color: #FFF9E6; }
+
+/* Arbitrary dimensions */
+.h-\[50px\] { height: 50px; }
+.h-\[90vh\] { height: 90vh; }
+.w-\[120px\] { width: 120px; }
+.w-\[200px\] { width: 200px; }
+.w-\[250px\] { width: 250px; }
+
+/* Arbitrary shadows */
+.shadow-\[0_4px_0_0_\#000\] { box-shadow: 0 4px 0 0 #000; }
+.shadow-\[2px_2px_0px_\#000\] { box-shadow: 2px 2px 0px #000; }
+.shadow-\[3px_3px_0_\#000\] { box-shadow: 3px 3px 0 #000; }
+.shadow-\[4px_4px_0_0_\#000\] { box-shadow: 4px 4px 0 0 #000; }
+
+/* Arbitrary text colors */
+.text-\[\#3498db\] { color: #3498db; }

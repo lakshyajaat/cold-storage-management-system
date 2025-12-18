@@ -44,7 +44,7 @@ func (r *RoomEntryEditLogRepository) ListAllEditLogs(ctx context.Context) ([]map
 		SELECT
 			el.id,
 			el.room_entry_id,
-			re.truck_number,
+			re.thock_number,
 			el.edited_by_user_id,
 			u.name as editor_name,
 			u.email as editor_email,
@@ -76,7 +76,7 @@ func (r *RoomEntryEditLogRepository) ListAllEditLogs(ctx context.Context) ([]map
 		var (
 			id             int
 			roomEntryID    int
-			truckNumber    string
+			thockNumber    string
 			editedByUserID int
 			editorName     string
 			editorEmail    string
@@ -94,7 +94,7 @@ func (r *RoomEntryEditLogRepository) ListAllEditLogs(ctx context.Context) ([]map
 		)
 
 		if err := rows.Scan(
-			&id, &roomEntryID, &truckNumber, &editedByUserID, &editorName, &editorEmail,
+			&id, &roomEntryID, &thockNumber, &editedByUserID, &editorName, &editorEmail,
 			&oldRoomNo, &newRoomNo, &oldFloor, &newFloor,
 			&oldGateNo, &newGateNo, &oldQuantity, &newQuantity,
 			&oldRemark, &newRemark, &editedAt,
@@ -105,7 +105,7 @@ func (r *RoomEntryEditLogRepository) ListAllEditLogs(ctx context.Context) ([]map
 		log := map[string]interface{}{
 			"id":               id,
 			"room_entry_id":    roomEntryID,
-			"truck_number":     truckNumber,
+			"thock_number":     thockNumber,
 			"edited_by_user_id": editedByUserID,
 			"editor_name":      editorName,
 			"editor_email":     editorEmail,

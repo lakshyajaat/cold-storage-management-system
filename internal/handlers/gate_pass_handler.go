@@ -49,7 +49,7 @@ func (h *GatePassHandler) CreateGatePass(w http.ResponseWriter, r *http.Request)
 
 	// Log admin action
 	ipAddress := getIPAddress(r)
-	description := fmt.Sprintf("Issued gate pass for truck %s - %d items requested", req.TruckNumber, req.RequestedQuantity)
+	description := fmt.Sprintf("Issued gate pass for thock %s - %d items requested", req.ThockNumber, req.RequestedQuantity)
 	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
 		AdminUserID: userID,
 		ActionType:  "CREATE",

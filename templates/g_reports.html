@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Reports</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .stat-card {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 1.5rem;
+            background: white;
+        }
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border: 3px solid #000;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-button.active {
+            background: #3B82F6;
+            color: white;
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <a href="/g/" class="neu-button bg-gray-200 py-2 px-4">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-graph-up-arrow text-4xl text-purple-600"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">Reports & Analytics</h1>
+                            <p class="text-gray-600">Comprehensive inventory reports</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="loadAllData()" class="neu-button bg-blue-500 text-white">
+                    <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Refresh
+                </button>
+                <button onclick="logout()" class="neu-button bg-red-500 text-white">
+                    <i class="bi bi-box-arrow-right"></i> Exit
+                </button>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="stat-card bg-green-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Total Stock In</p>
+                        <p class="text-3xl font-bold text-green-600" id="totalStockIn">0</p>
+                    </div>
+                    <i class="bi bi-arrow-down-circle text-4xl text-green-600"></i>
+                </div>
+            </div>
+            <div class="stat-card bg-red-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Total Stock Out</p>
+                        <p class="text-3xl font-bold text-red-600" id="totalStockOut">0</p>
+                    </div>
+                    <i class="bi bi-arrow-up-circle text-4xl text-red-600"></i>
+                </div>
+            </div>
+            <div class="stat-card bg-blue-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Current Inventory</p>
+                        <p class="text-3xl font-bold text-blue-600" id="currentInventory">0</p>
+                    </div>
+                    <i class="bi bi-box-seam text-4xl text-blue-600"></i>
+                </div>
+            </div>
+            <div class="stat-card bg-purple-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Total Profit/Loss</p>
+                        <p class="text-3xl font-bold text-purple-600" id="totalPL">Rs. 0</p>
+                    </div>
+                    <i class="bi bi-graph-up text-4xl text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+            <button class="tab-button active" onclick="switchTab('stockin')">
+                <i class="bi bi-arrow-down-circle"></i> Stock In
+            </button>
+            <button class="tab-button" onclick="switchTab('stockout')">
+                <i class="bi bi-arrow-up-circle"></i> Stock Out
+            </button>
+            <button class="tab-button" onclick="switchTab('items')">
+                <i class="bi bi-box"></i> Item History
+            </button>
+            <button class="tab-button" onclick="switchTab('floors')">
+                <i class="bi bi-building"></i> Floor Report
+            </button>
+            <button class="tab-button" onclick="switchTab('pnl')">
+                <i class="bi bi-currency-rupee"></i> P/L Report
+            </button>
+            <button class="tab-button" onclick="switchTab('monthly')">
+                <i class="bi bi-calendar3"></i> Monthly Trends
+            </button>
+        </div>
+
+        <!-- Stock In Tab -->
+        <div id="stockin-tab" class="tab-content active neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-arrow-down-circle text-green-600"></i>
+                    Stock In Logs
+                </h2>
+                <input type="text" id="stockInSearch" placeholder="Search..." class="neu-input" onkeyup="filterStockIn()">
+            </div>
+            <div class="overflow-auto" style="max-height: 500px;">
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Date</th>
+                            <th class="p-3 text-left font-bold">Item</th>
+                            <th class="p-3 text-left font-bold">Floor</th>
+                            <th class="p-3 text-left font-bold">Qty</th>
+                            <th class="p-3 text-left font-bold">Unit Cost</th>
+                            <th class="p-3 text-left font-bold">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockInBody">
+                        <tr><td colspan="6" class="text-center p-4 text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stock Out Tab -->
+        <div id="stockout-tab" class="tab-content neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-arrow-up-circle text-red-600"></i>
+                    Stock Out Logs
+                </h2>
+                <input type="text" id="stockOutSearch" placeholder="Search..." class="neu-input" onkeyup="filterStockOut()">
+            </div>
+            <div class="overflow-auto" style="max-height: 500px;">
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Date</th>
+                            <th class="p-3 text-left font-bold">Item</th>
+                            <th class="p-3 text-left font-bold">Qty</th>
+                            <th class="p-3 text-left font-bold">Reason</th>
+                            <th class="p-3 text-left font-bold">Sale Price</th>
+                            <th class="p-3 text-left font-bold">P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockOutBody">
+                        <tr><td colspan="6" class="text-center p-4 text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Item History Tab -->
+        <div id="items-tab" class="tab-content neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-box text-blue-600"></i>
+                    Item Transaction History
+                </h2>
+                <select id="itemSelect" class="neu-input" onchange="loadItemHistory()">
+                    <option value="">Select an item...</option>
+                </select>
+            </div>
+            <div id="itemHistoryContent" class="overflow-auto" style="max-height: 500px;">
+                <p class="text-center text-gray-500 p-4">Select an item to view history</p>
+            </div>
+        </div>
+
+        <!-- Floor Report Tab -->
+        <div id="floors-tab" class="tab-content neu-border bg-white p-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-building text-purple-600"></i>
+                Floor-wise Inventory Report
+            </h2>
+            <div class="grid grid-cols-5 gap-4 mb-6" id="floorCards">
+                <!-- Filled by JS -->
+            </div>
+            <div class="overflow-auto" style="max-height: 400px;">
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Floor</th>
+                            <th class="p-3 text-left font-bold">Items</th>
+                            <th class="p-3 text-left font-bold">Total Qty</th>
+                            <th class="p-3 text-left font-bold">Total Value</th>
+                            <th class="p-3 text-left font-bold">% of Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="floorReportBody">
+                        <tr><td colspan="5" class="text-center p-4 text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- P/L Report Tab -->
+        <div id="pnl-tab" class="tab-content neu-border bg-white p-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-currency-rupee text-green-600"></i>
+                Profit/Loss Report by Item
+            </h2>
+            <div class="overflow-auto" style="max-height: 500px;">
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Item</th>
+                            <th class="p-3 text-left font-bold">Floor</th>
+                            <th class="p-3 text-left font-bold">Total In</th>
+                            <th class="p-3 text-left font-bold">Total Out</th>
+                            <th class="p-3 text-left font-bold">Cost Basis</th>
+                            <th class="p-3 text-left font-bold">Sale Value</th>
+                            <th class="p-3 text-left font-bold">P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pnlBody">
+                        <tr><td colspan="7" class="text-center p-4 text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Monthly Trends Tab -->
+        <div id="monthly-tab" class="tab-content neu-border bg-white p-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-calendar3 text-orange-600"></i>
+                Monthly Trends
+            </h2>
+            <div class="overflow-auto" style="max-height: 500px;">
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Month</th>
+                            <th class="p-3 text-left font-bold">In Qty</th>
+                            <th class="p-3 text-left font-bold">In Value</th>
+                            <th class="p-3 text-left font-bold">Out Qty</th>
+                            <th class="p-3 text-left font-bold">Out Value</th>
+                            <th class="p-3 text-left font-bold">Net Change</th>
+                            <th class="p-3 text-left font-bold">P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyBody">
+                        <tr><td colspan="7" class="text-center p-4 text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let allTxns = [];
+        let summary = null;
+
+        async function api(path) {
+            const res = await fetch('/g/api' + path, {
+                headers: { 'X-Token': token, 'X-DH': dh }
+            });
+            if (res.status === 401) { logout(); return null; }
+            return res.ok ? res.json() : null;
+        }
+
+        async function loadAllData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('spin-animation');
+
+            try {
+                const [items, txns, summaryData] = await Promise.all([
+                    api('/items'),
+                    api('/txns?limit=2000'),
+                    api('/summary')
+                ]);
+
+                if (items) allItems = items || [];
+                if (txns) allTxns = txns || [];
+                if (summaryData) summary = summaryData;
+
+                updateSummaryStats();
+                populateItemSelect();
+                renderStockIn();
+                renderStockOut();
+                renderFloorReport();
+                renderPLReport();
+                renderMonthlyTrends();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-animation'), 500);
+                }
+            }
+        }
+
+        function updateSummaryStats() {
+            const inTxns = allTxns.filter(t => t.type === 'in');
+            const outTxns = allTxns.filter(t => t.type === 'out');
+
+            const totalIn = inTxns.reduce((s, t) => s + t.qty, 0);
+            const totalOut = outTxns.reduce((s, t) => s + t.qty, 0);
+            const currentInv = allItems.reduce((s, i) => s + i.current_qty, 0);
+
+            document.getElementById('totalStockIn').textContent = totalIn;
+            document.getElementById('totalStockOut').textContent = totalOut;
+            document.getElementById('currentInventory').textContent = currentInv;
+
+            if (summary) {
+                const pl = summary.profit_loss || 0;
+                document.getElementById('totalPL').textContent = (pl >= 0 ? '+Rs. ' : '-Rs. ') + Math.abs(pl).toFixed(0);
+            }
+        }
+
+        function populateItemSelect() {
+            const select = document.getElementById('itemSelect');
+            select.innerHTML = '<option value="">Select an item...</option>' +
+                allItems.map(item => `<option value="${item.id}">${item.name} (F${item.floor})</option>`).join('');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+            event.target.closest('.tab-button').classList.add('active');
+            document.getElementById(tabId + '-tab').classList.add('active');
+        }
+
+        // Stock In Report
+        function renderStockIn() {
+            const inTxns = allTxns.filter(t => t.type === 'in');
+            const tbody = document.getElementById('stockInBody');
+
+            if (inTxns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500">No stock in records</td></tr>';
+                return;
+            }
+
+            const floorColors = { 0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100', 3: 'bg-orange-100', 4: 'bg-purple-100' };
+
+            tbody.innerHTML = inTxns.map(t => {
+                const item = allItems.find(i => i.id === t.item_id);
+                const floor = item ? item.floor : 0;
+                const date = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <tr class="border-b hover:bg-green-50">
+                        <td class="p-3">${date}</td>
+                        <td class="p-3 font-semibold">${t.item_name || '-'}</td>
+                        <td class="p-3"><span class="${floorColors[floor]} px-2 py-1 rounded font-bold">F${floor}</span></td>
+                        <td class="p-3 font-bold">${t.qty}</td>
+                        <td class="p-3">Rs. ${(t.unit_price || 0).toFixed(0)}</td>
+                        <td class="p-3 font-bold text-green-600">Rs. ${(t.total || 0).toFixed(0)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterStockIn() {
+            const search = document.getElementById('stockInSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#stockInBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        // Stock Out Report
+        function renderStockOut() {
+            const outTxns = allTxns.filter(t => t.type === 'out');
+            const tbody = document.getElementById('stockOutBody');
+
+            if (outTxns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500">No stock out records</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = outTxns.map(t => {
+                const item = allItems.find(i => i.id === t.item_id);
+                const cost = item ? t.qty * item.unit_cost : 0;
+                const sale = t.total || 0;
+                const pl = sale - cost;
+                const isSold = t.reason && t.reason.toLowerCase().startsWith('sold');
+
+                const date = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <tr class="border-b hover:bg-red-50">
+                        <td class="p-3">${date}</td>
+                        <td class="p-3 font-semibold">${t.item_name || '-'}</td>
+                        <td class="p-3 font-bold">${t.qty}</td>
+                        <td class="p-3">${t.reason || '-'}</td>
+                        <td class="p-3">${isSold ? 'Rs. ' + (t.unit_price || 0).toFixed(0) : '-'}</td>
+                        <td class="p-3 font-bold ${isSold ? (pl >= 0 ? 'text-green-600' : 'text-red-600') : 'text-red-600'}">
+                            ${isSold ? (pl >= 0 ? '+' : '') + 'Rs. ' + pl.toFixed(0) : '-Rs. ' + cost.toFixed(0)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterStockOut() {
+            const search = document.getElementById('stockOutSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#stockOutBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        // Item History
+        function loadItemHistory() {
+            const itemId = parseInt(document.getElementById('itemSelect').value);
+            const container = document.getElementById('itemHistoryContent');
+
+            if (!itemId) {
+                container.innerHTML = '<p class="text-center text-gray-500 p-4">Select an item to view history</p>';
+                return;
+            }
+
+            const item = allItems.find(i => i.id === itemId);
+            const itemTxns = allTxns.filter(t => t.item_id === itemId);
+
+            if (itemTxns.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 p-4">No transactions found for this item</p>';
+                return;
+            }
+
+            const inTxns = itemTxns.filter(t => t.type === 'in');
+            const outTxns = itemTxns.filter(t => t.type === 'out');
+            const totalIn = inTxns.reduce((s, t) => s + t.qty, 0);
+            const totalOut = outTxns.reduce((s, t) => s + t.qty, 0);
+            const totalInValue = inTxns.reduce((s, t) => s + (t.total || 0), 0);
+            const totalOutValue = outTxns.reduce((s, t) => s + (t.total || 0), 0);
+
+            container.innerHTML = `
+                <div class="mb-4 p-4 bg-blue-50 border-2 border-blue-200 rounded">
+                    <h3 class="font-bold text-lg mb-2">${item.name} - Summary</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div><span class="text-gray-600">Current Qty:</span> <span class="font-bold">${item.current_qty}</span></div>
+                        <div><span class="text-gray-600">Total In:</span> <span class="font-bold text-green-600">${totalIn}</span></div>
+                        <div><span class="text-gray-600">Total Out:</span> <span class="font-bold text-red-600">${totalOut}</span></div>
+                        <div><span class="text-gray-600">Floor:</span> <span class="font-bold">F${item.floor}</span></div>
+                    </div>
+                </div>
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-2 text-left">Date</th>
+                            <th class="p-2 text-left">Type</th>
+                            <th class="p-2 text-left">Qty</th>
+                            <th class="p-2 text-left">Unit Price</th>
+                            <th class="p-2 text-left">Total</th>
+                            <th class="p-2 text-left">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemTxns.map(t => {
+                            const date = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                            return `
+                                <tr class="border-b ${t.type === 'in' ? 'bg-green-50' : 'bg-red-50'}">
+                                    <td class="p-2">${date}</td>
+                                    <td class="p-2">
+                                        <span class="px-2 py-0.5 rounded text-white text-xs ${t.type === 'in' ? 'bg-green-500' : 'bg-red-500'}">
+                                            ${t.type.toUpperCase()}
+                                        </span>
+                                    </td>
+                                    <td class="p-2 font-bold">${t.qty}</td>
+                                    <td class="p-2">Rs. ${(t.unit_price || 0).toFixed(0)}</td>
+                                    <td class="p-2 font-bold ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}">Rs. ${(t.total || 0).toFixed(0)}</td>
+                                    <td class="p-2 text-gray-600">${t.reason || '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Floor Report
+        function renderFloorReport() {
+            const floorData = {};
+            let totalValue = 0;
+
+            allItems.forEach(item => {
+                if (!floorData[item.floor]) {
+                    floorData[item.floor] = { items: 0, qty: 0, value: 0 };
+                }
+                floorData[item.floor].items++;
+                floorData[item.floor].qty += item.current_qty;
+                floorData[item.floor].value += item.current_qty * item.unit_cost;
+                totalValue += item.current_qty * item.unit_cost;
+            });
+
+            const floorColors = { 0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100', 3: 'bg-orange-100', 4: 'bg-purple-100' };
+            const floorBorders = { 0: 'border-blue-500', 1: 'border-green-500', 2: 'border-yellow-500', 3: 'border-orange-500', 4: 'border-purple-500' };
+
+            // Floor Cards
+            document.getElementById('floorCards').innerHTML = [0, 1, 2, 3, 4].map(f => {
+                const data = floorData[f] || { items: 0, qty: 0, value: 0 };
+                return `
+                    <div class="neu-border ${floorColors[f]} p-4 text-center">
+                        <p class="text-3xl font-bold">F${f}</p>
+                        <p class="text-sm text-gray-600">${data.items} items</p>
+                        <p class="font-bold">${data.qty} qty</p>
+                        <p class="text-green-600 font-bold">Rs. ${data.value.toFixed(0)}</p>
+                    </div>
+                `;
+            }).join('');
+
+            // Floor Table
+            const tbody = document.getElementById('floorReportBody');
+            tbody.innerHTML = [0, 1, 2, 3, 4].map(f => {
+                const data = floorData[f] || { items: 0, qty: 0, value: 0 };
+                const pct = totalValue > 0 ? (data.value / totalValue * 100).toFixed(1) : 0;
+
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3"><span class="${floorColors[f]} px-3 py-1 rounded font-bold">F${f}</span></td>
+                        <td class="p-3 font-bold">${data.items}</td>
+                        <td class="p-3 font-bold">${data.qty}</td>
+                        <td class="p-3 font-bold text-green-600">Rs. ${data.value.toFixed(0)}</td>
+                        <td class="p-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-24 h-4 bg-gray-200 rounded overflow-hidden">
+                                    <div class="${floorColors[f].replace('bg-', 'bg-')} h-full" style="width: ${pct}%"></div>
+                                </div>
+                                <span class="font-bold">${pct}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // P/L Report
+        function renderPLReport() {
+            const tbody = document.getElementById('pnlBody');
+
+            if (allItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No items found</td></tr>';
+                return;
+            }
+
+            const floorColors = { 0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100', 3: 'bg-orange-100', 4: 'bg-purple-100' };
+
+            const itemsWithPL = allItems.map(item => {
+                const itemTxns = allTxns.filter(t => t.item_id === item.id);
+                const inTxns = itemTxns.filter(t => t.type === 'in');
+                const outTxns = itemTxns.filter(t => t.type === 'out');
+
+                const totalIn = inTxns.reduce((s, t) => s + t.qty, 0);
+                const totalInValue = inTxns.reduce((s, t) => s + (t.total || 0), 0);
+                const totalOut = outTxns.reduce((s, t) => s + t.qty, 0);
+                const totalOutValue = outTxns.reduce((s, t) => s + (t.total || 0), 0);
+
+                const avgCost = totalIn > 0 ? totalInValue / totalIn : item.unit_cost;
+                const costOfSold = totalOut * avgCost;
+                const pl = totalOutValue - costOfSold;
+
+                return { ...item, totalIn, totalInValue, totalOut, totalOutValue, costOfSold, pl };
+            });
+
+            // Sort by P/L descending
+            itemsWithPL.sort((a, b) => b.pl - a.pl);
+
+            tbody.innerHTML = itemsWithPL.map(item => {
+                const plClass = item.pl > 0 ? 'text-green-600' : (item.pl < 0 ? 'text-red-600' : 'text-gray-500');
+
+                return `
+                    <tr class="border-b hover:bg-gray-50 ${item.pl > 0 ? 'bg-green-50' : (item.pl < 0 ? 'bg-red-50' : '')}">
+                        <td class="p-3 font-semibold">${item.name}</td>
+                        <td class="p-3"><span class="${floorColors[item.floor]} px-2 py-1 rounded font-bold">F${item.floor}</span></td>
+                        <td class="p-3">${item.totalIn} (Rs. ${item.totalInValue.toFixed(0)})</td>
+                        <td class="p-3">${item.totalOut} (Rs. ${item.totalOutValue.toFixed(0)})</td>
+                        <td class="p-3">Rs. ${item.costOfSold.toFixed(0)}</td>
+                        <td class="p-3">Rs. ${item.totalOutValue.toFixed(0)}</td>
+                        <td class="p-3 font-bold ${plClass}">${item.pl >= 0 ? '+' : ''}Rs. ${item.pl.toFixed(0)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Monthly Trends
+        function renderMonthlyTrends() {
+            const monthly = {};
+
+            allTxns.forEach(t => {
+                const date = new Date(t.created_at);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+                if (!monthly[key]) {
+                    monthly[key] = { inQty: 0, inValue: 0, outQty: 0, outValue: 0 };
+                }
+
+                if (t.type === 'in') {
+                    monthly[key].inQty += t.qty;
+                    monthly[key].inValue += t.total || 0;
+                } else {
+                    monthly[key].outQty += t.qty;
+                    monthly[key].outValue += t.total || 0;
+                }
+            });
+
+            const sorted = Object.entries(monthly).sort((a, b) => b[0].localeCompare(a[0]));
+            const tbody = document.getElementById('monthlyBody');
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No data available</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map(([month, data]) => {
+                const netChange = data.inQty - data.outQty;
+                const netClass = netChange > 0 ? 'text-green-600' : (netChange < 0 ? 'text-red-600' : 'text-gray-500');
+                const plClass = data.outValue > 0 ? 'text-green-600' : 'text-gray-400';
+
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3 font-bold">${month}</td>
+                        <td class="p-3 text-green-600">${data.inQty}</td>
+                        <td class="p-3 text-green-600 font-bold">Rs. ${data.inValue.toFixed(0)}</td>
+                        <td class="p-3 text-red-600">${data.outQty}</td>
+                        <td class="p-3 text-red-600 font-bold">Rs. ${data.outValue.toFixed(0)}</td>
+                        <td class="p-3 font-bold ${netClass}">${netChange >= 0 ? '+' : ''}${netChange}</td>
+                        <td class="p-3 font-bold ${plClass}">${data.outValue > 0 ? 'Rs. ' + data.outValue.toFixed(0) : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function logout() {
+            fetch('/g/api/logout', { method: 'POST', headers: { 'X-Token': token, 'X-DH': dh } }).finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Initialize
+        loadAllData();
+    </script>
+</body>
+</html>

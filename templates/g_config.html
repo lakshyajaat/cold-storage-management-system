@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Floor Configuration</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .floor-btn.selected {
+            background-color: #10B981 !important;
+            color: white !important;
+        }
+        .item-row.selected {
+            background-color: #FDE68A !important;
+            border-left: 4px solid #F59E0B;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
+        .hidden { display: none; }
+        .floor-card {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .floor-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .floor-card.active {
+            border-color: #10B981;
+            box-shadow: 6px 6px 0 #10B981;
+        }
+        .qty-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #3B82F6;
+            color: white;
+            border-radius: 9999px;
+            font-weight: bold;
+            border: 3px solid #000;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981, #34D399);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <a href="/g/" class="neu-button bg-gray-200 py-2 px-4">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-door-open text-3xl text-blue-600"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">Floor Configuration</h1>
+                            <p class="text-gray-600">Manage item locations across floors</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="logout()" class="neu-button bg-red-500 text-white">
+                <i class="bi bi-box-arrow-right"></i> Exit
+            </button>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left Column: Move Form -->
+            <div class="col-span-2">
+                <!-- Move Item Form -->
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="bi bi-arrows-move text-purple-600"></i>
+                        Move Item Between Floors
+                    </h2>
+
+                    <!-- Selected Item Display -->
+                    <div class="mb-6 p-4 bg-yellow-50 neu-border">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Selected Item:</p>
+                        <p class="text-2xl font-bold text-blue-700" id="selectedItemName">-</p>
+                        <p class="text-sm text-gray-600 mt-1" id="selectedItemDetails"></p>
+                    </div>
+
+                    <!-- Floor Selection -->
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <!-- Current Floor -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Current Floor
+                            </label>
+                            <div class="neu-border bg-gray-50 p-4 text-center">
+                                <p class="text-3xl font-bold text-gray-700" id="currentFloorDisplay">-</p>
+                            </div>
+                        </div>
+
+                        <!-- New Floor Selection -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Move to Floor *
+                            </label>
+                            <input type="hidden" id="newFloor" required>
+                            <div class="space-y-2">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" id="floor-btn-4" onclick="selectNewFloor(4)"
+                                        class="floor-btn neu-button bg-purple-100 py-3 text-lg font-bold">
+                                        <div>F4</div>
+                                        <div class="text-xs text-gray-600">Top</div>
+                                    </button>
+                                    <button type="button" id="floor-btn-3" onclick="selectNewFloor(3)"
+                                        class="floor-btn neu-button bg-orange-100 py-3 text-lg font-bold">
+                                        <div>F3</div>
+                                        <div class="text-xs text-gray-600">Third</div>
+                                    </button>
+                                    <button type="button" id="floor-btn-2" onclick="selectNewFloor(2)"
+                                        class="floor-btn neu-button bg-yellow-100 py-3 text-lg font-bold">
+                                        <div>F2</div>
+                                        <div class="text-xs text-gray-600">Second</div>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" id="floor-btn-1" onclick="selectNewFloor(1)"
+                                        class="floor-btn neu-button bg-green-100 py-3 text-lg font-bold">
+                                        <div>F1</div>
+                                        <div class="text-xs text-gray-600">First</div>
+                                    </button>
+                                    <button type="button" id="floor-btn-0" onclick="selectNewFloor(0)"
+                                        class="floor-btn neu-button bg-blue-100 py-3 text-lg font-bold">
+                                        <div>F0</div>
+                                        <div class="text-xs text-gray-600">Ground</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity to Move -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Quantity to Move *
+                        </label>
+                        <input type="hidden" id="moveQuantity" required>
+                        <div class="neu-border bg-blue-50 p-4 text-center">
+                            <p class="text-sm text-gray-600 mb-1">Quantity to Move</p>
+                            <p class="text-3xl font-bold text-blue-700" id="totalQuantityDisplay">0</p>
+                            <p class="text-sm text-gray-500 mt-1">Available: <span id="availableQty">0</span></p>
+                            <p class="text-xs text-gray-500 mt-2">Use calculator on right →</p>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="flex gap-4">
+                        <button type="button" onclick="submitMove()" class="neu-button bg-blue-500 text-white flex-1">
+                            <i class="bi bi-check-circle"></i> Confirm Move
+                        </button>
+                        <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
+                            <i class="bi bi-x-circle"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Moves -->
+                <div class="neu-border bg-white p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-clock-history text-green-600"></i>
+                        Recent Moves
+                    </h2>
+                    <div class="overflow-auto" style="max-height: 300px;">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b-2 border-black">
+                                    <th class="text-left p-2 font-bold">Item</th>
+                                    <th class="text-left p-2 font-bold">From</th>
+                                    <th class="text-left p-2 font-bold">To</th>
+                                    <th class="text-left p-2 font-bold">Qty</th>
+                                    <th class="text-left p-2 font-bold">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentMovesTable">
+                                <tr>
+                                    <td colspan="5" class="text-center p-4 text-gray-500">No recent moves</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Items List + Calculator -->
+            <div class="col-span-1">
+                <!-- Items List -->
+                <div class="neu-border bg-white p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="bi bi-inbox text-blue-600"></i>
+                            Items
+                        </h2>
+                        <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 border-2 border-black flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto (5s)
+                        </span>
+                    </div>
+
+                    <!-- Filter by Floor -->
+                    <div class="mb-4">
+                        <div class="flex gap-1 flex-wrap">
+                            <button onclick="filterItems(null)" id="filter-all"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-gray-200">
+                                All
+                            </button>
+                            <button onclick="filterItems(0)" id="filter-0"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-blue-100">
+                                F0
+                            </button>
+                            <button onclick="filterItems(1)" id="filter-1"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-green-100">
+                                F1
+                            </button>
+                            <button onclick="filterItems(2)" id="filter-2"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-yellow-100">
+                                F2
+                            </button>
+                            <button onclick="filterItems(3)" id="filter-3"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-orange-100">
+                                F3
+                            </button>
+                            <button onclick="filterItems(4)" id="filter-4"
+                                class="filter-btn px-3 py-1 text-sm font-bold border-2 border-black bg-purple-100">
+                                F4
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-3">Click an item to select for move</p>
+                    <div class="overflow-auto" style="max-height: 350px;">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b-2 border-black">
+                                    <th class="text-left p-2 font-bold">Item</th>
+                                    <th class="text-left p-2 font-bold">Floor</th>
+                                    <th class="text-left p-2 font-bold">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody">
+                                <tr>
+                                    <td colspan="3" class="text-center p-4 text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quantity Calculator -->
+                <div class="neu-border bg-white p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-calculator text-purple-600"></i>
+                        Quantity Calculator
+                    </h2>
+
+                    <!-- Preset Values -->
+                    <div class="grid grid-cols-5 gap-2 mb-4">
+                        <button type="button" onclick="addQuantity(10)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">
+                            10
+                        </button>
+                        <button type="button" onclick="addQuantity(20)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">
+                            20
+                        </button>
+                        <button type="button" onclick="addQuantity(50)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">
+                            50
+                        </button>
+                        <button type="button" onclick="addQuantity(100)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">
+                            100
+                        </button>
+                        <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-2 text-sm font-bold">
+                            +
+                        </button>
+                    </div>
+
+                    <!-- Custom Input -->
+                    <div id="customInputDiv" class="hidden mb-4">
+                        <div class="flex gap-2">
+                            <input type="number" id="customQuantityInput" min="1"
+                                class="flex-1 border-3 border-black p-2 text-sm" placeholder="Enter qty">
+                            <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-3 py-1 text-sm">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-3 py-1 text-sm">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chips Display -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
+                        <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
+                            <span class="text-sm text-gray-400">Click values above to add...</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Display -->
+                    <div class="flex justify-between items-center bg-green-50 p-3 border-3 border-green-600 rounded mb-4">
+                        <span class="text-sm font-bold">Total:</span>
+                        <span class="text-2xl font-bold text-green-700" id="calcTotalQuantity">0</span>
+                    </div>
+
+                    <!-- Clear Button -->
+                    <button type="button" onclick="clearAllQuantities()" class="neu-button bg-red-500 text-white w-full py-2 text-sm font-bold">
+                        <i class="bi bi-trash"></i> Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floor Summary Cards -->
+        <div class="mt-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-grid-3x3-gap text-blue-600"></i>
+                Floor Summary
+            </h2>
+            <div class="grid grid-cols-5 gap-4">
+                <div class="floor-card bg-blue-50 p-4" data-floor="0">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-2xl font-bold">F0</span>
+                        <span class="text-xs bg-blue-200 px-2 py-1 rounded">Ground</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="floor0Count">0</div>
+                    <div class="text-sm text-gray-600">items</div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="floor0Progress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-green-600 font-bold mt-2" id="floor0Value">Rs. 0</div>
+                </div>
+                <div class="floor-card bg-green-50 p-4" data-floor="1">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-2xl font-bold">F1</span>
+                        <span class="text-xs bg-green-200 px-2 py-1 rounded">First</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="floor1Count">0</div>
+                    <div class="text-sm text-gray-600">items</div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="floor1Progress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-green-600 font-bold mt-2" id="floor1Value">Rs. 0</div>
+                </div>
+                <div class="floor-card bg-yellow-50 p-4" data-floor="2">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-2xl font-bold">F2</span>
+                        <span class="text-xs bg-yellow-200 px-2 py-1 rounded">Second</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="floor2Count">0</div>
+                    <div class="text-sm text-gray-600">items</div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="floor2Progress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-green-600 font-bold mt-2" id="floor2Value">Rs. 0</div>
+                </div>
+                <div class="floor-card bg-orange-50 p-4" data-floor="3">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-2xl font-bold">F3</span>
+                        <span class="text-xs bg-orange-200 px-2 py-1 rounded">Third</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="floor3Count">0</div>
+                    <div class="text-sm text-gray-600">items</div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="floor3Progress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-green-600 font-bold mt-2" id="floor3Value">Rs. 0</div>
+                </div>
+                <div class="floor-card bg-purple-50 p-4" data-floor="4">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-2xl font-bold">F4</span>
+                        <span class="text-xs bg-purple-200 px-2 py-1 rounded">Top</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="floor4Count">0</div>
+                    <div class="text-sm text-gray-600">items</div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="floor4Progress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-green-600 font-bold mt-2" id="floor4Value">Rs. 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="hidden fixed top-4 right-4 neu-border bg-green-500 text-white p-4 z-50">
+        <div class="flex items-center gap-2">
+            <i class="bi bi-check-circle text-2xl"></i>
+            <div>
+                <p class="font-bold">Move Successful!</p>
+                <p class="text-sm" id="successDetails"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let selectedItem = null;
+        let quantityValues = [];
+        let currentFilter = null;
+        let refreshInterval = null;
+
+        async function api(path, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: { 'X-Token': token, 'X-DH': dh }
+            };
+            if (body) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(body);
+            }
+            const res = await fetch('/g/api' + path, opts);
+            if (res.status === 401) { logout(); return null; }
+            return res;
+        }
+
+        // Load all data
+        async function loadData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('spin-animation');
+
+            try {
+                const [itemsRes, summaryRes, txnsRes] = await Promise.all([
+                    api('/items'),
+                    api('/summary'),
+                    api('/txns?limit=20')
+                ]);
+
+                if (itemsRes && itemsRes.ok) {
+                    allItems = await itemsRes.json() || [];
+                    renderItems();
+                }
+
+                if (summaryRes && summaryRes.ok) {
+                    const summary = await summaryRes.json();
+                    updateFloorSummary(summary);
+                }
+
+                if (txnsRes && txnsRes.ok) {
+                    const txns = await txnsRes.json() || [];
+                    renderRecentMoves(txns);
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-animation'), 500);
+                }
+            }
+        }
+
+        // Update floor summary cards
+        function updateFloorSummary(summary) {
+            if (!summary || !summary.floor_breakdown) return;
+
+            let totalItems = 0;
+            summary.floor_breakdown.forEach(f => totalItems += f.item_count);
+
+            [0, 1, 2, 3, 4].forEach(floor => {
+                const floorData = summary.floor_breakdown.find(f => f.floor === floor) || { item_count: 0, value: 0 };
+                document.getElementById(`floor${floor}Count`).textContent = floorData.item_count;
+                document.getElementById(`floor${floor}Value`).textContent = 'Rs. ' + Math.round(floorData.value).toLocaleString();
+
+                const progress = totalItems > 0 ? (floorData.item_count / totalItems * 100) : 0;
+                document.getElementById(`floor${floor}Progress`).style.width = progress + '%';
+            });
+        }
+
+        // Render items list
+        function renderItems() {
+            const tbody = document.getElementById('itemsTableBody');
+            let items = allItems;
+
+            if (currentFilter !== null) {
+                items = allItems.filter(i => i.floor === currentFilter);
+            }
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">No items found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => {
+                const floorColors = {
+                    0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100',
+                    3: 'bg-orange-100', 4: 'bg-purple-100'
+                };
+                const isSelected = selectedItem && selectedItem.id === item.id;
+                return `
+                    <tr class="border-b hover:bg-yellow-50 cursor-pointer item-row ${isSelected ? 'selected' : ''}"
+                        onclick="selectItem(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.floor}, ${item.current_qty})">
+                        <td class="p-2 font-semibold">${item.name}</td>
+                        <td class="p-2">
+                            <span class="${floorColors[item.floor]} px-2 py-1 rounded font-bold text-sm">F${item.floor}</span>
+                        </td>
+                        <td class="p-2 font-bold">${item.current_qty}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Render recent moves
+        function renderRecentMoves(txns) {
+            const tbody = document.getElementById('recentMovesTable');
+
+            // Filter for move transactions (we'll track floor changes)
+            // Since the current API doesn't track moves specifically, show recent stock changes
+            const moves = txns.filter(t => t.type === 'in' || t.type === 'out').slice(0, 10);
+
+            if (!moves || moves.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">No recent activity</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = moves.map(m => {
+                const date = new Date(m.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                const typeColor = m.type === 'in' ? 'text-green-600' : 'text-red-600';
+                const typeIcon = m.type === 'in' ? 'bi-arrow-down-circle' : 'bi-arrow-up-circle';
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-2 font-semibold">${m.item_name || 'Item #' + m.item_id}</td>
+                        <td class="p-2">-</td>
+                        <td class="p-2 ${typeColor}">
+                            <i class="bi ${typeIcon}"></i> ${m.type.toUpperCase()}
+                        </td>
+                        <td class="p-2 font-bold">${m.qty}</td>
+                        <td class="p-2 text-sm text-gray-600">${formattedDate}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Filter items by floor
+        function filterItems(floor) {
+            currentFilter = floor;
+
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-black');
+            });
+            const activeBtn = floor === null ? document.getElementById('filter-all') : document.getElementById(`filter-${floor}`);
+            if (activeBtn) activeBtn.classList.add('ring-2', 'ring-black');
+
+            renderItems();
+        }
+
+        // Select item for move
+        function selectItem(id, name, floor, qty) {
+            selectedItem = { id, name, floor, qty };
+
+            document.getElementById('selectedItemName').textContent = name;
+            document.getElementById('selectedItemDetails').textContent = `Floor: F${floor} | Available Qty: ${qty}`;
+            document.getElementById('currentFloorDisplay').textContent = `F${floor}`;
+            document.getElementById('availableQty').textContent = qty;
+
+            // Highlight selected row
+            document.querySelectorAll('.item-row').forEach(row => row.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            // Reset new floor selection
+            document.getElementById('newFloor').value = '';
+            document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('selected'));
+        }
+
+        // Select new floor
+        function selectNewFloor(floor) {
+            if (selectedItem && selectedItem.floor === floor) {
+                alert('Item is already on Floor ' + floor);
+                return;
+            }
+
+            document.getElementById('newFloor').value = floor;
+            document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById(`floor-btn-${floor}`).classList.add('selected');
+        }
+
+        // Quantity Calculator Functions
+        function addQuantity(value) {
+            if (value && value > 0) {
+                quantityValues.push(value);
+                updateQuantityDisplay();
+            }
+        }
+
+        function showCustomInput() {
+            document.getElementById('customInputDiv').classList.remove('hidden');
+            document.getElementById('customQuantityInput').focus();
+        }
+
+        function hideCustomInput() {
+            document.getElementById('customInputDiv').classList.add('hidden');
+            document.getElementById('customQuantityInput').value = '';
+        }
+
+        function addCustomQuantity() {
+            const input = document.getElementById('customQuantityInput');
+            const value = parseInt(input.value);
+            if (value && value > 0) {
+                addQuantity(value);
+                hideCustomInput();
+            } else {
+                alert('Please enter a valid quantity');
+            }
+        }
+
+        function removeQuantity(index) {
+            quantityValues.splice(index, 1);
+            updateQuantityDisplay();
+        }
+
+        function clearAllQuantities() {
+            quantityValues = [];
+            updateQuantityDisplay();
+        }
+
+        function updateQuantityDisplay() {
+            const chipsContainer = document.getElementById('quantityChips');
+            const calcTotal = document.getElementById('calcTotalQuantity');
+            const formTotal = document.getElementById('totalQuantityDisplay');
+            const hiddenInput = document.getElementById('moveQuantity');
+
+            const total = quantityValues.reduce((sum, val) => sum + val, 0);
+            calcTotal.textContent = total;
+            formTotal.textContent = total;
+            hiddenInput.value = total;
+
+            if (quantityValues.length === 0) {
+                chipsContainer.innerHTML = '<span class="text-sm text-gray-400">Click values above to add...</span>';
+            } else {
+                chipsContainer.innerHTML = quantityValues.map((val, index) => `
+                    <span class="qty-chip">
+                        ${val}
+                        <button type="button" onclick="removeQuantity(${index})" class="hover:bg-red-500 rounded-full p-1">
+                            <i class="bi bi-x-lg text-xs"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        // Submit move
+        async function submitMove() {
+            if (!selectedItem) {
+                alert('Please select an item to move');
+                return;
+            }
+
+            const newFloor = parseInt(document.getElementById('newFloor').value);
+            if (isNaN(newFloor)) {
+                alert('Please select a destination floor');
+                return;
+            }
+
+            const qty = parseInt(document.getElementById('moveQuantity').value);
+            if (!qty || qty <= 0) {
+                alert('Please enter quantity to move');
+                return;
+            }
+
+            if (qty > selectedItem.qty) {
+                alert(`Cannot move more than available quantity (${selectedItem.qty})`);
+                return;
+            }
+
+            // For now, we update the item's floor
+            // In a full implementation, we'd have a separate "move" API that tracks the move history
+            try {
+                const res = await api(`/items?id=${selectedItem.id}`, 'PUT', {
+                    name: selectedItem.name,
+                    floor: newFloor
+                });
+
+                if (res && res.ok) {
+                    showSuccess(`Moved ${qty} units of "${selectedItem.name}" to Floor ${newFloor}`);
+                    resetForm();
+                    loadData();
+                } else {
+                    alert('Failed to move item');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            document.getElementById('successDetails').textContent = message;
+            successDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                successDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Reset form
+        function resetForm() {
+            selectedItem = null;
+            document.getElementById('selectedItemName').textContent = '-';
+            document.getElementById('selectedItemDetails').textContent = '';
+            document.getElementById('currentFloorDisplay').textContent = '-';
+            document.getElementById('availableQty').textContent = '0';
+            document.getElementById('newFloor').value = '';
+            document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelectorAll('.item-row').forEach(row => row.classList.remove('selected'));
+            clearAllQuantities();
+        }
+
+        // Start auto-refresh
+        function startAutoRefresh() {
+            refreshInterval = setInterval(loadData, 5000);
+        }
+
+        // Stop auto-refresh
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+        });
+
+        // Logout
+        function logout() {
+            api('/logout', 'POST').finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Initialize
+        filterItems(null); // Set "All" as default
+        loadData();
+        startAutoRefresh();
+    </script>
+</body>
+</html>

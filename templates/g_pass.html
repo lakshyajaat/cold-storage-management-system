@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Stock Out</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .neu-input:focus {
+            outline: none;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .hidden { display: none; }
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .search-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 2px solid #eee;
+            transition: background 0.2s;
+        }
+        .search-item:hover {
+            background: #FEF3C7;
+            font-weight: 600;
+        }
+        .reason-btn.selected {
+            background-color: #EF4444 !important;
+            color: white !important;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
+        .qty-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #3B82F6;
+            color: white;
+            border-radius: 9999px;
+            font-weight: bold;
+            border: 3px solid #000;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <a href="/g/" class="neu-button bg-gray-200 py-2 px-4">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-box-arrow-up text-4xl text-red-600"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">Stock Out</h1>
+                            <p class="text-gray-600">Remove items from inventory</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="logout()" class="neu-button bg-red-500 text-white">
+                <i class="bi bi-box-arrow-right"></i> Exit
+            </button>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left: Stock Out Form -->
+            <div class="col-span-2">
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="bi bi-card-checklist text-red-600"></i>
+                        Stock Out Details
+                    </h2>
+
+                    <form id="outForm">
+                        <!-- Item Search -->
+                        <div class="mb-6 relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Search Item *
+                            </label>
+                            <input
+                                type="text"
+                                id="itemSearch"
+                                class="w-full neu-input"
+                                placeholder="Search by item name..."
+                                autocomplete="off"
+                                onfocus="showItemDropdown()"
+                                oninput="filterItems()"
+                            >
+                            <div id="itemDropdown" class="search-dropdown hidden">
+                                <div id="itemList"></div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Item Info -->
+                        <div id="itemInfo" class="hidden mb-6 p-4 bg-blue-50 neu-border">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Selected Item:</p>
+                            <p class="text-2xl font-bold text-blue-700" id="selectedItemName"></p>
+                            <div class="grid grid-cols-4 gap-4 mt-3">
+                                <div>
+                                    <span class="text-xs text-gray-600">Floor</span>
+                                    <p class="font-bold text-lg" id="selectedItemFloor">-</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-600">Available</span>
+                                    <p class="font-bold text-lg text-green-600" id="selectedItemQty">0</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-600">Unit Cost</span>
+                                    <p class="font-bold text-lg" id="selectedItemCost">Rs. 0</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-600">Total Value</span>
+                                    <p class="font-bold text-lg text-blue-600" id="selectedItemValue">Rs. 0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantity & Reason -->
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <!-- Quantity -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Quantity to Remove *
+                                </label>
+                                <input type="hidden" id="outQuantity" required>
+                                <div class="neu-border bg-red-50 p-4 text-center">
+                                    <p class="text-sm text-gray-600 mb-1">Quantity</p>
+                                    <p class="text-3xl font-bold text-red-700" id="totalQuantityDisplay">0</p>
+                                    <p class="text-sm text-gray-500 mt-1">Max: <span id="maxQty">0</span></p>
+                                </div>
+                            </div>
+
+                            <!-- Reason Selection -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Reason *
+                                </label>
+                                <input type="hidden" id="selectedReason" required>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" onclick="selectReason('sold')"
+                                        class="reason-btn neu-button bg-green-100 py-3">
+                                        <i class="bi bi-cash"></i> Sold
+                                    </button>
+                                    <button type="button" onclick="selectReason('personal')"
+                                        class="reason-btn neu-button bg-blue-100 py-3">
+                                        <i class="bi bi-person"></i> Personal
+                                    </button>
+                                    <button type="button" onclick="selectReason('damaged')"
+                                        class="reason-btn neu-button bg-yellow-100 py-3">
+                                        <i class="bi bi-exclamation-triangle"></i> Damaged
+                                    </button>
+                                    <button type="button" onclick="selectReason('gift')"
+                                        class="reason-btn neu-button bg-purple-100 py-3">
+                                        <i class="bi bi-gift"></i> Gift
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sale Price (shown when "Sold" is selected) -->
+                        <div id="salePriceSection" class="hidden mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Sale Price (per unit) *
+                            </label>
+                            <input
+                                type="number"
+                                id="salePrice"
+                                class="w-full neu-input"
+                                placeholder="Enter sale price per unit"
+                                step="0.01"
+                                min="0"
+                                oninput="updateCalculation()"
+                            >
+                        </div>
+
+                        <!-- Calculation Preview -->
+                        <div class="mb-6 neu-border bg-yellow-50 p-4">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-calculator text-purple-600"></i>
+                                Calculation Preview
+                            </h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <span class="text-sm text-gray-600">Total Cost</span>
+                                    <p class="text-xl font-bold text-gray-700" id="calcTotalCost">Rs. 0</p>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Total Sale</span>
+                                    <p class="text-xl font-bold text-gray-700" id="calcTotalSale">-</p>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Profit / Loss</span>
+                                    <p class="text-2xl font-bold" id="calcPL">Rs. 0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Notes (Optional)
+                            </label>
+                            <textarea
+                                id="notes"
+                                class="w-full neu-input"
+                                rows="2"
+                                placeholder="Any additional notes..."
+                            ></textarea>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="flex gap-4">
+                            <button type="submit" class="neu-button bg-red-500 text-white flex-1">
+                                <i class="bi bi-box-arrow-up"></i> Remove Stock
+                            </button>
+                            <button type="button" onclick="resetForm()" class="neu-button bg-gray-300">
+                                <i class="bi bi-x-circle"></i> Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Recent Removals -->
+                <div class="neu-border bg-white p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="bi bi-clock-history text-red-600"></i>
+                            Recent Removals
+                        </h2>
+                        <span class="text-xs text-gray-600 bg-green-50 px-2 py-1 border-2 border-black flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Auto (5s)
+                        </span>
+                    </div>
+                    <div class="overflow-auto" style="max-height: 300px;">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b-2 border-black">
+                                    <th class="text-left p-2 font-bold">Item</th>
+                                    <th class="text-left p-2 font-bold">Floor</th>
+                                    <th class="text-left p-2 font-bold">Qty</th>
+                                    <th class="text-left p-2 font-bold">Reason</th>
+                                    <th class="text-left p-2 font-bold">P/L</th>
+                                    <th class="text-left p-2 font-bold">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentRemovalsTable">
+                                <tr>
+                                    <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Quantity Calculator + Summary -->
+            <div class="col-span-1">
+                <!-- Quantity Calculator -->
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-calculator text-purple-600"></i>
+                        Quantity Calculator
+                    </h2>
+
+                    <!-- Preset Values -->
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <button type="button" onclick="addQuantity(5)" class="neu-button bg-red-100 hover:bg-red-200 py-2 text-sm font-bold">
+                            5
+                        </button>
+                        <button type="button" onclick="addQuantity(10)" class="neu-button bg-red-100 hover:bg-red-200 py-2 text-sm font-bold">
+                            10
+                        </button>
+                        <button type="button" onclick="addQuantity(20)" class="neu-button bg-red-100 hover:bg-red-200 py-2 text-sm font-bold">
+                            20
+                        </button>
+                        <button type="button" onclick="addQuantity(50)" class="neu-button bg-red-100 hover:bg-red-200 py-2 text-sm font-bold">
+                            50
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <button type="button" onclick="addQuantity(100)" class="neu-button bg-red-100 hover:bg-red-200 py-2 text-sm font-bold">
+                            100
+                        </button>
+                        <button type="button" onclick="addQuantity(-10)" class="neu-button bg-gray-100 hover:bg-gray-200 py-2 text-sm font-bold">
+                            -10
+                        </button>
+                        <button type="button" onclick="addQuantity(-50)" class="neu-button bg-gray-100 hover:bg-gray-200 py-2 text-sm font-bold">
+                            -50
+                        </button>
+                        <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-2 text-sm font-bold">
+                            +
+                        </button>
+                    </div>
+
+                    <!-- Custom Input -->
+                    <div id="customInputDiv" class="hidden mb-4">
+                        <div class="flex gap-2">
+                            <input type="number" id="customQuantityInput" min="1"
+                                class="flex-1 border-3 border-black p-2 text-sm" placeholder="Enter qty">
+                            <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-3 py-1 text-sm">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-3 py-1 text-sm">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chips Display -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
+                        <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
+                            <span class="text-sm text-gray-400">Click values to add...</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Display -->
+                    <div class="flex justify-between items-center bg-red-50 p-3 border-3 border-red-600 rounded mb-4">
+                        <span class="text-sm font-bold">Total to Remove:</span>
+                        <span class="text-2xl font-bold text-red-700" id="calcTotalQuantity">0</span>
+                    </div>
+
+                    <!-- Clear Button -->
+                    <button type="button" onclick="clearAllQuantities()" class="neu-button bg-gray-500 text-white w-full py-2 text-sm font-bold">
+                        <i class="bi bi-trash"></i> Clear All
+                    </button>
+                </div>
+
+                <!-- Today's Summary -->
+                <div class="neu-border bg-white p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-bar-chart text-blue-600"></i>
+                        Today's Summary
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-red-50 rounded border-2 border-red-200">
+                            <span class="font-semibold">Items Removed</span>
+                            <span class="text-2xl font-bold text-red-600" id="todayRemoved">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-green-50 rounded border-2 border-green-200">
+                            <span class="font-semibold">Items Sold</span>
+                            <span class="text-2xl font-bold text-green-600" id="todaySold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-blue-50 rounded border-2 border-blue-200">
+                            <span class="font-semibold">Total Revenue</span>
+                            <span class="text-xl font-bold text-blue-600" id="todayRevenue">Rs. 0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 border-2 border-black rounded">
+                            <span class="font-semibold">Today's P/L</span>
+                            <span class="text-xl font-bold" id="todayPL">Rs. 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="hidden fixed top-4 right-4 neu-border bg-green-500 text-white p-4 z-50">
+        <div class="flex items-center gap-2">
+            <i class="bi bi-check-circle text-2xl"></i>
+            <div>
+                <p class="font-bold">Stock Removed!</p>
+                <p class="text-sm" id="successDetails"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let selectedItem = null;
+        let currentReason = null;
+        let quantityValues = [];
+        let refreshInterval = null;
+
+        async function api(path, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: { 'X-Token': token, 'X-DH': dh }
+            };
+            if (body) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(body);
+            }
+            const res = await fetch('/g/api' + path, opts);
+            if (res.status === 401) { logout(); return null; }
+            return res;
+        }
+
+        // Fuzzy match function
+        function fuzzyMatch(searchTerm, targetText) {
+            if (!searchTerm) return true;
+            if (!targetText) return false;
+            searchTerm = searchTerm.toLowerCase();
+            targetText = targetText.toLowerCase();
+            if (targetText.includes(searchTerm)) return true;
+            let searchIndex = 0;
+            for (let i = 0; i < targetText.length && searchIndex < searchTerm.length; i++) {
+                if (targetText[i] === searchTerm[searchIndex]) searchIndex++;
+            }
+            return searchIndex === searchTerm.length;
+        }
+
+        // Show item dropdown
+        function showItemDropdown() {
+            filterItems();
+            document.getElementById('itemDropdown').classList.remove('hidden');
+        }
+
+        // Filter items
+        function filterItems() {
+            const searchTerm = document.getElementById('itemSearch').value;
+            const filtered = allItems.filter(item =>
+                item.current_qty > 0 && fuzzyMatch(searchTerm, item.name)
+            ).slice(0, 50);
+
+            const itemList = document.getElementById('itemList');
+            if (filtered.length === 0) {
+                itemList.innerHTML = '<div class="search-item" style="color: #999;">No items found</div>';
+            } else {
+                const floorColors = { 0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100', 3: 'bg-orange-100', 4: 'bg-purple-100' };
+                itemList.innerHTML = filtered.map(item => `
+                    <div class="search-item" onclick='selectItem(${JSON.stringify(item).replace(/'/g, "\\'")})'>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-bold">${item.name}</span>
+                                <span class="${floorColors[item.floor]} px-2 py-0.5 rounded text-xs ml-2">F${item.floor}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold text-green-600">${item.current_qty}</span>
+                                <span class="text-gray-500 text-xs ml-1">qty</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Select item
+        function selectItem(item) {
+            selectedItem = item;
+            document.getElementById('itemSearch').value = item.name;
+            document.getElementById('itemDropdown').classList.add('hidden');
+
+            document.getElementById('itemInfo').classList.remove('hidden');
+            document.getElementById('selectedItemName').textContent = item.name;
+            document.getElementById('selectedItemFloor').textContent = 'F' + item.floor;
+            document.getElementById('selectedItemQty').textContent = item.current_qty;
+            document.getElementById('selectedItemCost').textContent = 'Rs. ' + item.unit_cost.toFixed(2);
+            document.getElementById('selectedItemValue').textContent = 'Rs. ' + (item.current_qty * item.unit_cost).toFixed(0);
+            document.getElementById('maxQty').textContent = item.current_qty;
+
+            updateCalculation();
+        }
+
+        // Close dropdown on outside click
+        document.addEventListener('click', function(e) {
+            const input = document.getElementById('itemSearch');
+            const dropdown = document.getElementById('itemDropdown');
+            if (input && dropdown && !input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Select reason
+        function selectReason(reason) {
+            currentReason = reason;
+            document.getElementById('selectedReason').value = reason;
+
+            document.querySelectorAll('.reason-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.closest('.reason-btn').classList.add('selected');
+
+            // Show/hide sale price section
+            document.getElementById('salePriceSection').classList.toggle('hidden', reason !== 'sold');
+            updateCalculation();
+        }
+
+        // Quantity Calculator Functions
+        function addQuantity(value) {
+            const total = quantityValues.reduce((sum, v) => sum + v, 0) + value;
+            const maxQty = selectedItem ? selectedItem.current_qty : 999999;
+
+            if (total < 0) {
+                alert('Cannot go below 0');
+                return;
+            }
+            if (total > maxQty) {
+                alert(`Cannot exceed available quantity (${maxQty})`);
+                return;
+            }
+
+            if (value > 0) {
+                quantityValues.push(value);
+            } else {
+                // For negative values, add as separate entry
+                quantityValues.push(value);
+            }
+            updateQuantityDisplay();
+        }
+
+        function showCustomInput() {
+            document.getElementById('customInputDiv').classList.remove('hidden');
+            document.getElementById('customQuantityInput').focus();
+        }
+
+        function hideCustomInput() {
+            document.getElementById('customInputDiv').classList.add('hidden');
+            document.getElementById('customQuantityInput').value = '';
+        }
+
+        function addCustomQuantity() {
+            const input = document.getElementById('customQuantityInput');
+            const value = parseInt(input.value);
+            if (value && value > 0) {
+                addQuantity(value);
+                hideCustomInput();
+            } else {
+                alert('Please enter a valid quantity');
+            }
+        }
+
+        function removeQuantity(index) {
+            quantityValues.splice(index, 1);
+            updateQuantityDisplay();
+        }
+
+        function clearAllQuantities() {
+            quantityValues = [];
+            updateQuantityDisplay();
+        }
+
+        function updateQuantityDisplay() {
+            const chipsContainer = document.getElementById('quantityChips');
+            const calcTotal = document.getElementById('calcTotalQuantity');
+            const formTotal = document.getElementById('totalQuantityDisplay');
+            const hiddenInput = document.getElementById('outQuantity');
+
+            const total = quantityValues.reduce((sum, val) => sum + val, 0);
+            calcTotal.textContent = total;
+            formTotal.textContent = total;
+            hiddenInput.value = total;
+
+            if (quantityValues.length === 0) {
+                chipsContainer.innerHTML = '<span class="text-sm text-gray-400">Click values to add...</span>';
+            } else {
+                chipsContainer.innerHTML = quantityValues.map((val, index) => `
+                    <span class="qty-chip ${val < 0 ? 'bg-gray-500' : ''}">
+                        ${val > 0 ? '+' : ''}${val}
+                        <button type="button" onclick="removeQuantity(${index})" class="hover:bg-red-500 rounded-full p-1">
+                            <i class="bi bi-x-lg text-xs"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+
+            updateCalculation();
+        }
+
+        // Update calculation
+        function updateCalculation() {
+            const qty = quantityValues.reduce((sum, val) => sum + val, 0);
+            const unitCost = selectedItem ? selectedItem.unit_cost : 0;
+            const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
+
+            const totalCost = qty * unitCost;
+            const totalSale = currentReason === 'sold' ? qty * salePrice : 0;
+            const pl = totalSale - totalCost;
+
+            document.getElementById('calcTotalCost').textContent = 'Rs. ' + totalCost.toFixed(0);
+            document.getElementById('calcTotalSale').textContent = currentReason === 'sold' ? 'Rs. ' + totalSale.toFixed(0) : '-';
+
+            const plEl = document.getElementById('calcPL');
+            if (currentReason === 'sold') {
+                plEl.textContent = (pl >= 0 ? '+Rs. ' : '-Rs. ') + Math.abs(pl).toFixed(0);
+                plEl.className = 'text-2xl font-bold ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
+            } else {
+                plEl.textContent = '-Rs. ' + totalCost.toFixed(0);
+                plEl.className = 'text-2xl font-bold text-red-600';
+            }
+        }
+
+        // Form submission
+        document.getElementById('outForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!selectedItem) {
+                alert('Please select an item');
+                return;
+            }
+
+            if (!currentReason) {
+                alert('Please select a reason');
+                return;
+            }
+
+            const qty = quantityValues.reduce((sum, val) => sum + val, 0);
+            if (qty <= 0) {
+                alert('Quantity must be greater than 0');
+                return;
+            }
+
+            if (qty > selectedItem.current_qty) {
+                alert(`Cannot remove more than available (${selectedItem.current_qty})`);
+                return;
+            }
+
+            const data = {
+                item_id: selectedItem.id,
+                qty: qty,
+                reason: currentReason
+            };
+
+            if (currentReason === 'sold') {
+                const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
+                if (salePrice <= 0) {
+                    alert('Please enter sale price');
+                    return;
+                }
+                data.unit_price = salePrice;
+            }
+
+            const notes = document.getElementById('notes').value.trim();
+            if (notes) {
+                data.reason = data.reason + ': ' + notes;
+            }
+
+            try {
+                const res = await api('/out', 'POST', data);
+                if (res && res.ok) {
+                    showSuccess(`${qty} units of "${selectedItem.name}" removed`);
+                    resetForm();
+                    loadData();
+                } else {
+                    const err = await res.text();
+                    alert('Error: ' + err);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            document.getElementById('successDetails').textContent = message;
+            successDiv.classList.remove('hidden');
+            setTimeout(() => successDiv.classList.add('hidden'), 3000);
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('outForm').reset();
+            document.getElementById('itemInfo').classList.add('hidden');
+            document.getElementById('salePriceSection').classList.add('hidden');
+            document.querySelectorAll('.reason-btn').forEach(btn => btn.classList.remove('selected'));
+            selectedItem = null;
+            currentReason = null;
+            clearAllQuantities();
+        }
+
+        // Load data
+        async function loadData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('spin-animation');
+
+            try {
+                // Load items
+                const itemsRes = await api('/items');
+                if (itemsRes && itemsRes.ok) {
+                    allItems = await itemsRes.json() || [];
+                }
+
+                // Load recent transactions
+                const txnsRes = await api('/txns?limit=20');
+                if (txnsRes && txnsRes.ok) {
+                    const txns = await txnsRes.json() || [];
+                    renderRecentRemovals(txns);
+                    updateTodaySummary(txns);
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-animation'), 500);
+                }
+            }
+        }
+
+        // Render recent removals
+        function renderRecentRemovals(txns) {
+            const tbody = document.getElementById('recentRemovalsTable');
+            const outs = txns.filter(t => t.type === 'out').slice(0, 15);
+
+            if (outs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500">No removals yet</td></tr>';
+                return;
+            }
+
+            const floorColors = { 0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100', 3: 'bg-orange-100', 4: 'bg-purple-100' };
+
+            tbody.innerHTML = outs.map(t => {
+                const item = allItems.find(i => i.id === t.item_id);
+                const cost = item ? t.qty * item.unit_cost : 0;
+                const sale = t.total || 0;
+                const pl = sale - cost;
+                const isSold = t.reason && t.reason.toLowerCase().startsWith('sold');
+
+                const date = new Date(t.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+
+                const reasonColor = {
+                    'sold': 'text-green-600',
+                    'personal': 'text-blue-600',
+                    'damaged': 'text-yellow-600',
+                    'gift': 'text-purple-600'
+                };
+                const baseReason = t.reason ? t.reason.split(':')[0].toLowerCase() : '';
+
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-2 font-semibold">${t.item_name || '-'}</td>
+                        <td class="p-2">
+                            <span class="${floorColors[item?.floor || 0]} px-2 py-0.5 rounded text-xs">F${item?.floor || 0}</span>
+                        </td>
+                        <td class="p-2 font-bold">${t.qty}</td>
+                        <td class="p-2 ${reasonColor[baseReason] || 'text-gray-600'}">${t.reason || '-'}</td>
+                        <td class="p-2 ${isSold ? (pl >= 0 ? 'text-green-600' : 'text-red-600') : 'text-red-600'}">
+                            ${isSold ? (pl >= 0 ? '+' : '') + 'Rs. ' + pl.toFixed(0) : '-Rs. ' + cost.toFixed(0)}
+                        </td>
+                        <td class="p-2 text-xs text-gray-600">${formattedDate}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update today's summary
+        function updateTodaySummary(txns) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const todayOuts = txns.filter(t => {
+                const txnDate = new Date(t.created_at);
+                txnDate.setHours(0, 0, 0, 0);
+                return t.type === 'out' && txnDate.getTime() === today.getTime();
+            });
+
+            let removed = 0, sold = 0, revenue = 0, totalCost = 0;
+
+            todayOuts.forEach(t => {
+                removed += t.qty;
+                const item = allItems.find(i => i.id === t.item_id);
+                const cost = item ? t.qty * item.unit_cost : 0;
+                totalCost += cost;
+
+                if (t.reason && t.reason.toLowerCase().startsWith('sold')) {
+                    sold += t.qty;
+                    revenue += t.total || 0;
+                }
+            });
+
+            const pl = revenue - totalCost;
+
+            document.getElementById('todayRemoved').textContent = removed;
+            document.getElementById('todaySold').textContent = sold;
+            document.getElementById('todayRevenue').textContent = 'Rs. ' + revenue.toFixed(0);
+
+            const plEl = document.getElementById('todayPL');
+            plEl.textContent = (pl >= 0 ? '+Rs. ' : '-Rs. ') + Math.abs(pl).toFixed(0);
+            plEl.className = 'text-xl font-bold ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+
+        // Start auto-refresh
+        function startAutoRefresh() {
+            refreshInterval = setInterval(loadData, 5000);
+        }
+
+        // Stop auto-refresh
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+        });
+
+        // Logout
+        function logout() {
+            api('/logout', 'POST').finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Initialize
+        loadData();
+        startAutoRefresh();
+    </script>
+</body>
+</html>

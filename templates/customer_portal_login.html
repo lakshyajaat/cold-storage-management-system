@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n-page-title="page_title_customer_login">Customer Portal - Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
     <style>
         .lang-selector {
             border: 2px solid rgba(255,255,255,0.3);
@@ -119,7 +120,7 @@
                 <label class="block text-gray-700 font-semibold mb-2" data-i18n="truck_number">Truck Number</label>
                 <input
                     type="text"
-                    id="truckNumber"
+                    id="thockNumber"
                     class="neu-input"
                     placeholder="e.g., 609/200 or SEED-001"
                     required
@@ -177,7 +178,7 @@
             event.preventDefault();
 
             const phone = document.getElementById('phone').value;
-            const truckNumber = document.getElementById('truckNumber').value;
+            const thockNumber = document.getElementById('thockNumber').value;
             const rememberMe = document.getElementById('rememberMe').checked;
             const loginBtn = document.getElementById('loginBtn');
             const errorMessage = document.getElementById('errorMessage');
@@ -200,7 +201,7 @@
                     credentials: 'include',
                     body: JSON.stringify({
                         phone: phone,
-                        truck_number: truckNumber,
+                        thock_number: thockNumber,
                         remember_me: rememberMe
                     })
                 });

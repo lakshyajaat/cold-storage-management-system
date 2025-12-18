@@ -17,27 +17,27 @@ func NewRoomEntryRepository(db *pgxpool.Pool) *RoomEntryRepository {
 
 func (r *RoomEntryRepository) Create(ctx context.Context, re *models.RoomEntry) error {
 	return r.DB.QueryRow(ctx,
-		`INSERT INTO room_entries(entry_id, truck_number, room_no, floor, gate_no, remark, quantity, created_by_user_id)
+		`INSERT INTO room_entries(entry_id, thock_number, room_no, floor, gate_no, remark, quantity, created_by_user_id)
          VALUES($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id, created_at, updated_at`,
-		re.EntryID, re.TruckNumber, re.RoomNo, re.Floor, re.GateNo, re.Remark, re.Quantity, re.CreatedByUserID,
+		re.EntryID, re.ThockNumber, re.RoomNo, re.Floor, re.GateNo, re.Remark, re.Quantity, re.CreatedByUserID,
 	).Scan(&re.ID, &re.CreatedAt, &re.UpdatedAt)
 }
 
 func (r *RoomEntryRepository) Get(ctx context.Context, id int) (*models.RoomEntry, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, entry_id, truck_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
+		`SELECT id, entry_id, thock_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
          FROM room_entries WHERE id=$1`, id)
 
 	var re models.RoomEntry
-	err := row.Scan(&re.ID, &re.EntryID, &re.TruckNumber, &re.RoomNo, &re.Floor,
+	err := row.Scan(&re.ID, &re.EntryID, &re.ThockNumber, &re.RoomNo, &re.Floor,
 		&re.GateNo, &re.Remark, &re.Quantity, &re.CreatedByUserID, &re.CreatedAt, &re.UpdatedAt)
 	return &re, err
 }
 
 func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, entry_id, truck_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
+		`SELECT id, entry_id, thock_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
          FROM room_entries ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, er
 	var roomEntries []*models.RoomEntry
 	for rows.Next() {
 		var re models.RoomEntry
-		err := rows.Scan(&re.ID, &re.EntryID, &re.TruckNumber, &re.RoomNo, &re.Floor,
+		err := rows.Scan(&re.ID, &re.EntryID, &re.ThockNumber, &re.RoomNo, &re.Floor,
 			&re.GateNo, &re.Remark, &re.Quantity, &re.CreatedByUserID, &re.CreatedAt, &re.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -59,11 +59,11 @@ func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, er
 
 func (r *RoomEntryRepository) GetByEntryID(ctx context.Context, entryID int) (*models.RoomEntry, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, entry_id, truck_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
+		`SELECT id, entry_id, thock_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
          FROM room_entries WHERE entry_id=$1`, entryID)
 
 	var re models.RoomEntry
-	err := row.Scan(&re.ID, &re.EntryID, &re.TruckNumber, &re.RoomNo, &re.Floor,
+	err := row.Scan(&re.ID, &re.EntryID, &re.ThockNumber, &re.RoomNo, &re.Floor,
 		&re.GateNo, &re.Remark, &re.Quantity, &re.CreatedByUserID, &re.CreatedAt, &re.UpdatedAt)
 	return &re, err
 }
@@ -79,14 +79,14 @@ func (r *RoomEntryRepository) Update(ctx context.Context, id int, re *models.Roo
 }
 
 // ReduceQuantity reduces the quantity in a room entry (for gate pass pickups)
-func (r *RoomEntryRepository) ReduceQuantity(ctx context.Context, truckNumber, roomNo, floor string, quantity int) error {
+func (r *RoomEntryRepository) ReduceQuantity(ctx context.Context, thockNumber, roomNo, floor string, quantity int) error {
 	query := `
 		UPDATE room_entries
 		SET quantity = quantity - $1, updated_at = NOW()
-		WHERE truck_number = $2 AND room_no = $3 AND floor = $4 AND quantity >= $1
+		WHERE thock_number = $2 AND room_no = $3 AND floor = $4 AND quantity >= $1
 	`
 
-	result, err := r.DB.Exec(ctx, query, quantity, truckNumber, roomNo, floor)
+	result, err := r.DB.Exec(ctx, query, quantity, thockNumber, roomNo, floor)
 	if err != nil {
 		return err
 	}
@@ -99,20 +99,20 @@ func (r *RoomEntryRepository) ReduceQuantity(ctx context.Context, truckNumber, r
 	return nil
 }
 
-// GetTotalQuantityByTruckNumber returns the current total inventory for a truck
-func (r *RoomEntryRepository) GetTotalQuantityByTruckNumber(ctx context.Context, truckNumber string) (int, error) {
+// GetTotalQuantityByThockNumber returns the current total inventory for a truck
+func (r *RoomEntryRepository) GetTotalQuantityByThockNumber(ctx context.Context, thockNumber string) (int, error) {
 	var totalQuantity int
-	query := `SELECT COALESCE(SUM(quantity), 0) FROM room_entries WHERE truck_number = $1`
+	query := `SELECT COALESCE(SUM(quantity), 0) FROM room_entries WHERE thock_number = $1`
 
-	err := r.DB.QueryRow(ctx, query, truckNumber).Scan(&totalQuantity)
+	err := r.DB.QueryRow(ctx, query, thockNumber).Scan(&totalQuantity)
 	return totalQuantity, err
 }
 
-// ListByTruckNumber returns all room entries for a specific truck
-func (r *RoomEntryRepository) ListByTruckNumber(ctx context.Context, truckNumber string) ([]*models.RoomEntry, error) {
+// ListByThockNumber returns all room entries for a specific truck
+func (r *RoomEntryRepository) ListByThockNumber(ctx context.Context, thockNumber string) ([]*models.RoomEntry, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, entry_id, truck_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
-         FROM room_entries WHERE truck_number=$1 ORDER BY created_at DESC`, truckNumber)
+		`SELECT id, entry_id, thock_number, room_no, floor, gate_no, remark, quantity, created_by_user_id, created_at, updated_at
+         FROM room_entries WHERE thock_number=$1 ORDER BY created_at DESC`, thockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (r *RoomEntryRepository) ListByTruckNumber(ctx context.Context, truckNumber
 	var roomEntries []*models.RoomEntry
 	for rows.Next() {
 		var re models.RoomEntry
-		err := rows.Scan(&re.ID, &re.EntryID, &re.TruckNumber, &re.RoomNo, &re.Floor,
+		err := rows.Scan(&re.ID, &re.EntryID, &re.ThockNumber, &re.RoomNo, &re.Floor,
 			&re.GateNo, &re.Remark, &re.Quantity, &re.CreatedByUserID, &re.CreatedAt, &re.UpdatedAt)
 		if err != nil {
 			return nil, err

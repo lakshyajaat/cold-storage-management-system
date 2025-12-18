@@ -23,12 +23,12 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 	var nextNumber int
 	var sequenceName string
 
-	if e.TruckCategory == "seed" {
+	if e.ThockCategory == "seed" {
 		sequenceName = "seed_entry_sequence"
-	} else if e.TruckCategory == "sell" {
+	} else if e.ThockCategory == "sell" {
 		sequenceName = "sell_entry_sequence"
 	} else {
-		return fmt.Errorf("invalid truck category: %s", e.TruckCategory)
+		return fmt.Errorf("invalid thock category: %s", e.ThockCategory)
 	}
 
 	// Get next number from sequence (atomic operation)
@@ -37,40 +37,40 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 		return fmt.Errorf("failed to get next sequence number: %w", err)
 	}
 
-	// Generate truck number: NO/QUANTITY format
+	// Generate thock number: NO/QUANTITY format
 	// SEED: 0001/quantity format
 	// SELL: 1501+/quantity format
-	var truckNumber string
-	if e.TruckCategory == "seed" {
-		truckNumber = fmt.Sprintf("%04d/%d", nextNumber, e.ExpectedQuantity)
-	} else if e.TruckCategory == "sell" {
-		truckNumber = fmt.Sprintf("%d/%d", nextNumber, e.ExpectedQuantity)
+	var thockNumber string
+	if e.ThockCategory == "seed" {
+		thockNumber = fmt.Sprintf("%04d/%d", nextNumber, e.ExpectedQuantity)
+	} else if e.ThockCategory == "sell" {
+		thockNumber = fmt.Sprintf("%d/%d", nextNumber, e.ExpectedQuantity)
 	}
-	e.TruckNumber = truckNumber
+	e.ThockNumber = thockNumber
 
 	return r.DB.QueryRow(ctx,
-		`INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, truck_category, truck_number, created_by_user_id)
+		`INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id)
          VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, created_at, updated_at`,
-		e.CustomerID, e.Phone, e.Name, e.Village, e.SO, e.ExpectedQuantity, e.TruckCategory, e.TruckNumber, e.CreatedByUserID,
+		e.CustomerID, e.Phone, e.Name, e.Village, e.SO, e.ExpectedQuantity, e.ThockCategory, e.ThockNumber, e.CreatedByUserID,
 	).Scan(&e.ID, &e.CreatedAt, &e.UpdatedAt)
 }
 
 func (r *EntryRepository) Get(ctx context.Context, id int) (*models.Entry, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, customer_id, phone, name, village, so, expected_quantity, truck_category, truck_number, created_by_user_id, created_at, updated_at
+		`SELECT id, customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id, created_at, updated_at
          FROM entries WHERE id=$1`, id)
 
 	var entry models.Entry
 	err := row.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-		&entry.ExpectedQuantity, &entry.TruckCategory, &entry.TruckNumber, &entry.CreatedByUserID,
+		&entry.ExpectedQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
 		&entry.CreatedAt, &entry.UpdatedAt)
 	return &entry, err
 }
 
 func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, customer_id, phone, name, village, so, expected_quantity, truck_category, truck_number, created_by_user_id, created_at, updated_at
+		`SELECT id, customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id, created_at, updated_at
          FROM entries ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.TruckCategory, &entry.TruckNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -93,7 +93,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 
 func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([]*models.Entry, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, customer_id, phone, name, village, so, expected_quantity, truck_category, truck_number, created_by_user_id, created_at, updated_at
+		`SELECT id, customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id, created_at, updated_at
          FROM entries WHERE customer_id=$1 ORDER BY created_at DESC`, customerID)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.TruckCategory, &entry.TruckNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -116,7 +116,7 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 
 func (r *EntryRepository) GetCountByCategory(ctx context.Context, category string) (int, error) {
 	// Return the current sequence value (last used number) instead of COUNT
-	// This matches the actual truck number generation which uses sequences
+	// This matches the actual thock number generation which uses sequences
 	var sequenceName string
 	if category == "seed" {
 		sequenceName = "seed_entry_sequence"
@@ -136,7 +136,7 @@ func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, 
 	// Get entries that don't have a room entry yet
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
-		        e.truck_category, e.truck_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e
          LEFT JOIN room_entries re ON e.id = re.entry_id
          WHERE re.id IS NULL
@@ -150,7 +150,7 @@ func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, 
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.TruckCategory, &entry.TruckNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -160,15 +160,15 @@ func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, 
 	return entries, nil
 }
 
-// GetByTruckNumber retrieves an entry by truck number
-func (r *EntryRepository) GetByTruckNumber(ctx context.Context, truckNumber string) (*models.Entry, error) {
+// GetByThockNumber retrieves an entry by thock number
+func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber string) (*models.Entry, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, customer_id, phone, name, village, so, expected_quantity, truck_category, truck_number, created_by_user_id, created_at, updated_at
-         FROM entries WHERE truck_number=$1`, truckNumber)
+		`SELECT id, customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id, created_at, updated_at
+         FROM entries WHERE thock_number=$1`, thockNumber)
 
 	var entry models.Entry
 	err := row.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-		&entry.ExpectedQuantity, &entry.TruckCategory, &entry.TruckNumber, &entry.CreatedByUserID,
+		&entry.ExpectedQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
 		&entry.CreatedAt, &entry.UpdatedAt)
 	return &entry, err
 }

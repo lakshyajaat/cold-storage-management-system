@@ -255,7 +255,7 @@
                         <thead>
                             <tr>
                                 <th>क्र.<br>Sr. No.</th>
-                                <th>ट्रक नं.<br>Truck No.</th>
+                                <th>थोक नं.<br>Thok No.</th>
                                 <th>कुल भरती बोरे<br>Total Bags</th>
                                 <th>बोरी बिक्री मात्रा<br>Sold Qty</th>
                                 <th>शेष मात्रा<br>Remaining</th>
@@ -336,7 +336,7 @@
                         <thead>
                             <tr>
                                 <th>क्र.<br>Sr. No.</th>
-                                <th>ट्रक नं.<br>Truck No.</th>
+                                <th>थोक नं.<br>Thok No.</th>
                                 <th>कुल भरती बोरे<br>Total Bags</th>
                                 <th>बोरी बिक्री मात्रा<br>Sold Qty</th>
                                 <th>शेष मात्रा<br>Remaining</th>
@@ -476,7 +476,7 @@
                     totalRent += amount;
                     return {
                         entry_id: e.id,
-                        truck_number: e.truck_number,
+                        thock_number: e.thock_number,
                         quantity: quantity,
                         rate: rentPerItem,
                         amount: amount
@@ -551,12 +551,12 @@
                 const quantity = e.expected_quantity || 0;
                 const rent = quantity * rentPerItem;
                 totalRent += rent;
-                const truckColor = getTruckColor(e.truck_number);
+                const thockColor = getThockColor(e.thock_number);
 
                 return `
                     <tr>
                         <td>${index + 1}</td>
-                        <td style="color: ${truckColor === 'text-green-600' ? 'green' : 'orange'}; font-weight: bold;">${e.truck_number}</td>
+                        <td style="color: ${thockColor === 'text-green-600' ? 'green' : 'orange'}; font-weight: bold;">${e.thock_number}</td>
                         <td>${quantity}</td>
                         <td>0</td>
                         <td>${quantity}</td>
@@ -596,8 +596,8 @@
             }
         }
 
-        function getTruckColor(truckNumber) {
-            const numMatch = truckNumber.match(/^(\d+)/);
+        function getThockColor(thockNumber) {
+            const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';

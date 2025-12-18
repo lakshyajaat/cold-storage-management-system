@@ -32,9 +32,9 @@ func NewCustomerPortalService(
 	}
 }
 
-// TruckInfo represents dashboard data for a single truck
-type TruckInfo struct {
-	TruckNumber       string  `json:"truck_number"`
+// ThockInfo represents dashboard data for a single truck
+type ThockInfo struct {
+	ThockNumber       string  `json:"thock_number"`
 	EntryID           int     `json:"entry_id"`
 	ExpectedQuantity  int     `json:"expected_quantity"`
 	CurrentInventory  int     `json:"current_inventory"`
@@ -48,7 +48,7 @@ type TruckInfo struct {
 // DashboardData represents the complete customer dashboard
 type DashboardData struct {
 	Customer    *models.Customer         `json:"customer"`
-	Trucks      []TruckInfo              `json:"trucks"`
+	Trucks      []ThockInfo              `json:"trucks"`
 	GatePasses  []map[string]interface{} `json:"gate_passes"`
 	TotalRent   float64                  `json:"total_rent"`
 	TotalPaid   float64                  `json:"total_paid"`
@@ -69,13 +69,13 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		return nil, fmt.Errorf("failed to get entries: %w", err)
 	}
 
-	var trucks []TruckInfo
+	var trucks []ThockInfo
 	var totalRent, totalPaid, totalBalance float64
 
 	// For each entry, calculate truck info
 	for _, entry := range entries {
 		// Get current inventory from room entries
-		currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, entry.TruckNumber)
+		currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, entry.ThockNumber)
 		if err != nil {
 			// If no room entries, inventory is 0
 			currentInventory = 0
@@ -138,8 +138,8 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 			canTakeOut = 0
 		}
 
-		trucks = append(trucks, TruckInfo{
-			TruckNumber:      entry.TruckNumber,
+		trucks = append(trucks, ThockInfo{
+			ThockNumber:      entry.ThockNumber,
 			EntryID:          entry.ID,
 			ExpectedQuantity: entry.ExpectedQuantity,
 			CurrentInventory: currentInventory,
@@ -175,7 +175,7 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 // CreateGatePassRequest creates a gate pass request from customer portal
 func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, customerID int, request *models.CreateCustomerGatePassRequest) (*models.GatePass, error) {
 	// Verify truck belongs to customer
-	entry, err := s.EntryRepo.GetByTruckNumber(ctx, request.TruckNumber)
+	entry, err := s.EntryRepo.GetByThockNumber(ctx, request.ThockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("truck not found")
 	}
@@ -185,7 +185,7 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 	}
 
 	// Check current inventory
-	currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByTruckNumber(ctx, request.TruckNumber)
+	currentInventory, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, request.ThockNumber)
 	if err != nil {
 		currentInventory = 0
 	}
@@ -241,7 +241,7 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 	gatePass, err := s.GatePassRepo.CreateCustomerGatePass(
 		ctx,
 		customerID,
-		request.TruckNumber,
+		request.ThockNumber,
 		request.RequestedQuantity,
 		request.Remarks,
 		entry.ID,
@@ -263,7 +263,7 @@ func (s *CustomerPortalService) GetTrucksByCustomerID(ctx context.Context, custo
 
 	trucks := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		trucks = append(trucks, entry.TruckNumber)
+		trucks = append(trucks, entry.ThockNumber)
 	}
 
 	return trucks, nil

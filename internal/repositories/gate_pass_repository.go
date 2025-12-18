@@ -18,7 +18,7 @@ func NewGatePassRepository(db *pgxpool.Pool) *GatePassRepository {
 func (r *GatePassRepository) CreateGatePass(ctx context.Context, gatePass *models.GatePass) error {
 	query := `
 		INSERT INTO gate_passes (
-			customer_id, truck_number, entry_id, requested_quantity,
+			customer_id, thock_number, entry_id, requested_quantity,
 			payment_verified, payment_amount, issued_by_user_id, remarks,
 			expires_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP + INTERVAL '30 hours')
@@ -26,7 +26,7 @@ func (r *GatePassRepository) CreateGatePass(ctx context.Context, gatePass *model
 	`
 
 	return r.DB.QueryRow(ctx, query,
-		gatePass.CustomerID, gatePass.TruckNumber, gatePass.EntryID,
+		gatePass.CustomerID, gatePass.ThockNumber, gatePass.EntryID,
 		gatePass.RequestedQuantity, gatePass.PaymentVerified,
 		gatePass.PaymentAmount, gatePass.IssuedByUserID, gatePass.Remarks,
 	).Scan(&gatePass.ID, &gatePass.IssuedAt, &gatePass.ExpiresAt, &gatePass.CreatedAt, &gatePass.UpdatedAt)
@@ -35,7 +35,7 @@ func (r *GatePassRepository) CreateGatePass(ctx context.Context, gatePass *model
 // GetGatePass retrieves a gate pass by ID
 func (r *GatePassRepository) GetGatePass(ctx context.Context, id int) (*models.GatePass, error) {
 	query := `
-		SELECT id, customer_id, truck_number, entry_id, requested_quantity,
+		SELECT id, customer_id, thock_number, entry_id, requested_quantity,
 		       approved_quantity, gate_no, status, payment_verified, payment_amount,
 		       issued_by_user_id, approved_by_user_id, issued_at, expires_at, completed_at,
 		       remarks, created_at, updated_at, total_picked_up, approval_expires_at, final_approved_quantity
@@ -45,7 +45,7 @@ func (r *GatePassRepository) GetGatePass(ctx context.Context, id int) (*models.G
 
 	gatePass := &models.GatePass{}
 	err := r.DB.QueryRow(ctx, query, id).Scan(
-		&gatePass.ID, &gatePass.CustomerID, &gatePass.TruckNumber, &gatePass.EntryID,
+		&gatePass.ID, &gatePass.CustomerID, &gatePass.ThockNumber, &gatePass.EntryID,
 		&gatePass.RequestedQuantity, &gatePass.ApprovedQuantity, &gatePass.GateNo,
 		&gatePass.Status, &gatePass.PaymentVerified, &gatePass.PaymentAmount,
 		&gatePass.IssuedByUserID, &gatePass.ApprovedByUserID, &gatePass.IssuedAt,
@@ -64,7 +64,7 @@ func (r *GatePassRepository) GetGatePass(ctx context.Context, id int) (*models.G
 func (r *GatePassRepository) ListAllGatePasses(ctx context.Context) ([]map[string]interface{}, error) {
 	query := `
 		SELECT
-			gp.id, gp.truck_number, gp.requested_quantity, gp.approved_quantity,
+			gp.id, gp.thock_number, gp.requested_quantity, gp.approved_quantity,
 			gp.gate_no, gp.status, gp.payment_verified, gp.payment_amount,
 			gp.issued_at, gp.expires_at, gp.completed_at, gp.remarks,
 			gp.total_picked_up, gp.approval_expires_at, gp.final_approved_quantity,
@@ -95,7 +95,7 @@ func (r *GatePassRepository) ListAllGatePasses(ctx context.Context) ([]map[strin
 
 		var (
 			id, customerID, totalPickedUp int
-			truckNumber, status, customerName, customerPhone, customerVillage, requestSource string
+			thockNumber, status, customerName, customerPhone, customerVillage, requestSource string
 			requestedQty int
 			approvedQty, gateNo, remarks, approvedByName, issuedByName *string
 			entryID, approvedByID, entryQty, finalApprovedQty, createdByCustomerID, issuedByID *int
@@ -107,7 +107,7 @@ func (r *GatePassRepository) ListAllGatePasses(ctx context.Context) ([]map[strin
 		)
 
 		err := rows.Scan(
-			&id, &truckNumber, &requestedQty, &approvedQty, &gateNo, &status,
+			&id, &thockNumber, &requestedQty, &approvedQty, &gateNo, &status,
 			&paymentVerified, &paymentAmount, &issuedAt, &expiresAt, &completedAt, &remarks,
 			&totalPickedUp, &approvalExpiresAt, &finalApprovedQty,
 			&requestSource, &createdByCustomerID,
@@ -121,7 +121,7 @@ func (r *GatePassRepository) ListAllGatePasses(ctx context.Context) ([]map[strin
 		}
 
 		gatePass["id"] = id
-		gatePass["truck_number"] = truckNumber
+		gatePass["thock_number"] = thockNumber
 		gatePass["requested_quantity"] = requestedQty
 		gatePass["status"] = status
 		gatePass["payment_verified"] = paymentVerified
@@ -188,7 +188,7 @@ func (r *GatePassRepository) ListAllGatePasses(ctx context.Context) ([]map[strin
 func (r *GatePassRepository) ListPendingGatePasses(ctx context.Context) ([]map[string]interface{}, error) {
 	query := `
 		SELECT
-			gp.id, gp.truck_number, gp.requested_quantity, gp.gate_no,
+			gp.id, gp.thock_number, gp.requested_quantity, gp.gate_no,
 			gp.payment_verified, gp.payment_amount, gp.issued_at, gp.expires_at, gp.remarks,
 			(gp.expires_at IS NOT NULL AND CURRENT_TIMESTAMP > gp.expires_at) as is_expired,
 			COALESCE(gp.request_source, 'employee') as request_source,
@@ -201,7 +201,7 @@ func (r *GatePassRepository) ListPendingGatePasses(ctx context.Context) ([]map[s
 		JOIN customers c ON gp.customer_id = c.id
 		LEFT JOIN entries e ON gp.entry_id = e.id
 		LEFT JOIN users iu ON gp.issued_by_user_id = iu.id
-		LEFT JOIN room_entries re ON gp.truck_number = re.truck_number
+		LEFT JOIN room_entries re ON gp.thock_number = re.thock_number
 		WHERE gp.status = 'pending'
 		ORDER BY gp.issued_at ASC
 	`
@@ -218,7 +218,7 @@ func (r *GatePassRepository) ListPendingGatePasses(ctx context.Context) ([]map[s
 
 		var (
 			id, customerID int
-			truckNumber, customerName, customerPhone, requestSource string
+			thockNumber, customerName, customerPhone, requestSource string
 			requestedQty int
 			gateNo, remarks, roomNo, floor, gatarNo, issuedByName *string
 			entryID, entryQty, createdByCustomerID *int
@@ -228,7 +228,7 @@ func (r *GatePassRepository) ListPendingGatePasses(ctx context.Context) ([]map[s
 		)
 
 		err := rows.Scan(
-			&id, &truckNumber, &requestedQty, &gateNo,
+			&id, &thockNumber, &requestedQty, &gateNo,
 			&paymentVerified, &paymentAmount, &issuedAt, &expiresAt, &remarks, &isExpired,
 			&requestSource, &createdByCustomerID,
 			&customerID, &customerName, &customerPhone,
@@ -240,7 +240,7 @@ func (r *GatePassRepository) ListPendingGatePasses(ctx context.Context) ([]map[s
 		}
 
 		gatePass["id"] = id
-		gatePass["truck_number"] = truckNumber
+		gatePass["thock_number"] = thockNumber
 		gatePass["requested_quantity"] = requestedQty
 		gatePass["payment_verified"] = paymentVerified
 		gatePass["issued_at"] = issuedAt
@@ -361,7 +361,7 @@ func (r *GatePassRepository) ExpireGatePasses(ctx context.Context) error {
 func (r *GatePassRepository) GetExpiredGatePasses(ctx context.Context) ([]map[string]interface{}, error) {
 	query := `
 		SELECT
-			gp.id, gp.truck_number, gp.requested_quantity, gp.total_picked_up,
+			gp.id, gp.thock_number, gp.requested_quantity, gp.total_picked_up,
 			gp.final_approved_quantity, gp.approval_expires_at, gp.updated_at,
 			c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
 			(gp.requested_quantity - gp.total_picked_up) as remaining_quantity
@@ -385,12 +385,12 @@ func (r *GatePassRepository) GetExpiredGatePasses(ctx context.Context) ([]map[st
 		var (
 			id, customerID, requestedQty, totalPickedUp, remainingQty int
 			finalApprovedQty                                          *int
-			truckNumber, customerName, customerPhone                  string
+			thockNumber, customerName, customerPhone                  string
 			approvalExpiresAt, updatedAt                              interface{}
 		)
 
 		err := rows.Scan(
-			&id, &truckNumber, &requestedQty, &totalPickedUp,
+			&id, &thockNumber, &requestedQty, &totalPickedUp,
 			&finalApprovedQty, &approvalExpiresAt, &updatedAt,
 			&customerID, &customerName, &customerPhone,
 			&remainingQty,
@@ -400,7 +400,7 @@ func (r *GatePassRepository) GetExpiredGatePasses(ctx context.Context) ([]map[st
 		}
 
 		expiredPass["id"] = id
-		expiredPass["truck_number"] = truckNumber
+		expiredPass["thock_number"] = thockNumber
 		expiredPass["requested_quantity"] = requestedQty
 		expiredPass["total_picked_up"] = totalPickedUp
 		expiredPass["remaining_quantity"] = remainingQty
@@ -433,10 +433,10 @@ func (r *GatePassRepository) CompleteGatePass(ctx context.Context, id int) error
 }
 
 // CreateCustomerGatePass creates a gate pass from customer portal (status = pending, no expiration)
-func (r *GatePassRepository) CreateCustomerGatePass(ctx context.Context, customerID int, truckNumber string, requestedQuantity int, remarks string, entryID int) (*models.GatePass, error) {
+func (r *GatePassRepository) CreateCustomerGatePass(ctx context.Context, customerID int, thockNumber string, requestedQuantity int, remarks string, entryID int) (*models.GatePass, error) {
 	query := `
 		INSERT INTO gate_passes (
-			customer_id, truck_number, entry_id, requested_quantity,
+			customer_id, thock_number, entry_id, requested_quantity,
 			payment_verified, status, created_by_customer_id, request_source, remarks
 		) VALUES ($1, $2, $3, $4, false, 'pending', $5, 'customer_portal', $6)
 		RETURNING id, issued_at, created_at, updated_at
@@ -444,7 +444,7 @@ func (r *GatePassRepository) CreateCustomerGatePass(ctx context.Context, custome
 
 	gatePass := &models.GatePass{
 		CustomerID:          customerID,
-		TruckNumber:         truckNumber,
+		ThockNumber:         thockNumber,
 		RequestedQuantity:   requestedQuantity,
 		Status:              "pending",
 		PaymentVerified:     false,
@@ -456,7 +456,7 @@ func (r *GatePassRepository) CreateCustomerGatePass(ctx context.Context, custome
 		gatePass.Remarks = &remarks
 	}
 
-	err := r.DB.QueryRow(ctx, query, customerID, truckNumber, entryID, requestedQuantity, customerID, remarks).Scan(
+	err := r.DB.QueryRow(ctx, query, customerID, thockNumber, entryID, requestedQuantity, customerID, remarks).Scan(
 		&gatePass.ID, &gatePass.IssuedAt, &gatePass.CreatedAt, &gatePass.UpdatedAt,
 	)
 
@@ -471,7 +471,7 @@ func (r *GatePassRepository) CreateCustomerGatePass(ctx context.Context, custome
 func (r *GatePassRepository) ListByCustomerID(ctx context.Context, customerID int) ([]map[string]interface{}, error) {
 	query := `
 		SELECT
-			gp.id, gp.truck_number, gp.requested_quantity, gp.approved_quantity,
+			gp.id, gp.thock_number, gp.requested_quantity, gp.approved_quantity,
 			gp.gate_no, gp.status, gp.payment_verified, gp.payment_amount,
 			gp.issued_at, gp.expires_at, gp.completed_at, gp.remarks,
 			gp.total_picked_up, gp.approval_expires_at, gp.final_approved_quantity,
@@ -497,7 +497,7 @@ func (r *GatePassRepository) ListByCustomerID(ctx context.Context, customerID in
 
 		var (
 			id, requestedQty, totalPickedUp int
-			truckNumber, status, requestSource string
+			thockNumber, status, requestSource string
 			approvedQty, gateNo, remarks, approvedByName *string
 			entryID, entryQty, finalApprovedQty *int
 			paymentVerified bool
@@ -507,7 +507,7 @@ func (r *GatePassRepository) ListByCustomerID(ctx context.Context, customerID in
 		)
 
 		err := rows.Scan(
-			&id, &truckNumber, &requestedQty, &approvedQty, &gateNo, &status,
+			&id, &thockNumber, &requestedQty, &approvedQty, &gateNo, &status,
 			&paymentVerified, &paymentAmount, &issuedAt, &expiresAt, &completedAt, &remarks,
 			&totalPickedUp, &approvalExpiresAt, &finalApprovedQty, &requestSource,
 			&entryID, &entryQty, &approvedByName,
@@ -517,7 +517,7 @@ func (r *GatePassRepository) ListByCustomerID(ctx context.Context, customerID in
 		}
 
 		gatePass["id"] = id
-		gatePass["truck_number"] = truckNumber
+		gatePass["thock_number"] = thockNumber
 		gatePass["requested_quantity"] = requestedQty
 		gatePass["status"] = status
 		gatePass["payment_verified"] = paymentVerified

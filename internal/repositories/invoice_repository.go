@@ -63,9 +63,9 @@ func (r *InvoiceRepository) Create(ctx context.Context, invoice *models.Invoice,
 	// Insert invoice items
 	for _, item := range items {
 		_, err = tx.Exec(ctx,
-			`INSERT INTO invoice_items(invoice_id, entry_id, truck_number, quantity, rate, amount)
+			`INSERT INTO invoice_items(invoice_id, entry_id, thock_number, quantity, rate, amount)
 			 VALUES($1, $2, $3, $4, $5, $6)`,
-			invoice.ID, item.EntryID, item.TruckNumber, item.Quantity, item.Rate, item.Amount,
+			invoice.ID, item.EntryID, item.ThockNumber, item.Quantity, item.Rate, item.Amount,
 		)
 		if err != nil {
 			return err
@@ -98,7 +98,7 @@ func (r *InvoiceRepository) Get(ctx context.Context, id int) (*models.InvoiceWit
 
 	// Get invoice items
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, invoice_id, entry_id, truck_number, quantity, rate, amount, created_at
+		`SELECT id, invoice_id, entry_id, thock_number, quantity, rate, amount, created_at
 		 FROM invoice_items WHERE invoice_id = $1`, id,
 	)
 	if err != nil {
@@ -109,7 +109,7 @@ func (r *InvoiceRepository) Get(ctx context.Context, id int) (*models.InvoiceWit
 	var items []models.InvoiceItem
 	for rows.Next() {
 		var item models.InvoiceItem
-		err := rows.Scan(&item.ID, &item.InvoiceID, &item.EntryID, &item.TruckNumber,
+		err := rows.Scan(&item.ID, &item.InvoiceID, &item.EntryID, &item.ThockNumber,
 			&item.Quantity, &item.Rate, &item.Amount, &item.CreatedAt)
 		if err != nil {
 			return nil, err
@@ -142,7 +142,7 @@ func (r *InvoiceRepository) GetByInvoiceNumber(ctx context.Context, invoiceNumbe
 
 	// Get invoice items
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, invoice_id, entry_id, truck_number, quantity, rate, amount, created_at
+		`SELECT id, invoice_id, entry_id, thock_number, quantity, rate, amount, created_at
 		 FROM invoice_items WHERE invoice_id = $1`, invoice.ID,
 	)
 	if err != nil {
@@ -153,7 +153,7 @@ func (r *InvoiceRepository) GetByInvoiceNumber(ctx context.Context, invoiceNumbe
 	var items []models.InvoiceItem
 	for rows.Next() {
 		var item models.InvoiceItem
-		err := rows.Scan(&item.ID, &item.InvoiceID, &item.EntryID, &item.TruckNumber,
+		err := rows.Scan(&item.ID, &item.InvoiceID, &item.EntryID, &item.ThockNumber,
 			&item.Quantity, &item.Rate, &item.Amount, &item.CreatedAt)
 		if err != nil {
 			return nil, err

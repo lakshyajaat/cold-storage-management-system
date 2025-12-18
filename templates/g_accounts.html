@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Accounts</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-input {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+        .neu-button {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .neu-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .neu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+        .item-card {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            margin-bottom: 1rem;
+            background: white;
+        }
+        .item-card.profit {
+            border: 3px solid #22c55e;
+            box-shadow: 4px 4px 0 #22c55e;
+        }
+        .item-card.loss {
+            border: 3px solid #ef4444;
+            box-shadow: 4px 4px 0 #ef4444;
+        }
+        .history-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .history-list.expanded {
+            max-height: 1000px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 1s linear infinite;
+        }
+        .hidden { display: none; }
+        .progress-bar {
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 neu-border bg-white p-4">
+            <div class="flex items-center gap-4">
+                <a href="/g/" class="neu-button bg-gray-200 py-2 px-4">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-wallet2 text-4xl text-green-600"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">Account Management</h1>
+                            <p class="text-gray-600">Financial tracking and P/L analysis</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="logout()" class="neu-button bg-red-500 text-white">
+                <i class="bi bi-box-arrow-right"></i> Exit
+            </button>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">Total Items</p>
+                        <p class="text-3xl font-bold mt-2" id="totalItems">0</p>
+                    </div>
+                    <i class="bi bi-box-seam text-5xl opacity-50"></i>
+                </div>
+            </div>
+            <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">Total Invested</p>
+                        <p class="text-3xl font-bold mt-2" id="totalInvested">Rs. 0</p>
+                    </div>
+                    <i class="bi bi-wallet text-5xl opacity-50"></i>
+                </div>
+            </div>
+            <div class="neu-border bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">Current Value</p>
+                        <p class="text-3xl font-bold mt-2" id="currentValue">Rs. 0</p>
+                    </div>
+                    <i class="bi bi-cash-stack text-5xl opacity-50"></i>
+                </div>
+            </div>
+            <div class="neu-border bg-gradient-to-br from-yellow-400 to-yellow-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">Profit / Loss</p>
+                        <p class="text-3xl font-bold mt-2" id="profitLoss">Rs. 0</p>
+                    </div>
+                    <i class="bi bi-graph-up text-5xl opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="neu-border bg-white p-4 mb-6">
+            <div class="flex gap-4 flex-wrap">
+                <div class="flex-1 min-w-[250px]">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        class="w-full neu-input"
+                        placeholder="Search by item name..."
+                        oninput="filterItems()"
+                    >
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="filterByFloor(null)" id="filter-all" class="filter-btn neu-button bg-gray-200 py-2 px-4">
+                        All Floors
+                    </button>
+                    <button onclick="filterByFloor(0)" id="filter-0" class="filter-btn neu-button bg-blue-100 py-2 px-4">
+                        F0
+                    </button>
+                    <button onclick="filterByFloor(1)" id="filter-1" class="filter-btn neu-button bg-green-100 py-2 px-4">
+                        F1
+                    </button>
+                    <button onclick="filterByFloor(2)" id="filter-2" class="filter-btn neu-button bg-yellow-100 py-2 px-4">
+                        F2
+                    </button>
+                    <button onclick="filterByFloor(3)" id="filter-3" class="filter-btn neu-button bg-orange-100 py-2 px-4">
+                        F3
+                    </button>
+                    <button onclick="filterByFloor(4)" id="filter-4" class="filter-btn neu-button bg-purple-100 py-2 px-4">
+                        F4
+                    </button>
+                </div>
+                <button onclick="loadData()" class="neu-button bg-blue-500 text-white">
+                    <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Item Cards (2 columns) -->
+            <div class="lg:col-span-2">
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-grid text-blue-600"></i>
+                        Item Breakdown
+                        <span class="text-sm font-normal text-gray-500">(<span id="itemCount">0</span> items)</span>
+                    </h2>
+                    <div id="itemsContainer">
+                        <div class="text-center py-12">
+                            <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
+                            <p class="text-gray-600 mt-4">Loading items...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="lg:col-span-1">
+                <!-- Floor Breakdown -->
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-building text-blue-600"></i>
+                        Floor Summary
+                    </h2>
+                    <div id="floorBreakdown" class="space-y-4">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Transaction Summary -->
+                <div class="neu-border bg-white p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-bar-chart text-purple-600"></i>
+                        Transaction Summary
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-green-50 p-4 rounded border-2 border-green-200">
+                            <div class="text-gray-600 text-sm">Stock In</div>
+                            <div class="text-2xl font-bold text-green-600" id="inCount">0</div>
+                            <div class="text-sm text-green-600" id="inValue">Rs. 0</div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded border-2 border-red-200">
+                            <div class="text-gray-600 text-sm">Stock Out</div>
+                            <div class="text-2xl font-bold text-red-600" id="outCount">0</div>
+                            <div class="text-sm text-red-600" id="outValue">Rs. 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Summary -->
+                <div class="neu-border bg-white p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="bi bi-calendar3 text-orange-600"></i>
+                        Monthly Summary
+                    </h2>
+                    <div class="overflow-auto" style="max-height: 300px;">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b-2 border-black">
+                                    <th class="p-2 text-left font-bold">Month</th>
+                                    <th class="p-2 text-left font-bold">In</th>
+                                    <th class="p-2 text-left font-bold">Out</th>
+                                    <th class="p-2 text-left font-bold">P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="neu-border bg-white p-6 mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="bi bi-clock-history text-green-600"></i>
+                    Recent Transactions
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="filterTxns('all')" class="filter-txn-btn neu-button bg-gray-200 text-sm py-2 px-3" id="txnFilterAll">All</button>
+                    <button onclick="filterTxns('in')" class="filter-txn-btn neu-button bg-green-200 text-sm py-2 px-3" id="txnFilterIn">In</button>
+                    <button onclick="filterTxns('out')" class="filter-txn-btn neu-button bg-red-200 text-sm py-2 px-3" id="txnFilterOut">Out</button>
+                </div>
+            </div>
+            <div class="overflow-auto" style="max-height: 400px;">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left font-bold">Date</th>
+                            <th class="p-3 text-left font-bold">Item</th>
+                            <th class="p-3 text-left font-bold">Type</th>
+                            <th class="p-3 text-left font-bold">Qty</th>
+                            <th class="p-3 text-left font-bold">Unit</th>
+                            <th class="p-3 text-left font-bold">Total</th>
+                            <th class="p-3 text-left font-bold">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txnTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        let allItems = [];
+        let allTxns = [];
+        let currentFloorFilter = null;
+        let currentTxnFilter = 'all';
+
+        async function api(path) {
+            const res = await fetch('/g/api' + path, {
+                headers: { 'X-Token': token, 'X-DH': dh }
+            });
+            if (res.status === 401) { logout(); return null; }
+            return res.ok ? res.json() : null;
+        }
+
+        async function loadData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('spin-animation');
+
+            try {
+                const [items, summary, txns] = await Promise.all([
+                    api('/items'),
+                    api('/summary'),
+                    api('/txns?limit=1000')
+                ]);
+
+                if (items) {
+                    allItems = items || [];
+                }
+
+                if (summary) {
+                    updateSummary(summary);
+                    updateFloorBreakdown(summary);
+                }
+
+                if (txns) {
+                    allTxns = txns || [];
+                    updateTxnSummary();
+                    renderTxns();
+                    renderMonthly();
+                }
+
+                renderItems();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-animation'), 500);
+                }
+            }
+        }
+
+        function updateSummary(summary) {
+            document.getElementById('totalItems').textContent = summary.total_items || 0;
+            document.getElementById('totalInvested').textContent = 'Rs. ' + (summary.total_invested || 0).toFixed(0);
+            document.getElementById('currentValue').textContent = 'Rs. ' + (summary.current_value || 0).toFixed(0);
+
+            const pl = summary.profit_loss || 0;
+            const plEl = document.getElementById('profitLoss');
+            plEl.textContent = (pl >= 0 ? '+Rs. ' : '-Rs. ') + Math.abs(pl).toFixed(0);
+        }
+
+        function updateFloorBreakdown(summary) {
+            const floorDiv = document.getElementById('floorBreakdown');
+            const floors = [0, 1, 2, 3, 4];
+            const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-orange-500', 'bg-purple-500'];
+            const bgColors = ['bg-blue-50', 'bg-green-50', 'bg-yellow-50', 'bg-orange-50', 'bg-purple-50'];
+            const maxValue = Math.max(...(summary.floor_breakdown || []).map(f => f.value || 0), 1);
+
+            floorDiv.innerHTML = floors.map((f, idx) => {
+                const fs = (summary.floor_breakdown || []).find(x => x.floor === f) || { item_count: 0, total_qty: 0, value: 0 };
+                const pct = (fs.value / maxValue) * 100;
+
+                return `
+                    <div class="p-3 ${bgColors[idx]} rounded border-2 border-gray-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold">Floor ${f}</span>
+                            <span class="text-sm text-gray-600">${fs.item_count} items</span>
+                        </div>
+                        <div class="progress-bar mb-2">
+                            <div class="progress-fill ${colors[idx]}" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">${fs.total_qty} qty</span>
+                            <span class="font-bold">Rs. ${fs.value.toFixed(0)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateTxnSummary() {
+            const inTxns = allTxns.filter(t => t.type === 'in');
+            const outTxns = allTxns.filter(t => t.type === 'out');
+
+            document.getElementById('inCount').textContent = inTxns.length;
+            document.getElementById('outCount').textContent = outTxns.length;
+            document.getElementById('inValue').textContent = 'Rs. ' + inTxns.reduce((s, t) => s + (t.total || 0), 0).toFixed(0);
+            document.getElementById('outValue').textContent = 'Rs. ' + outTxns.reduce((s, t) => s + (t.total || 0), 0).toFixed(0);
+        }
+
+        function renderItems() {
+            const container = document.getElementById('itemsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            // Filter items
+            let filtered = allItems;
+            if (currentFloorFilter !== null) {
+                filtered = filtered.filter(i => i.floor === currentFloorFilter);
+            }
+            if (searchTerm) {
+                filtered = filtered.filter(i => i.name.toLowerCase().includes(searchTerm));
+            }
+
+            document.getElementById('itemCount').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="bi bi-inbox text-6xl text-gray-400"></i>
+                        <p class="text-gray-600 mt-4">No items found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate P/L for each item
+            const itemsWithPL = filtered.map((item, index) => {
+                const itemTxns = allTxns.filter(t => t.item_id === item.id);
+                const inTxns = itemTxns.filter(t => t.type === 'in');
+                const outTxns = itemTxns.filter(t => t.type === 'out');
+
+                const totalInQty = inTxns.reduce((s, t) => s + t.qty, 0);
+                const totalInValue = inTxns.reduce((s, t) => s + (t.total || 0), 0);
+                const totalOutQty = outTxns.reduce((s, t) => s + t.qty, 0);
+                const totalOutValue = outTxns.reduce((s, t) => s + (t.total || 0), 0);
+
+                const avgCost = totalInQty > 0 ? totalInValue / totalInQty : 0;
+                const costOfSold = totalOutQty * avgCost;
+                const pl = totalOutValue - costOfSold;
+                const currentQty = item.current_qty;
+                const currentValue = currentQty * item.unit_cost;
+
+                return {
+                    ...item,
+                    index,
+                    totalInQty,
+                    totalInValue,
+                    totalOutQty,
+                    totalOutValue,
+                    pl,
+                    currentValue,
+                    itemTxns
+                };
+            });
+
+            // Sort by current value (highest first)
+            itemsWithPL.sort((a, b) => b.currentValue - a.currentValue);
+
+            const floorColors = {
+                0: 'bg-blue-100', 1: 'bg-green-100', 2: 'bg-yellow-100',
+                3: 'bg-orange-100', 4: 'bg-purple-100'
+            };
+
+            container.innerHTML = itemsWithPL.map((item, idx) => {
+                const plClass = item.pl > 0 ? 'profit' : (item.pl < 0 ? 'loss' : '');
+                const plColor = item.pl >= 0 ? 'text-green-600' : 'text-red-600';
+
+                return `
+                    <div class="item-card ${plClass}">
+                        <div class="p-4">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3 class="text-xl font-bold">${item.name}</h3>
+                                        <span class="${floorColors[item.floor]} px-2 py-1 rounded text-sm font-bold">F${item.floor}</span>
+                                        ${item.pl > 0 ? `
+                                            <span class="badge bg-green-500 text-white">
+                                                <i class="bi bi-graph-up"></i> +Rs. ${item.pl.toFixed(0)}
+                                            </span>
+                                        ` : item.pl < 0 ? `
+                                            <span class="badge bg-red-500 text-white">
+                                                <i class="bi bi-graph-down"></i> -Rs. ${Math.abs(item.pl).toFixed(0)}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+
+                                    <div class="grid grid-cols-4 gap-4 mb-3">
+                                        <div class="p-2 bg-blue-50 border border-blue-200 rounded">
+                                            <p class="text-xs text-gray-600">Current Qty</p>
+                                            <p class="text-lg font-bold text-blue-600">${item.current_qty}</p>
+                                        </div>
+                                        <div class="p-2 bg-green-50 border border-green-200 rounded">
+                                            <p class="text-xs text-gray-600">Unit Cost</p>
+                                            <p class="text-lg font-bold text-green-600">Rs. ${item.unit_cost.toFixed(0)}</p>
+                                        </div>
+                                        <div class="p-2 bg-purple-50 border border-purple-200 rounded">
+                                            <p class="text-xs text-gray-600">Current Value</p>
+                                            <p class="text-lg font-bold text-purple-600">Rs. ${item.currentValue.toFixed(0)}</p>
+                                        </div>
+                                        <div class="p-2 bg-gray-50 border border-gray-200 rounded">
+                                            <p class="text-xs text-gray-600">P/L</p>
+                                            <p class="text-lg font-bold ${plColor}">${item.pl >= 0 ? '+' : ''}Rs. ${item.pl.toFixed(0)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-6 text-sm text-gray-600">
+                                        <span><i class="bi bi-arrow-down-circle text-green-600"></i> In: ${item.totalInQty} (Rs. ${item.totalInValue.toFixed(0)})</span>
+                                        <span><i class="bi bi-arrow-up-circle text-red-600"></i> Out: ${item.totalOutQty} (Rs. ${item.totalOutValue.toFixed(0)})</span>
+                                    </div>
+                                </div>
+
+                                <button onclick="toggleHistory(${idx})" class="neu-button bg-blue-500 text-white text-sm py-2">
+                                    <i class="bi bi-list"></i> <span id="toggleText${idx}">History</span>
+                                </button>
+                            </div>
+
+                            <!-- Transaction History -->
+                            <div id="historyList${idx}" class="history-list mt-4">
+                                <h4 class="font-bold mb-3 flex items-center gap-2">
+                                    <i class="bi bi-clock-history"></i>
+                                    Transaction History for ${item.name}
+                                </h4>
+                                <div class="overflow-auto" style="max-height: 250px;">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-gray-100 border-2 border-black sticky top-0">
+                                            <tr>
+                                                <th class="text-left p-2 font-bold">Date</th>
+                                                <th class="text-left p-2 font-bold">Type</th>
+                                                <th class="text-left p-2 font-bold">Qty</th>
+                                                <th class="text-left p-2 font-bold">Unit</th>
+                                                <th class="text-left p-2 font-bold">Total</th>
+                                                <th class="text-left p-2 font-bold">Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${item.itemTxns.length > 0 ? item.itemTxns.map(t => `
+                                                <tr class="border-b ${t.type === 'out' ? 'bg-red-50' : 'bg-green-50'}">
+                                                    <td class="p-2">${new Date(t.created_at).toLocaleDateString('en-IN')}</td>
+                                                    <td class="p-2">
+                                                        <span class="px-2 py-0.5 rounded text-white text-xs ${t.type === 'in' ? 'bg-green-500' : 'bg-red-500'}">
+                                                            ${t.type.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td class="p-2 font-bold">${t.qty}</td>
+                                                    <td class="p-2">Rs. ${(t.unit_price || 0).toFixed(0)}</td>
+                                                    <td class="p-2 font-bold ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}">Rs. ${(t.total || 0).toFixed(0)}</td>
+                                                    <td class="p-2 text-gray-600">${t.reason || '-'}</td>
+                                                </tr>
+                                            `).join('') : '<tr><td colspan="6" class="p-4 text-center text-gray-500">No transactions</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleHistory(index) {
+            const list = document.getElementById(`historyList${index}`);
+            const text = document.getElementById(`toggleText${index}`);
+
+            if (list.classList.contains('expanded')) {
+                list.classList.remove('expanded');
+                text.textContent = 'History';
+            } else {
+                list.classList.add('expanded');
+                text.textContent = 'Hide';
+            }
+        }
+
+        function filterItems() {
+            renderItems();
+        }
+
+        function filterByFloor(floor) {
+            currentFloorFilter = floor;
+
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-black');
+            });
+            const activeBtn = floor === null ? document.getElementById('filter-all') : document.getElementById(`filter-${floor}`);
+            if (activeBtn) activeBtn.classList.add('ring-2', 'ring-black');
+
+            renderItems();
+        }
+
+        function filterTxns(type) {
+            currentTxnFilter = type;
+
+            document.querySelectorAll('.filter-txn-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-black');
+            });
+            const activeBtn = document.getElementById(`txnFilter${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            if (activeBtn) activeBtn.classList.add('ring-2', 'ring-black');
+
+            renderTxns();
+        }
+
+        function renderTxns() {
+            const filtered = currentTxnFilter === 'all' ? allTxns : allTxns.filter(t => t.type === currentTxnFilter);
+            const recent = filtered.slice(0, 50);
+
+            document.getElementById('txnTable').innerHTML = recent.length > 0 ?
+                recent.map(t => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">${new Date(t.created_at).toLocaleDateString('en-IN')}</td>
+                        <td class="p-3 font-semibold">${t.item_name || '-'}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded text-white text-sm ${t.type === 'in' ? 'bg-green-500' : 'bg-red-500'}">
+                                ${t.type.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="p-3 font-bold">${t.qty}</td>
+                        <td class="p-3">Rs. ${(t.unit_price || 0).toFixed(0)}</td>
+                        <td class="p-3 font-bold ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}">Rs. ${(t.total || 0).toFixed(0)}</td>
+                        <td class="p-3 text-gray-600">${t.reason || '-'}</td>
+                    </tr>
+                `).join('') :
+                '<tr><td colspan="7" class="p-4 text-center text-gray-500">No transactions</td></tr>';
+        }
+
+        function renderMonthly() {
+            // Group by month
+            const monthly = {};
+            allTxns.forEach(t => {
+                const date = new Date(t.created_at);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                if (!monthly[key]) {
+                    monthly[key] = { inQty: 0, inValue: 0, outQty: 0, outValue: 0, outCost: 0 };
+                }
+                if (t.type === 'in') {
+                    monthly[key].inQty += t.qty;
+                    monthly[key].inValue += t.total || 0;
+                } else {
+                    monthly[key].outQty += t.qty;
+                    monthly[key].outValue += t.total || 0;
+                }
+            });
+
+            const sorted = Object.entries(monthly).sort((a, b) => b[0].localeCompare(a[0]));
+
+            document.getElementById('monthlyTable').innerHTML = sorted.length > 0 ?
+                sorted.slice(0, 12).map(([month, data]) => {
+                    const pl = data.outValue;
+                    const plColor = pl > 0 ? 'text-green-600' : 'text-gray-400';
+
+                    return `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="p-2 font-bold">${month}</td>
+                            <td class="p-2 text-green-600">${data.inQty}</td>
+                            <td class="p-2 text-red-600">${data.outQty}</td>
+                            <td class="p-2 font-bold ${plColor}">
+                                ${pl > 0 ? 'Rs. ' + pl.toFixed(0) : '-'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('') :
+                '<tr><td colspan="4" class="p-4 text-center text-gray-500">No data</td></tr>';
+        }
+
+        function logout() {
+            fetch('/g/api/logout', { method: 'POST', headers: { 'X-Token': token, 'X-DH': dh } }).finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Initialize
+        filterByFloor(null);
+        filterTxns('all');
+        loadData();
+    </script>
+</body>
+</html>

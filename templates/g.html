@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory</title>
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; }
+        .card { background: #16213e; border-radius: 8px; padding: 1rem; }
+        .btn { padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #0f3460; color: #fff; }
+        .btn-primary:hover { background: #1a4980; }
+        .btn-success { background: #1e5128; color: #fff; }
+        .btn-success:hover { background: #2d7a3a; }
+        .btn-danger { background: #6b1c1c; color: #fff; }
+        .btn-danger:hover { background: #8b2c2c; }
+        .input { background: #0f3460; border: 1px solid #1a4980; color: #fff; padding: 0.5rem; border-radius: 4px; }
+        .input:focus { outline: none; border-color: #4a90d9; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #1a4980; }
+        .table th { background: #0f3460; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #16213e; padding: 1.5rem; border-radius: 8px; max-width: 400px; width: 90%; }
+        .floor-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+        .f0 { background: #1e3a5f; }
+        .f1 { background: #2c5a3a; }
+        .f2 { background: #5a3a2c; }
+        .f3 { background: #5a2c5a; }
+        .f4 { background: #5a5a2c; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Inventory</h1>
+        <button onclick="logout()" class="btn btn-danger text-sm">Exit</button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="card">
+            <div class="text-sm text-gray-400">Items</div>
+            <div class="text-2xl font-bold" id="totalItems">0</div>
+        </div>
+        <div class="card">
+            <div class="text-sm text-gray-400">Quantity</div>
+            <div class="text-2xl font-bold" id="totalQty">0</div>
+        </div>
+        <div class="card">
+            <div class="text-sm text-gray-400">Value</div>
+            <div class="text-2xl font-bold" id="currentValue">₹0</div>
+        </div>
+        <div class="card">
+            <div class="text-sm text-gray-400">P/L</div>
+            <div class="text-2xl font-bold" id="profitLoss">₹0</div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 mb-4">
+        <button onclick="showAddModal()" class="btn btn-success">+ Add Item</button>
+        <button onclick="showInModal()" class="btn btn-primary">Stock In</button>
+        <button onclick="showOutModal()" class="btn btn-danger">Stock Out</button>
+        <button onclick="showHistory()" class="btn btn-primary">History</button>
+    </div>
+
+    <!-- Items Table -->
+    <div class="card overflow-x-auto">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>SKU</th>
+                    <th>Floor</th>
+                    <th>Qty</th>
+                    <th>Cost</th>
+                    <th>Value</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="itemsTable"></tbody>
+        </table>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Add Item</h2>
+            <div class="space-y-3">
+                <input type="text" id="addName" class="input w-full" placeholder="Name">
+                <input type="text" id="addSku" class="input w-full" placeholder="SKU (optional)">
+                <select id="addFloor" class="input w-full">
+                    <option value="0">Floor 0</option>
+                    <option value="1">Floor 1</option>
+                    <option value="2">Floor 2</option>
+                    <option value="3">Floor 3</option>
+                    <option value="4">Floor 4</option>
+                </select>
+                <input type="number" id="addQty" class="input w-full" placeholder="Initial Qty" value="0">
+                <input type="number" id="addCost" class="input w-full" placeholder="Unit Cost" step="0.01">
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="addItem()" class="btn btn-success flex-1">Add</button>
+                <button onclick="closeModal('addModal')" class="btn btn-danger flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock In Modal -->
+    <div id="inModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Stock In</h2>
+            <div class="space-y-3">
+                <select id="inItem" class="input w-full"></select>
+                <input type="number" id="inQty" class="input w-full" placeholder="Quantity">
+                <input type="number" id="inPrice" class="input w-full" placeholder="Unit Price" step="0.01">
+                <input type="text" id="inReason" class="input w-full" placeholder="Reason (optional)">
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="stockIn()" class="btn btn-success flex-1">Add Stock</button>
+                <button onclick="closeModal('inModal')" class="btn btn-danger flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Out Modal -->
+    <div id="outModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Stock Out</h2>
+            <div class="space-y-3">
+                <select id="outItem" class="input w-full"></select>
+                <input type="number" id="outQty" class="input w-full" placeholder="Quantity">
+                <input type="number" id="outPrice" class="input w-full" placeholder="Sale Price" step="0.01">
+                <select id="outReason" class="input w-full">
+                    <option value="sold">Sold</option>
+                    <option value="damaged">Damaged</option>
+                    <option value="personal">Personal Use</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="stockOut()" class="btn btn-danger flex-1">Remove Stock</button>
+                <button onclick="closeModal('outModal')" class="btn btn-primary flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 class="text-xl font-bold mb-4">Transaction History</h2>
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <table class="table text-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Item</th>
+                            <th>Type</th>
+                            <th>Qty</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+            </div>
+            <button onclick="closeModal('historyModal')" class="btn btn-primary w-full mt-4">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let token = sessionStorage.getItem('gt');
+        let dh = sessionStorage.getItem('gdh');
+        let items = [];
+
+        // Check auth on load
+        if (!token || !dh) {
+            window.location.href = '/events';
+        }
+
+        // API helper
+        async function api(path, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Token': token,
+                    'X-DH': dh
+                }
+            };
+            if (body) opts.body = JSON.stringify(body);
+
+            const res = await fetch('/g/api' + path, opts);
+            if (res.status === 401) {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+                return null;
+            }
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err);
+            }
+            if (res.headers.get('content-type')?.includes('json')) {
+                return res.json();
+            }
+            return null;
+        }
+
+        // Load data
+        async function loadData() {
+            try {
+                const [itemsData, summary] = await Promise.all([
+                    api('/items'),
+                    api('/summary')
+                ]);
+
+                items = itemsData || [];
+                renderItems();
+                renderSummary(summary);
+                updateItemSelects();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderItems() {
+            const tbody = document.getElementById('itemsTable');
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No items</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.sku || '-'}</td>
+                    <td><span class="floor-badge f${item.floor}">F${item.floor}</span></td>
+                    <td>${item.current_qty}</td>
+                    <td>₹${item.unit_cost.toFixed(2)}</td>
+                    <td>₹${(item.current_qty * item.unit_cost).toFixed(2)}</td>
+                    <td>
+                        <button onclick="deleteItem(${item.id})" class="text-red-400 hover:text-red-300">×</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderSummary(s) {
+            if (!s) return;
+            document.getElementById('totalItems').textContent = s.total_items;
+            document.getElementById('totalQty').textContent = s.total_qty;
+            document.getElementById('currentValue').textContent = '₹' + s.current_value.toFixed(2);
+            const pl = s.profit_loss;
+            const plEl = document.getElementById('profitLoss');
+            plEl.textContent = (pl >= 0 ? '+' : '') + '₹' + pl.toFixed(2);
+            plEl.className = 'text-2xl font-bold ' + (pl >= 0 ? 'text-green-400' : 'text-red-400');
+        }
+
+        function updateItemSelects() {
+            const opts = items.map(i => `<option value="${i.id}">${i.name} (${i.current_qty})</option>`).join('');
+            document.getElementById('inItem').innerHTML = opts;
+            document.getElementById('outItem').innerHTML = opts;
+        }
+
+        // Modal functions
+        function showAddModal() { document.getElementById('addModal').classList.add('active'); }
+        function showInModal() { document.getElementById('inModal').classList.add('active'); }
+        function showOutModal() { document.getElementById('outModal').classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        async function showHistory() {
+            try {
+                const txns = await api('/txns?limit=50');
+                const tbody = document.getElementById('historyTable');
+                if (!txns || txns.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500">No transactions</td></tr>';
+                } else {
+                    tbody.innerHTML = txns.map(t => `
+                        <tr>
+                            <td>${new Date(t.created_at).toLocaleDateString()}</td>
+                            <td>${t.item_name}</td>
+                            <td class="${t.type === 'in' ? 'text-green-400' : 'text-red-400'}">${t.type.toUpperCase()}</td>
+                            <td>${t.qty}</td>
+                            <td>₹${t.total.toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+                }
+                document.getElementById('historyModal').classList.add('active');
+            } catch (e) {
+                alert('Error loading history');
+            }
+        }
+
+        // CRUD functions
+        async function addItem() {
+            try {
+                await api('/items', 'POST', {
+                    name: document.getElementById('addName').value,
+                    sku: document.getElementById('addSku').value,
+                    floor: parseInt(document.getElementById('addFloor').value),
+                    qty: parseInt(document.getElementById('addQty').value) || 0,
+                    unit_cost: parseFloat(document.getElementById('addCost').value) || 0
+                });
+                closeModal('addModal');
+                document.getElementById('addName').value = '';
+                document.getElementById('addSku').value = '';
+                document.getElementById('addQty').value = '0';
+                document.getElementById('addCost').value = '';
+                loadData();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function stockIn() {
+            try {
+                await api('/in', 'POST', {
+                    item_id: parseInt(document.getElementById('inItem').value),
+                    qty: parseInt(document.getElementById('inQty').value),
+                    unit_price: parseFloat(document.getElementById('inPrice').value) || 0,
+                    reason: document.getElementById('inReason').value
+                });
+                closeModal('inModal');
+                document.getElementById('inQty').value = '';
+                document.getElementById('inPrice').value = '';
+                document.getElementById('inReason').value = '';
+                loadData();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function stockOut() {
+            try {
+                await api('/out', 'POST', {
+                    item_id: parseInt(document.getElementById('outItem').value),
+                    qty: parseInt(document.getElementById('outQty').value),
+                    sale_price: parseFloat(document.getElementById('outPrice').value) || 0,
+                    reason: document.getElementById('outReason').value
+                });
+                closeModal('outModal');
+                document.getElementById('outQty').value = '';
+                document.getElementById('outPrice').value = '';
+                loadData();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Delete this item?')) return;
+            try {
+                await api('/items?id=' + id, 'DELETE');
+                loadData();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function logout() {
+            api('/logout', 'POST').finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        // Auto logout on close/hide
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                logout();
+            }
+        });
+
+        // Load on start
+        loadData();
+    </script>
+</body>
+</html>

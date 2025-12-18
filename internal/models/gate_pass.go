@@ -5,7 +5,7 @@ import "time"
 type GatePass struct {
 	ID                    int        `json:"id" db:"id"`
 	CustomerID            int        `json:"customer_id" db:"customer_id"`
-	TruckNumber           string     `json:"truck_number" db:"truck_number"`
+	ThockNumber           string     `json:"thock_number" db:"thock_number"`
 	EntryID               *int       `json:"entry_id,omitempty" db:"entry_id"`
 	RequestedQuantity     int        `json:"requested_quantity" db:"requested_quantity"`
 	ApprovedQuantity      *int       `json:"approved_quantity,omitempty" db:"approved_quantity"`
@@ -30,7 +30,7 @@ type GatePass struct {
 
 type CreateGatePassRequest struct {
 	CustomerID        int     `json:"customer_id"`
-	TruckNumber       string  `json:"truck_number"`
+	ThockNumber       string  `json:"thock_number"`
 	EntryID           *int    `json:"entry_id"`
 	RequestedQuantity int     `json:"requested_quantity"`
 	PaymentVerified   bool    `json:"payment_verified"`
@@ -56,7 +56,7 @@ type RecordPickupRequest struct {
 
 // CreateCustomerGatePassRequest represents a customer's gate pass request
 type CreateCustomerGatePassRequest struct {
-	TruckNumber       string `json:"truck_number" binding:"required"`
+	ThockNumber       string `json:"thock_number" binding:"required"`
 	RequestedQuantity int    `json:"requested_quantity" binding:"required"`
 	Remarks           string `json:"remarks"`
 }

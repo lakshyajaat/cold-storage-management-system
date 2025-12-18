@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-border {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+        }
+        .neu-border:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .page-button {
+            padding: 1.5rem;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .page-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #000;
+        }
+        .stat-card {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-[#1a1a2e] min-h-screen p-6 text-white">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 neu-border bg-[#16213e] p-4">
+            <div>
+                <h1 class="text-3xl font-bold">Gallery System</h1>
+                <p class="text-gray-400">Private Inventory Management</p>
+            </div>
+            <button onclick="logout()" class="neu-border bg-red-600 px-4 py-2 text-white">
+                <i class="bi bi-box-arrow-right"></i> Exit
+            </button>
+        </header>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="stat-card bg-[#0f3460]">
+                <div class="text-gray-400 text-sm">Total Items</div>
+                <div class="text-3xl font-bold" id="totalItems">0</div>
+            </div>
+            <div class="stat-card bg-[#1e5128]">
+                <div class="text-gray-400 text-sm">Total Quantity</div>
+                <div class="text-3xl font-bold" id="totalQty">0</div>
+            </div>
+            <div class="stat-card bg-[#5c3d2e]">
+                <div class="text-gray-400 text-sm">Current Value</div>
+                <div class="text-3xl font-bold" id="currentValue">₹0</div>
+            </div>
+            <div class="stat-card bg-[#2d132c]">
+                <div class="text-gray-400 text-sm">Profit/Loss</div>
+                <div class="text-3xl font-bold" id="profitLoss">₹0</div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <a href="/g/entry" class="page-button bg-[#98EECC]">
+                <i class="bi bi-plus-circle text-2xl text-black"></i>
+                <span class="text-black">Add Entry</span>
+            </a>
+            <a href="/g/config" class="page-button bg-[#7DEDFF]">
+                <i class="bi bi-grid-3x3 text-2xl text-black"></i>
+                <span class="text-black">Location Config</span>
+            </a>
+            <a href="/g/pass" class="page-button bg-[#FFB4B4]">
+                <i class="bi bi-box-arrow-up text-2xl text-black"></i>
+                <span class="text-black">Stock Out</span>
+            </a>
+            <a href="/g/search" class="page-button bg-[#DFCCFB]">
+                <i class="bi bi-search text-2xl text-black"></i>
+                <span class="text-black">Item Search</span>
+            </a>
+            <a href="/g/accounts" class="page-button bg-[#FFE5CA]">
+                <i class="bi bi-wallet2 text-2xl text-black"></i>
+                <span class="text-black">Accounts</span>
+            </a>
+            <a href="/g/events" class="page-button bg-[#B4FF9F]">
+                <i class="bi bi-calendar-event text-2xl text-black"></i>
+                <span class="text-black">Activity Log</span>
+            </a>
+        </div>
+
+        <!-- Floor Summary -->
+        <div class="neu-border bg-[#16213e] p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Floor-wise Summary</h2>
+            <div class="grid grid-cols-5 gap-4" id="floorSummary">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="neu-border bg-[#16213e] p-6">
+            <h2 class="text-xl font-bold mb-4">Recent Activity</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-[#0f3460]">
+                        <tr>
+                            <th class="p-3 text-left">Date</th>
+                            <th class="p-3 text-left">Item</th>
+                            <th class="p-3 text-left">Type</th>
+                            <th class="p-3 text-left">Qty</th>
+                            <th class="p-3 text-left">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentActivity"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem('gt');
+        const dh = sessionStorage.getItem('gdh');
+        if (!token || !dh) window.location.href = '/events';
+
+        async function api(path) {
+            const res = await fetch('/g/api' + path, {
+                headers: { 'X-Token': token, 'X-DH': dh }
+            });
+            if (res.status === 401) { logout(); return null; }
+            return res.ok ? res.json() : null;
+        }
+
+        async function loadData() {
+            const [summary, txns] = await Promise.all([
+                api('/summary'),
+                api('/txns?limit=10')
+            ]);
+
+            if (summary) {
+                document.getElementById('totalItems').textContent = summary.total_items;
+                document.getElementById('totalQty').textContent = summary.total_qty;
+                document.getElementById('currentValue').textContent = '₹' + summary.current_value.toFixed(0);
+                const pl = summary.profit_loss;
+                const plEl = document.getElementById('profitLoss');
+                plEl.textContent = (pl >= 0 ? '+₹' : '-₹') + Math.abs(pl).toFixed(0);
+                plEl.className = 'text-3xl font-bold ' + (pl >= 0 ? 'text-green-400' : 'text-red-400');
+
+                // Floor summary
+                const floorDiv = document.getElementById('floorSummary');
+                const floors = [0, 1, 2, 3, 4];
+                floorDiv.innerHTML = floors.map(f => {
+                    const fs = summary.floor_breakdown?.find(x => x.floor === f) || { item_count: 0, total_qty: 0, value: 0 };
+                    return `<div class="stat-card bg-[#0f3460] text-center">
+                        <div class="text-2xl font-bold">F${f}</div>
+                        <div class="text-sm text-gray-400">${fs.item_count} items</div>
+                        <div class="text-lg">${fs.total_qty} qty</div>
+                        <div class="text-green-400">₹${fs.value.toFixed(0)}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            if (txns && txns.length > 0) {
+                document.getElementById('recentActivity').innerHTML = txns.map(t => `
+                    <tr class="border-b border-gray-700">
+                        <td class="p-3">${new Date(t.created_at).toLocaleDateString()}</td>
+                        <td class="p-3">${t.item_name || '-'}</td>
+                        <td class="p-3 ${t.type === 'in' ? 'text-green-400' : 'text-red-400'}">${t.type.toUpperCase()}</td>
+                        <td class="p-3">${t.qty}</td>
+                        <td class="p-3">₹${t.total.toFixed(0)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                document.getElementById('recentActivity').innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">No activity yet</td></tr>';
+            }
+        }
+
+        function logout() {
+            fetch('/g/api/logout', { method: 'POST', headers: { 'X-Token': token, 'X-DH': dh } }).finally(() => {
+                sessionStorage.removeItem('gt');
+                sessionStorage.removeItem('gdh');
+                window.location.href = '/events';
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
