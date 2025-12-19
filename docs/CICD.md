@@ -200,19 +200,82 @@ kubectl get pods -l app=cold-backend
 kubectl logs -l app=cold-backend --tail=50
 ```
 
-### Manual Rollback
+## Rollback
 
-If deployment fails, rollback to previous version:
+### Overview
+
+Rollbacks are fast (~10s workflow, ~80s total pod update) with **zero downtime** because:
+- Old images are cached on all K3s nodes
+- Rolling update ensures pods are always available
+- No rebuild or transfer needed
+
+### Method 1: CI/CD Rollback (Recommended)
+
+1. Go to **GitHub → Actions → Rollback**
+2. Click **Run workflow**
+3. Configure options:
+
+| Option | Description |
+|--------|-------------|
+| Version | Leave empty for previous version, or enter specific version (e.g., `v1.5.5`) |
+| Deployment | `both`, `employee`, or `customer` |
+
+4. Click **Run workflow**
+
+**Workflow file:** `.github/workflows/rollback.yml`
+
+### Method 2: kubectl Rollback
 
 ```bash
-# Rollback to previous revision
-kubectl rollout undo deployment/cold-backend-employee
-kubectl rollout undo deployment/cold-backend-customer
+# Rollback to previous revision (instant)
+kubectl rollout undo deployment/cold-backend-employee -n default
+kubectl rollout undo deployment/cold-backend-customer -n default
 
-# Or deploy specific version
-kubectl set image deployment/cold-backend-employee cold-backend=lakshyajaat/cold-backend:v1.5.39
-kubectl set image deployment/cold-backend-customer cold-backend=lakshyajaat/cold-backend:v1.5.39
+# Rollback to specific version
+kubectl set image deployment/cold-backend-employee cold-backend=lakshyajaat/cold-backend:v1.5.5 -n default
+kubectl set image deployment/cold-backend-customer cold-backend=lakshyajaat/cold-backend:v1.5.5 -n default
+
+# Rollback to specific revision number
+kubectl rollout undo deployment/cold-backend-employee --to-revision=164 -n default
 ```
+
+### View Rollout History
+
+```bash
+# See deployment history
+kubectl rollout history deployment/cold-backend-employee -n default
+
+# See specific revision details
+kubectl rollout history deployment/cold-backend-employee --revision=165 -n default
+```
+
+### Rollback Timing
+
+| Phase | Time |
+|-------|------|
+| CI/CD workflow | ~10s |
+| Pod startup | 10-15s per pod |
+| Readiness check | 10s |
+| Rolling update (2 pods) | 50-60s |
+| **Total** | **~80s** |
+
+**Downtime: 0 seconds** - Rolling update ensures at least 2 pods are always serving traffic.
+
+### Deployment Strategy
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%        # Can create 1 extra pod
+    maxUnavailable: 25%  # 0 pods can be unavailable (rounds down)
+```
+
+This ensures:
+1. New pod is created first
+2. Waits for readiness probe to pass
+3. Only then terminates old pod
+4. Repeat for remaining pods
 
 ## Local Development Deployment
 
