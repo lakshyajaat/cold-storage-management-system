@@ -916,10 +916,10 @@
             document.getElementById('entriesCount').textContent = entries.length;
             document.getElementById('archivedEntriesTable').innerHTML = entries.map(e => `
                 <tr class="border-b hover:bg-blue-100">
-                    <td class="p-2">${e.thock_number || '-'}</td>
-                    <td class="p-2">${e.customer_name || e.customer_id || '-'}</td>
-                    <td class="p-2">${e.thock_category || '-'}</td>
-                    <td class="p-2 text-right">${e.quantity || e.bags || 0}</td>
+                    <td class="p-2">${e.truck_number || e.thock_number || '-'}</td>
+                    <td class="p-2">${e.customer_name || 'Customer #' + e.customer_id || '-'}</td>
+                    <td class="p-2">${e.category || e.thock_category || '-'}</td>
+                    <td class="p-2 text-right">${e.quantity || 0}</td>
                     <td class="p-2">${e.vehicle_number || '-'}</td>
                     <td class="p-2">${formatDate(e.created_at)}</td>
                 </tr>
@@ -930,9 +930,9 @@
             document.getElementById('roomEntriesCount').textContent = roomEntries.length;
             document.getElementById('archivedRoomEntriesTable').innerHTML = roomEntries.map(re => `
                 <tr class="border-b hover:bg-green-100">
-                    <td class="p-2">${re.thock_number || '-'}</td>
-                    <td class="p-2">${re.room_name || re.room_id || '-'}</td>
-                    <td class="p-2 text-right">${re.quantity || re.bags || 0}</td>
+                    <td class="p-2">${re.truck_number || re.thock_number || 'Entry #' + re.entry_id || '-'}</td>
+                    <td class="p-2">Room ${re.room || re.room_id || '-'}</td>
+                    <td class="p-2 text-right">${re.quantity || 0}</td>
                     <td class="p-2">${formatDate(re.created_at)}</td>
                 </tr>
             `).join('') || '<tr><td colspan="4" class="p-4 text-center text-gray-500">No room entries</td></tr>';
@@ -942,9 +942,9 @@
             document.getElementById('gatePassesCount').textContent = gatePasses.length;
             document.getElementById('archivedGatePassesTable').innerHTML = gatePasses.map(gp => `
                 <tr class="border-b hover:bg-orange-100">
-                    <td class="p-2">${gp.thock_number || '-'}</td>
+                    <td class="p-2">${gp.truck_number || gp.thock_number || '-'}</td>
                     <td class="p-2">${gp.status || '-'}</td>
-                    <td class="p-2 text-right">${gp.quantity || gp.bags || 0}</td>
+                    <td class="p-2 text-right">${gp.quantity || 0}</td>
                     <td class="p-2 text-right">${gp.picked_up_quantity || 0}</td>
                     <td class="p-2">${formatDate(gp.created_at)}</td>
                 </tr>
