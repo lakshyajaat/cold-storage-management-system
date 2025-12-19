@@ -17,6 +17,14 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Normalize version
+        id: version
+        run: |
+          # Trim whitespace from version input
+          VERSION=$(echo "${{ inputs.version }}" | xargs)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -26,28 +34,28 @@ jobs:
           go-version: '1.23'
 
       - name: Build Go binary
-        working-directory: ${{ github.workspace }}
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server
           echo "Go binary built successfully"
 
       - name: Build Docker image
-        working-directory: ${{ github.workspace }}
         run: |
-          docker build -t ${{ env.IMAGE_NAME }}:${{ inputs.version }} .
-          echo "Docker image built: ${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          docker build -t ${{ env.IMAGE_NAME }}:${VERSION} .
+          echo "Docker image built: ${{ env.IMAGE_NAME }}:${VERSION}"
 
       - name: Save Docker image
         run: |
-          docker save ${{ env.IMAGE_NAME }}:${{ inputs.version }} -o /tmp/cold-backend-${{ inputs.version }}.tar
-          ls -lh /tmp/cold-backend-${{ inputs.version }}.tar
+          VERSION="${{ steps.version.outputs.version }}"
+          docker save ${{ env.IMAGE_NAME }}:${VERSION} -o /tmp/cold-backend-${VERSION}.tar
+          ls -lh /tmp/cold-backend-${VERSION}.tar
 
       - name: Deploy to K3s nodes
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           TAR_FILE="/tmp/cold-backend-${VERSION}.tar"
 
-          echo "=== Deploying $VERSION to K3s cluster ==="
+          echo "=== Deploying ${VERSION} to K3s cluster ==="
 
           for NODE in ${{ env.K3S_NODES }}; do
             echo "Deploying to node $NODE..."
@@ -60,22 +68,23 @@ jobs:
 
       - name: Update Kubernetes deployments
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-          echo "Updating deployments to $VERSION..."
-          kubectl set image deployment/cold-backend-employee cold-backend=${{ env.IMAGE_NAME }}:$VERSION -n default
-          kubectl set image deployment/cold-backend-customer cold-backend=${{ env.IMAGE_NAME }}:$VERSION -n default
+          echo "Updating deployments to ${VERSION}..."
+          kubectl set image deployment/cold-backend-employee cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
+          kubectl set image deployment/cold-backend-customer cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
 
           echo "Waiting for rollout..."
           kubectl rollout status deployment/cold-backend-employee -n default --timeout=120s
           kubectl rollout status deployment/cold-backend-customer -n default --timeout=120s
 
-          echo "=== Deployment complete: $VERSION ==="
+          echo "=== Deployment complete: ${VERSION} ==="
 
       - name: Cleanup
         if: always()
         run: |
-          rm -f /tmp/cold-backend-${{ inputs.version }}.tar || true
+          VERSION="${{ steps.version.outputs.version }}"
+          rm -f /tmp/cold-backend-${VERSION}.tar || true
 
       - name: Verify deployment
         run: |
