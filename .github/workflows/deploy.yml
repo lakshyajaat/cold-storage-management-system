@@ -26,11 +26,13 @@ jobs:
           go-version: '1.23'
 
       - name: Build Go binary
+        working-directory: ${{ github.workspace }}
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server
           echo "Go binary built successfully"
 
       - name: Build Docker image
+        working-directory: ${{ github.workspace }}
         run: |
           docker build -t ${{ env.IMAGE_NAME }}:${{ inputs.version }} .
           echo "Docker image built: ${{ env.IMAGE_NAME }}:${{ inputs.version }}"
