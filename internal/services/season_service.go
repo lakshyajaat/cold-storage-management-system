@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -13,22 +12,16 @@ import (
 	"cold-backend/internal/repositories"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // SeasonService handles new season business logic
 type SeasonService struct {
-	seasonRepo   *repositories.SeasonRequestRepository
-	userRepo     *repositories.UserRepository
-	pool         *pgxpool.Pool
-	tsdbPool     *pgxpool.Pool
-	jwtManager   *auth.JWTManager
-	archiveHost  string
-	archivePort  string
-	archiveUser  string
-	archivePass  string
-	archiveDB    string
+	seasonRepo *repositories.SeasonRequestRepository
+	userRepo   *repositories.UserRepository
+	pool       *pgxpool.Pool
+	tsdbPool   *pgxpool.Pool
+	jwtManager *auth.JWTManager
 }
 
 // NewSeasonService creates a new season service
@@ -40,16 +33,11 @@ func NewSeasonService(
 	jwtManager *auth.JWTManager,
 ) *SeasonService {
 	return &SeasonService{
-		seasonRepo:   seasonRepo,
-		userRepo:     userRepo,
-		pool:         pool,
-		tsdbPool:     tsdbPool,
-		jwtManager:   jwtManager,
-		archiveHost:  "cold-postgres-rw",
-		archivePort:  "5432",
-		archiveUser:  "postgres",
-		archivePass:  "SecurePostgresPassword123",
-		archiveDB:    "cold_storage",
+		seasonRepo: seasonRepo,
+		userRepo:   userRepo,
+		pool:       pool,
+		tsdbPool:   tsdbPool,
+		jwtManager: jwtManager,
 	}
 }
 
@@ -175,65 +163,46 @@ func (s *SeasonService) executeSeasonReset(requestID int, seasonName string) {
 	ctx := context.Background()
 	summary := &models.RecordsArchivedSummary{}
 	archiveTime := time.Now().Format("2006-01-02_15-04-05")
-	archiveLocation := fmt.Sprintf("192.168.15.195:/archive/%s_%s", seasonName, archiveTime)
+	archiveLocation := fmt.Sprintf("local:archived_tables/%s_%s", seasonName, archiveTime)
 
 	log.Printf("[Season] Starting season reset for request %d", requestID)
 
-	// Connect to archive database
-	archiveConnStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		s.archiveHost, s.archivePort, s.archiveUser, s.archivePass, s.archiveDB)
-
-	archiveDB, err := sql.Open("postgres", archiveConnStr)
-	if err != nil {
-		log.Printf("[Season] Failed to connect to archive database: %v", err)
-		s.seasonRepo.UpdateCompletion(ctx, requestID, "failed", "", nil, fmt.Sprintf("Failed to connect to archive database: %v", err))
-		return
-	}
-	defer archiveDB.Close()
-
-	// Test connection
-	if err := archiveDB.Ping(); err != nil {
-		log.Printf("[Season] Failed to ping archive database: %v", err)
-		s.seasonRepo.UpdateCompletion(ctx, requestID, "failed", "", nil, fmt.Sprintf("Failed to ping archive database: %v", err))
-		return
-	}
-
-	// Create archive tables if they don't exist
-	if err := s.createArchiveTables(archiveDB); err != nil {
+	// Create archive tables in same database if they don't exist
+	if err := s.createArchiveTables(ctx); err != nil {
 		log.Printf("[Season] Failed to create archive tables: %v", err)
 		s.seasonRepo.UpdateCompletion(ctx, requestID, "failed", "", nil, fmt.Sprintf("Failed to create archive tables: %v", err))
 		return
 	}
 
-	// Archive app data
+	// Archive app data to same database
 	log.Println("[Season] Archiving entries...")
-	summary.Entries, _ = s.archiveEntries(ctx, archiveDB, seasonName)
+	summary.Entries, _ = s.archiveEntries(ctx, seasonName)
 
 	log.Println("[Season] Archiving room_entries...")
-	summary.RoomEntries, _ = s.archiveRoomEntries(ctx, archiveDB, seasonName)
+	summary.RoomEntries, _ = s.archiveRoomEntries(ctx, seasonName)
 
 	log.Println("[Season] Archiving entry_events...")
-	summary.EntryEvents, _ = s.archiveEntryEvents(ctx, archiveDB, seasonName)
+	summary.EntryEvents, _ = s.archiveEntryEvents(ctx, seasonName)
 
 	log.Println("[Season] Archiving gate_passes...")
-	summary.GatePasses, _ = s.archiveGatePasses(ctx, archiveDB, seasonName)
+	summary.GatePasses, _ = s.archiveGatePasses(ctx, seasonName)
 
 	log.Println("[Season] Archiving gate_pass_pickups...")
-	summary.GatePassPickups, _ = s.archiveGatePassPickups(ctx, archiveDB, seasonName)
+	summary.GatePassPickups, _ = s.archiveGatePassPickups(ctx, seasonName)
 
 	log.Println("[Season] Archiving rent_payments...")
-	summary.RentPayments, _ = s.archiveRentPayments(ctx, archiveDB, seasonName)
+	summary.RentPayments, _ = s.archiveRentPayments(ctx, seasonName)
 
 	log.Println("[Season] Archiving invoices...")
-	summary.Invoices, _ = s.archiveInvoices(ctx, archiveDB, seasonName)
+	summary.Invoices, _ = s.archiveInvoices(ctx, seasonName)
 
 	// Archive timeseries data if available
 	if s.tsdbPool != nil {
 		log.Println("[Season] Archiving node_metrics...")
-		summary.NodeMetrics, _ = s.archiveNodeMetrics(ctx, archiveDB, seasonName)
+		summary.NodeMetrics, _ = s.archiveNodeMetrics(ctx, seasonName)
 
 		log.Println("[Season] Archiving api_request_logs...")
-		summary.APIRequestLogs, _ = s.archiveAPIRequestLogs(ctx, archiveDB, seasonName)
+		summary.APIRequestLogs, _ = s.archiveAPIRequestLogs(ctx, seasonName)
 	}
 
 	// Clear tables in correct order (respecting foreign keys)
@@ -298,8 +267,8 @@ func (s *SeasonService) executeSeasonReset(requestID int, seasonName string) {
 	s.seasonRepo.UpdateCompletion(ctx, requestID, "completed", archiveLocation, summary, "")
 }
 
-// createArchiveTables creates the archive tables on the backup server
-func (s *SeasonService) createArchiveTables(archiveDB *sql.DB) error {
+// createArchiveTables creates the archive tables in the same database
+func (s *SeasonService) createArchiveTables(ctx context.Context) error {
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS archived_seasons (
 			id SERIAL PRIMARY KEY,
@@ -365,7 +334,7 @@ func (s *SeasonService) createArchiveTables(archiveDB *sql.DB) error {
 	}
 
 	for _, ddl := range tables {
-		if _, err := archiveDB.Exec(ddl); err != nil {
+		if _, err := s.pool.Exec(ctx, ddl); err != nil {
 			return fmt.Errorf("failed to create table: %v", err)
 		}
 	}
@@ -374,7 +343,7 @@ func (s *SeasonService) createArchiveTables(archiveDB *sql.DB) error {
 }
 
 // Archive functions for each table
-func (s *SeasonService) archiveEntries(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveEntries(ctx context.Context, seasonName string) (int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, customer_id, thock_number, thock_category, expected_quantity, created_at,
 			   row_to_json(entries.*) as data
@@ -405,7 +374,7 @@ func (s *SeasonService) archiveEntries(ctx context.Context, archiveDB *sql.DB, s
 			custID = *customerID
 		}
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_entries (season_name, original_id, customer_id, truck_number, item_type, expected_quantity, created_at, data)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`, seasonName, id, custID, thockNumber, thockCategory, expectedQty, createdAt, data)
@@ -421,7 +390,7 @@ func (s *SeasonService) archiveEntries(ctx context.Context, archiveDB *sql.DB, s
 	return count, nil
 }
 
-func (s *SeasonService) archiveRoomEntries(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveRoomEntries(ctx context.Context, seasonName string) (int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, entry_id, room_no, quantity, created_at,
 			   row_to_json(room_entries.*) as data
@@ -456,7 +425,7 @@ func (s *SeasonService) archiveRoomEntries(ctx context.Context, archiveDB *sql.D
 		roomNum := 0
 		fmt.Sscanf(roomNo, "%d", &roomNum)
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_room_entries (season_name, original_id, entry_id, room_number, quantity, created_at, data)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 		`, seasonName, id, entID, roomNum, quantity, createdAt, data)
@@ -472,7 +441,7 @@ func (s *SeasonService) archiveRoomEntries(ctx context.Context, archiveDB *sql.D
 	return count, nil
 }
 
-func (s *SeasonService) archiveEntryEvents(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveEntryEvents(ctx context.Context, seasonName string) (int, error) {
 	result, err := s.pool.Exec(ctx, "SELECT COUNT(*) FROM entry_events")
 	if err != nil {
 		return 0, err
@@ -480,7 +449,7 @@ func (s *SeasonService) archiveEntryEvents(ctx context.Context, archiveDB *sql.D
 	return int(result.RowsAffected()), nil
 }
 
-func (s *SeasonService) archiveGatePasses(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveGatePasses(ctx context.Context, seasonName string) (int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, entry_id, customer_id, status, quantity, created_at,
 			   row_to_json(gate_passes.*) as data
@@ -502,7 +471,7 @@ func (s *SeasonService) archiveGatePasses(ctx context.Context, archiveDB *sql.DB
 			continue
 		}
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_gate_passes (season_name, original_id, entry_id, customer_id, status, quantity, created_at, data)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`, seasonName, id, entryID, customerID, status, quantity, createdAt, data)
@@ -515,7 +484,7 @@ func (s *SeasonService) archiveGatePasses(ctx context.Context, archiveDB *sql.DB
 	return count, nil
 }
 
-func (s *SeasonService) archiveGatePassPickups(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveGatePassPickups(ctx context.Context, seasonName string) (int, error) {
 	result, err := s.pool.Exec(ctx, "SELECT COUNT(*) FROM gate_pass_pickups")
 	if err != nil {
 		return 0, err
@@ -523,7 +492,7 @@ func (s *SeasonService) archiveGatePassPickups(ctx context.Context, archiveDB *s
 	return int(result.RowsAffected()), nil
 }
 
-func (s *SeasonService) archiveRentPayments(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveRentPayments(ctx context.Context, seasonName string) (int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, customer_id, amount, payment_date,
 			   row_to_json(rent_payments.*) as data
@@ -545,7 +514,7 @@ func (s *SeasonService) archiveRentPayments(ctx context.Context, archiveDB *sql.
 			continue
 		}
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_rent_payments (season_name, original_id, customer_id, amount, payment_date, data)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, seasonName, id, customerID, amount, paymentDate, data)
@@ -558,7 +527,7 @@ func (s *SeasonService) archiveRentPayments(ctx context.Context, archiveDB *sql.
 	return count, nil
 }
 
-func (s *SeasonService) archiveInvoices(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveInvoices(ctx context.Context, seasonName string) (int, error) {
 	result, err := s.pool.Exec(ctx, "SELECT COUNT(*) FROM invoices")
 	if err != nil {
 		return 0, err
@@ -566,7 +535,7 @@ func (s *SeasonService) archiveInvoices(ctx context.Context, archiveDB *sql.DB, 
 	return int(result.RowsAffected()), nil
 }
 
-func (s *SeasonService) archiveNodeMetrics(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveNodeMetrics(ctx context.Context, seasonName string) (int, error) {
 	if s.tsdbPool == nil {
 		return 0, nil
 	}
@@ -591,7 +560,7 @@ func (s *SeasonService) archiveNodeMetrics(ctx context.Context, archiveDB *sql.D
 			continue
 		}
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_node_metrics (season_name, timestamp, node_name, data)
 			VALUES ($1, $2, $3, $4)
 		`, seasonName, timestamp, nodeName, data)
@@ -604,7 +573,7 @@ func (s *SeasonService) archiveNodeMetrics(ctx context.Context, archiveDB *sql.D
 	return count, nil
 }
 
-func (s *SeasonService) archiveAPIRequestLogs(ctx context.Context, archiveDB *sql.DB, seasonName string) (int, error) {
+func (s *SeasonService) archiveAPIRequestLogs(ctx context.Context, seasonName string) (int, error) {
 	if s.tsdbPool == nil {
 		return 0, nil
 	}
@@ -629,7 +598,7 @@ func (s *SeasonService) archiveAPIRequestLogs(ctx context.Context, archiveDB *sq
 			continue
 		}
 
-		_, err := archiveDB.Exec(`
+		_, err := s.pool.Exec(ctx, `
 			INSERT INTO archived_api_logs (season_name, timestamp, method, path, data)
 			VALUES ($1, $2, $3, $4, $5)
 		`, seasonName, timestamp, method, path, data)
