@@ -189,20 +189,79 @@
         }
 
         async function loadBaseData() {
-            const [accountsRes, entriesRes, roomEntriesRes, usersRes] = await Promise.all([
-                fetch('/api/rent-payments/accounts', { headers: { 'Authorization': `Bearer ${token}` } }),
+            const [entriesRes, roomEntriesRes, paymentsRes, usersRes] = await Promise.all([
                 fetch('/api/entries', { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch('/api/room-entries', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/rent-payments', { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
-            allAccounts = await accountsRes.json();
             allEntries = await entriesRes.json();
             allRoomEntries = await roomEntriesRes.json();
+            allPayments = await paymentsRes.json();
             const users = await usersRes.json();
             users.forEach(u => userMap[u.id] = u.name);
 
+            // Build customer accounts from entries and payments
+            allAccounts = buildCustomerAccounts(allEntries, allRoomEntries, allPayments);
+
             return allAccounts;
+        }
+
+        function buildCustomerAccounts(entries, roomEntries, payments) {
+            const customerMap = {};
+
+            // Group entries by customer phone
+            entries.forEach(entry => {
+                if (!entry.phone) return;
+
+                if (!customerMap[entry.phone]) {
+                    customerMap[entry.phone] = {
+                        phone: entry.phone,
+                        name: entry.name || entry.phone,
+                        village: entry.village || '',
+                        thock_count: 0,
+                        total_quantity: 0,
+                        total_rent: 0,
+                        total_paid: 0,
+                        balance: 0,
+                        thocks: []
+                    };
+                }
+
+                const customer = customerMap[entry.phone];
+                customer.thock_count++;
+
+                // Get room entries for this thock
+                const thockRoomEntries = roomEntries.filter(re => re.thock_number === entry.thock_number);
+                const totalQty = thockRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
+
+                customer.total_quantity += totalQty;
+                customer.total_rent += totalQty * rentRate;
+
+                customer.thocks.push({
+                    thock_number: entry.thock_number,
+                    category: entry.thock_category,
+                    quantity: totalQty,
+                    rent: totalQty * rentRate,
+                    is_outgoing: false,
+                    date: entry.created_at
+                });
+            });
+
+            // Add payments to customers
+            payments.forEach(payment => {
+                if (customerMap[payment.customer_phone]) {
+                    customerMap[payment.customer_phone].total_paid += payment.amount_paid || 0;
+                }
+            });
+
+            // Calculate balance for each customer
+            Object.values(customerMap).forEach(customer => {
+                customer.balance = customer.total_rent - customer.total_paid;
+            });
+
+            return Object.values(customerMap).sort((a, b) => a.name.localeCompare(b.name));
         }
 
         async function loadCustomerList() {
@@ -294,12 +353,6 @@
                 if (allAccounts.length === 0) {
                     await loadBaseData();
                 }
-
-                // Load all payments
-                const paymentsRes = await fetch('/api/rent-payments', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                allPayments = paymentsRes.ok ? await paymentsRes.json() : [];
 
                 // Filter by status
                 const statusFilter = document.getElementById('statusFilter')?.value || 'all';
