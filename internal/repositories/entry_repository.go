@@ -17,33 +17,33 @@ func NewEntryRepository(db *pgxpool.Pool) *EntryRepository {
 }
 
 func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
-	// CRITICAL FIX: Use database sequences instead of COUNT to prevent race conditions
-	// This ensures thread-safe, unique sequential numbering even with concurrent requests
+	// Use COUNT-based logic for thock numbers
+	// This ensures counters auto-reset when entries are deleted (season reset)
 
 	var nextNumber int
-	var sequenceName string
+	var err error
 
 	if e.ThockCategory == "seed" {
-		sequenceName = "seed_entry_sequence"
+		// SEED: starts at 1, format 0001/quantity
+		err = r.DB.QueryRow(ctx, "SELECT COALESCE(COUNT(*), 0) + 1 FROM entries WHERE thock_category = 'seed'").Scan(&nextNumber)
 	} else if e.ThockCategory == "sell" {
-		sequenceName = "sell_entry_sequence"
+		// SELL: starts at 1501, format 1501/quantity
+		err = r.DB.QueryRow(ctx, "SELECT COALESCE(COUNT(*), 0) + 1501 FROM entries WHERE thock_category = 'sell'").Scan(&nextNumber)
 	} else {
 		return fmt.Errorf("invalid thock category: %s", e.ThockCategory)
 	}
 
-	// Get next number from sequence (atomic operation)
-	err := r.DB.QueryRow(ctx, fmt.Sprintf("SELECT nextval('%s')", sequenceName)).Scan(&nextNumber)
 	if err != nil {
-		return fmt.Errorf("failed to get next sequence number: %w", err)
+		return fmt.Errorf("failed to get next thock number: %w", err)
 	}
 
 	// Generate thock number: NO/QUANTITY format
-	// SEED: 0001/quantity format
+	// SEED: 0001/quantity format (4-digit padded)
 	// SELL: 1501+/quantity format
 	var thockNumber string
 	if e.ThockCategory == "seed" {
 		thockNumber = fmt.Sprintf("%04d/%d", nextNumber, e.ExpectedQuantity)
-	} else if e.ThockCategory == "sell" {
+	} else {
 		thockNumber = fmt.Sprintf("%d/%d", nextNumber, e.ExpectedQuantity)
 	}
 	e.ThockNumber = thockNumber
@@ -115,21 +115,15 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 }
 
 func (r *EntryRepository) GetCountByCategory(ctx context.Context, category string) (int, error) {
-	// Return the current sequence value (last used number) instead of COUNT
-	// This matches the actual thock number generation which uses sequences
-	var sequenceName string
-	if category == "seed" {
-		sequenceName = "seed_entry_sequence"
-	} else if category == "sell" {
-		sequenceName = "sell_entry_sequence"
-	} else {
+	// Return actual COUNT of entries for this category
+	// This matches the thock number generation logic
+	if category != "seed" && category != "sell" {
 		return 0, fmt.Errorf("invalid category: %s", category)
 	}
 
-	var lastValue int
-	err := r.DB.QueryRow(ctx,
-		fmt.Sprintf(`SELECT last_value FROM %s`, sequenceName)).Scan(&lastValue)
-	return lastValue, err
+	var count int
+	err := r.DB.QueryRow(ctx, "SELECT COUNT(*) FROM entries WHERE thock_category = $1", category).Scan(&count)
+	return count, err
 }
 
 func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, error) {

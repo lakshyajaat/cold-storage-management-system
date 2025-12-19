@@ -350,19 +350,21 @@ func (r *Repository) SearchCustomers(ctx context.Context, query string) ([]*Cust
 // Entry operations
 
 func (r *Repository) CreateEntry(ctx context.Context, e *Entry) error {
-	// Generate thock number using sequence
+	// Use COUNT-based logic for thock numbers
+	// This ensures counters auto-reset when entries are deleted
 	var nextNumber int
-	var sequenceName string
+	var err error
 
 	if e.ThockCategory == "seed" {
-		sequenceName = "g_seed_entry_sequence"
+		// SEED: starts at 1
+		err = r.DB.QueryRow(ctx, "SELECT COALESCE(COUNT(*), 0) + 1 FROM entries WHERE thock_category = 'seed'").Scan(&nextNumber)
 	} else if e.ThockCategory == "sell" {
-		sequenceName = "g_sell_entry_sequence"
+		// SELL: starts at 1501
+		err = r.DB.QueryRow(ctx, "SELECT COALESCE(COUNT(*), 0) + 1501 FROM entries WHERE thock_category = 'sell'").Scan(&nextNumber)
 	} else {
 		return nil // Invalid category
 	}
 
-	err := r.DB.QueryRow(ctx, "SELECT nextval($1)", sequenceName).Scan(&nextNumber)
 	if err != nil {
 		return err
 	}
