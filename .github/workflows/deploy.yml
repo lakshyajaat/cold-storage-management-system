@@ -38,19 +38,19 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Build Go binary once (not in Docker)
+          # Build Go binary
           export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o server ./cmd/server
           echo "✓ Go binary built"
 
-          # Build minimal Docker image (uses pre-built binary)
+          # Build Docker image
           DOCKER_BUILDKIT=1 docker build \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             -f Dockerfile.ci \
             -t ${{ env.IMAGE_NAME }}:${VERSION} .
           echo "✓ Docker image built"
 
-          # Save with gzip compression (~60% smaller)
+          # Save with gzip compression
           docker save ${{ env.IMAGE_NAME }}:${VERSION} | gzip > /tmp/cold-backend-${VERSION}.tar.gz
           echo "✓ Image saved ($(du -h /tmp/cold-backend-${VERSION}.tar.gz | cut -f1) compressed)"
 
@@ -68,8 +68,6 @@ jobs:
               echo "✓ Node ${NODE}: done"
             ) &
           done
-
-          # Wait for all parallel jobs
           wait
           echo "=== All nodes updated ==="
 
@@ -77,19 +75,33 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Update deployments (no wait - rollout happens in background)
+          # Update deployments
           kubectl set image deployment/cold-backend-employee cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
           kubectl set image deployment/cold-backend-customer cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
 
-          echo "=== Rollout started: ${VERSION} (pods updating in background) ==="
+          echo "=== Rolling out ${VERSION} ==="
+
+      - name: Wait for rollout
+        run: |
+          echo "=== Waiting for employee deployment ==="
+          kubectl rollout status deployment/cold-backend-employee -n default --timeout=120s || true
+
+          echo "=== Waiting for customer deployment ==="
+          kubectl rollout status deployment/cold-backend-customer -n default --timeout=120s || true
+
+      - name: Verify deployment
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "=== Deployment Status ==="
+          kubectl get pods -l app=cold-backend -n default -o custom-columns="POD:.metadata.name,IMAGE:.spec.containers[0].image,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount" --no-headers
+
+          # Check if new version pods are running
+          RUNNING=$(kubectl get pods -l app=cold-backend -n default -o jsonpath='{.items[*].spec.containers[0].image}' | grep -c "${VERSION}" || echo "0")
+          echo ""
+          echo "=== ${VERSION} pods running: ${RUNNING} ==="
 
       - name: Cleanup
         if: always()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           rm -f /tmp/cold-backend-${VERSION}.tar.gz server || true
-
-      - name: Verify
-        run: |
-          sleep 5  # Brief wait for pods to start updating
-          kubectl get pods -l app=cold-backend -n default -o custom-columns="POD:.metadata.name,IMAGE:.spec.containers[0].image,READY:.status.containerStatuses[0].ready" --no-headers
