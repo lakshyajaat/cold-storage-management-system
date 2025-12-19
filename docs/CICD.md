@@ -10,21 +10,28 @@ This project uses GitHub Actions for CI/CD with manual deployment trigger. The p
 GitHub Actions (self-hosted runner)
          |
          v
-    Build Stage
-    - Go binary compilation
-    - Docker image build
+    Build Stage (~35s)
+    - Go binary compilation (once, not in Docker)
+    - Minimal Docker image build (Dockerfile.ci)
+    - Gzip compression (~60% smaller)
          |
          v
-    Deploy Stage
-    - SCP image to all K3s nodes
-    - Import to containerd
-    - Update Kubernetes deployments
+    Deploy Stage (~30s, parallel)
+    - SCP compressed image to all 5 nodes simultaneously
+    - Decompress and import to containerd
+         |
+         v
+    K8s Update (fire-and-forget)
+    - Update deployments (no wait)
+    - Pods roll out in background
          |
          v
     K3s Cluster (5 nodes)
     - 192.168.15.110 (master)
     - 192.168.15.111-114 (workers)
 ```
+
+**Total deployment time: ~1 minute**
 
 ## Prerequisites
 

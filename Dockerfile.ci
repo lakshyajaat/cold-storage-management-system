@@ -1,0 +1,40 @@
+# Minimal CI Dockerfile - uses pre-built binary
+# This skips Go compilation inside Docker for faster CI builds
+
+FROM alpine:latest
+
+# Install runtime dependencies including kubectl
+RUN apk --no-cache add ca-certificates tzdata curl && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# Create non-root user
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+WORKDIR /app
+
+# Copy pre-built binary from CI
+COPY server .
+
+# Copy static assets and templates
+COPY static ./static
+COPY templates ./templates
+COPY migrations ./migrations
+COPY configs ./configs
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose ports
+EXPOSE 8080 8081 9090
+
+# Set entrypoint
+ENTRYPOINT ["/app/server"]
+
+# Default to employee mode
+CMD ["-mode", "employee"]

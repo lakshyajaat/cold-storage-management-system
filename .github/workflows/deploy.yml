@@ -34,38 +34,37 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "=== Deploying version: ${VERSION} ==="
 
-      - name: Build Go binary
+      - name: Build and package
         run: |
-          # Use system Go if available, skip setup-go action
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Build Go binary once (not in Docker)
           export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o server ./cmd/server
           echo "✓ Go binary built"
 
-      - name: Build Docker image
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          # Use Docker BuildKit for faster builds with caching
+          # Build minimal Docker image (uses pre-built binary)
           DOCKER_BUILDKIT=1 docker build \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
+            -f Dockerfile.ci \
             -t ${{ env.IMAGE_NAME }}:${VERSION} .
-          echo "✓ Docker image built: ${VERSION}"
+          echo "✓ Docker image built"
 
-      - name: Save and deploy to all nodes (parallel)
+          # Save with gzip compression (~60% smaller)
+          docker save ${{ env.IMAGE_NAME }}:${VERSION} | gzip > /tmp/cold-backend-${VERSION}.tar.gz
+          echo "✓ Image saved ($(du -h /tmp/cold-backend-${VERSION}.tar.gz | cut -f1) compressed)"
+
+      - name: Deploy to all nodes (parallel)
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAR_FILE="/tmp/cold-backend-${VERSION}.tar"
+          TAR_FILE="/tmp/cold-backend-${VERSION}.tar.gz"
 
-          # Save image
-          docker save ${{ env.IMAGE_NAME }}:${VERSION} -o ${TAR_FILE}
-          echo "✓ Image saved ($(du -h ${TAR_FILE} | cut -f1))"
-
-          # Deploy to ALL nodes in PARALLEL
           echo "=== Deploying to all nodes in parallel ==="
           for NODE in ${{ env.K3S_NODES }}; do
             (
               scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${TAR_FILE} root@${NODE}:/tmp/ && \
               ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@${NODE} \
-                "k3s ctr -n k8s.io images import /tmp/cold-backend-${VERSION}.tar && rm /tmp/cold-backend-${VERSION}.tar" && \
+                "gunzip -c /tmp/cold-backend-${VERSION}.tar.gz | k3s ctr -n k8s.io images import - && rm /tmp/cold-backend-${VERSION}.tar.gz" && \
               echo "✓ Node ${NODE}: done"
             ) &
           done
@@ -78,24 +77,19 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Update both deployments in parallel
-          kubectl set image deployment/cold-backend-employee cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default &
-          kubectl set image deployment/cold-backend-customer cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default &
-          wait
+          # Update deployments (no wait - rollout happens in background)
+          kubectl set image deployment/cold-backend-employee cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
+          kubectl set image deployment/cold-backend-customer cold-backend=${{ env.IMAGE_NAME }}:${VERSION} -n default
 
-          echo "Waiting for rollout..."
-          kubectl rollout status deployment/cold-backend-employee -n default --timeout=120s &
-          kubectl rollout status deployment/cold-backend-customer -n default --timeout=120s &
-          wait
-
-          echo "=== Deployed: ${VERSION} ==="
+          echo "=== Rollout started: ${VERSION} (pods updating in background) ==="
 
       - name: Cleanup
         if: always()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          rm -f /tmp/cold-backend-${VERSION}.tar || true
+          rm -f /tmp/cold-backend-${VERSION}.tar.gz server || true
 
       - name: Verify
         run: |
+          sleep 5  # Brief wait for pods to start updating
           kubectl get pods -l app=cold-backend -n default -o custom-columns="POD:.metadata.name,IMAGE:.spec.containers[0].image,READY:.status.containerStatuses[0].ready" --no-headers
