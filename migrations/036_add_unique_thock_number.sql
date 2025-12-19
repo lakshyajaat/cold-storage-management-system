@@ -26,8 +26,17 @@ BEGIN
     END LOOP;
 END $$;
 
--- Now add the unique constraint
-ALTER TABLE entries ADD CONSTRAINT entries_thock_number_unique UNIQUE (thock_number);
+-- Now add the unique constraint (if not exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'entries_thock_number_unique'
+    ) THEN
+        ALTER TABLE entries ADD CONSTRAINT entries_thock_number_unique UNIQUE (thock_number);
+    END IF;
+EXCEPTION WHEN duplicate_object THEN
+    NULL; -- Constraint already exists
+END $$;
 
 -- Also add unique constraint on room_entries if needed (entry_id + room_no combination)
 -- This prevents same entry going to same room twice
