@@ -881,12 +881,9 @@
                 // Re-enable button on error
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnText;
-            } finally {
-                // Reset debounce flag after 2 seconds
-                setTimeout(() => {
-                    isSubmitting = false;
-                }, 2000);
+                isSubmitting = false;
             }
+            // Note: isSubmitting is reset in showSuccess after 5s cooldown
         }
 
         function showError(message) {
@@ -913,10 +910,23 @@
                 successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
-            // Re-enable submit button for next entry
+            // 5 second cooldown before allowing next submission
             if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> <span data-i18n="submit">Submit</span>';
+                let countdown = 5;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> Wait ${countdown}s...`;
+
+                const cooldownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        submitBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> Wait ${countdown}s...`;
+                    } else {
+                        clearInterval(cooldownInterval);
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> <span data-i18n="submit">Submit</span>';
+                        isSubmitting = false;
+                    }
+                }, 1000);
             }
 
             // Reload recent entries and room entries to show the new entry
