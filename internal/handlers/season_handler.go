@@ -108,6 +108,25 @@ func (h *SeasonHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(request)
 }
 
+// GetArchivedData handles GET /api/season/archived/{seasonName}
+func (h *SeasonHandler) GetArchivedData(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seasonName := vars["seasonName"]
+	if seasonName == "" {
+		http.Error(w, "Season name is required", http.StatusBadRequest)
+		return
+	}
+
+	data, err := h.service.GetArchivedData(r.Context(), seasonName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
 // ApproveRequest handles POST /api/season/{id}/approve
 func (h *SeasonHandler) ApproveRequest(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())

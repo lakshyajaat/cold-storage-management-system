@@ -89,6 +89,120 @@ func (s *SeasonService) GetRequest(ctx context.Context, id int) (*models.SeasonR
 	return s.seasonRepo.GetByID(ctx, id)
 }
 
+// ArchivedData holds the archived data for a season
+type ArchivedData struct {
+	SeasonName   string                   `json:"season_name"`
+	Entries      []map[string]interface{} `json:"entries"`
+	RoomEntries  []map[string]interface{} `json:"room_entries"`
+	GatePasses   []map[string]interface{} `json:"gate_passes"`
+	RentPayments []map[string]interface{} `json:"rent_payments"`
+}
+
+// GetArchivedData returns archived data for a specific season
+func (s *SeasonService) GetArchivedData(ctx context.Context, seasonName string) (*ArchivedData, error) {
+	data := &ArchivedData{
+		SeasonName:   seasonName,
+		Entries:      []map[string]interface{}{},
+		RoomEntries:  []map[string]interface{}{},
+		GatePasses:   []map[string]interface{}{},
+		RentPayments: []map[string]interface{}{},
+	}
+
+	// Get archived entries
+	rows, err := s.pool.Query(ctx, `
+		SELECT original_id, customer_id, truck_number, item_type, expected_quantity, created_at
+		FROM archived_entries WHERE season_name = $1 ORDER BY original_id
+	`, seasonName)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var origID, custID, qty int
+			var truckNum, itemType string
+			var createdAt interface{}
+			if err := rows.Scan(&origID, &custID, &truckNum, &itemType, &qty, &createdAt); err == nil {
+				data.Entries = append(data.Entries, map[string]interface{}{
+					"id":           origID,
+					"customer_id":  custID,
+					"truck_number": truckNum,
+					"category":     itemType,
+					"quantity":     qty,
+					"created_at":   createdAt,
+				})
+			}
+		}
+	}
+
+	// Get archived room entries
+	rows2, err := s.pool.Query(ctx, `
+		SELECT original_id, entry_id, room_number, quantity, created_at
+		FROM archived_room_entries WHERE season_name = $1 ORDER BY original_id
+	`, seasonName)
+	if err == nil {
+		defer rows2.Close()
+		for rows2.Next() {
+			var origID, entryID, roomNum, qty int
+			var createdAt interface{}
+			if err := rows2.Scan(&origID, &entryID, &roomNum, &qty, &createdAt); err == nil {
+				data.RoomEntries = append(data.RoomEntries, map[string]interface{}{
+					"id":         origID,
+					"entry_id":   entryID,
+					"room":       roomNum,
+					"quantity":   qty,
+					"created_at": createdAt,
+				})
+			}
+		}
+	}
+
+	// Get archived gate passes
+	rows3, err := s.pool.Query(ctx, `
+		SELECT original_id, entry_id, customer_id, status, quantity, created_at
+		FROM archived_gate_passes WHERE season_name = $1 ORDER BY original_id
+	`, seasonName)
+	if err == nil {
+		defer rows3.Close()
+		for rows3.Next() {
+			var origID, entryID, custID, qty int
+			var status string
+			var createdAt interface{}
+			if err := rows3.Scan(&origID, &entryID, &custID, &status, &qty, &createdAt); err == nil {
+				data.GatePasses = append(data.GatePasses, map[string]interface{}{
+					"id":          origID,
+					"entry_id":    entryID,
+					"customer_id": custID,
+					"status":      status,
+					"quantity":    qty,
+					"created_at":  createdAt,
+				})
+			}
+		}
+	}
+
+	// Get archived rent payments
+	rows4, err := s.pool.Query(ctx, `
+		SELECT original_id, customer_id, amount, payment_date
+		FROM archived_rent_payments WHERE season_name = $1 ORDER BY original_id
+	`, seasonName)
+	if err == nil {
+		defer rows4.Close()
+		for rows4.Next() {
+			var origID, custID int
+			var amount float64
+			var paymentDate interface{}
+			if err := rows4.Scan(&origID, &custID, &amount, &paymentDate); err == nil {
+				data.RentPayments = append(data.RentPayments, map[string]interface{}{
+					"id":           origID,
+					"customer_id":  custID,
+					"amount":       amount,
+					"payment_date": paymentDate,
+				})
+			}
+		}
+	}
+
+	return data, nil
+}
+
 // ApproveRequest approves a season request and executes the archive/clear process
 func (s *SeasonService) ApproveRequest(ctx context.Context, requestID int, approverUserID int, password string) error {
 	// Get the request

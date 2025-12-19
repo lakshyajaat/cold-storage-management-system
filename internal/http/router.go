@@ -187,6 +187,7 @@ func NewRouter(
 		seasonAPI.HandleFunc("/initiate", seasonHandler.InitiateSeason).Methods("POST")
 		seasonAPI.HandleFunc("/pending", seasonHandler.GetPending).Methods("GET")
 		seasonAPI.HandleFunc("/history", seasonHandler.GetHistory).Methods("GET")
+		seasonAPI.HandleFunc("/archived/{seasonName}", seasonHandler.GetArchivedData).Methods("GET")
 		seasonAPI.HandleFunc("/{id}", seasonHandler.GetRequest).Methods("GET")
 		seasonAPI.HandleFunc("/{id}/approve", seasonHandler.ApproveRequest).Methods("POST")
 		seasonAPI.HandleFunc("/{id}/reject", seasonHandler.RejectRequest).Methods("POST")
