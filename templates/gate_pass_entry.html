@@ -253,7 +253,8 @@
                                 <th class="text-left p-2 font-bold" data-i18n="thock_number">Thok NO</th>
                                 <th class="text-left p-2 font-bold" data-i18n="customer_name">Customer</th>
                                 <th class="text-left p-2 font-bold" data-i18n="recipient">Recipient</th>
-                                <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
+                                <th class="text-left p-2 font-bold" data-i18n="qty">Req Qty</th>
+                                <th class="text-left p-2 font-bold" data-i18n="picked_up">Picked Up</th>
                                 <th class="text-left p-2 font-bold" data-i18n="status">Status</th>
                                 <th class="text-left p-2 font-bold" data-i18n="expires_in">Expires In</th>
                                 <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
@@ -262,7 +263,7 @@
                         </thead>
                         <tbody id="gatePassesTableBody">
                             <tr>
-                                <td colspan="8" class="text-center p-4 text-gray-500" data-i18n="loading_gate_passes">Loading gate passes...</td>
+                                <td colspan="9" class="text-center p-4 text-gray-500" data-i18n="loading_gate_passes">Loading gate passes...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1137,7 +1138,7 @@
             const tbody = document.getElementById('gatePassesTableBody');
 
             if (gatePasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">' + i18n.t('no_gate_passes_yet', 'No gate passes yet') + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-gray-500">' + i18n.t('no_gate_passes_yet', 'No gate passes yet') + '</td></tr>';
                 return;
             }
 
@@ -1197,12 +1198,17 @@
                     `;
                 }
 
+                // Calculate picked up quantity
+                const pickedUp = gp.total_picked_up || 0;
+                const pickedUpColor = pickedUp > 0 ? 'text-red-600 font-bold' : 'text-gray-400';
+
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="p-2 font-bold ${truckColor}">${gp.thock_number}</td>
                         <td class="p-2">${gp.customer_name}</td>
                         <td class="p-2 font-semibold text-purple-600">${recipient}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
+                        <td class="p-2 ${pickedUpColor}">${pickedUp > 0 ? pickedUp : '-'}</td>
                         <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${gp.status.toUpperCase()}</span></td>
                         <td class="p-2 text-xs ${remaining.color}">${remaining.text}</td>
                         <td class="p-2 text-xs">${formattedDate}</td>
