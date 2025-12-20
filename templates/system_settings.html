@@ -60,19 +60,19 @@
         }
     </style>
 </head>
-<body class="bg-[#FFF9E6] min-h-screen p-8">
+<body class="bg-[#FFF9E6] min-h-screen p-4 md:p-8">
     <div class="max-w-4xl mx-auto">
-        <header class="flex justify-between items-center mb-8 neu-border bg-white p-6">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8 neu-border bg-white p-4 md:p-6">
             <div>
                 <div class="flex items-center gap-3">
-                    <i class="bi bi-gear-fill text-4xl text-blue-600"></i>
+                    <i class="bi bi-gear-fill text-2xl md:text-4xl text-blue-600"></i>
                     <div>
-                        <h1 class="text-3xl font-bold">System Settings</h1>
-                        <p class="text-gray-600">Configure system parameters</p>
+                        <h1 class="text-2xl md:text-3xl font-bold">System Settings</h1>
+                        <p class="text-gray-600 text-sm md:text-base">Configure system parameters</p>
                     </div>
                 </div>
             </div>
-            <button onclick="goBack()" class="neu-button bg-gray-200">
+            <button onclick="goBack()" class="neu-button bg-gray-200 w-full md:w-auto">
                 <i class="bi bi-arrow-left"></i> Back
             </button>
         </header>
@@ -95,16 +95,16 @@
                 </ul>
             </div>
 
-            <div class="flex items-center justify-between p-6 neu-border bg-gradient-to-r from-green-50 to-orange-50">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 md:p-6 neu-border bg-gradient-to-r from-green-50 to-orange-50">
                 <div>
-                    <h3 class="text-xl font-bold mb-2">Current Mode:</h3>
-                    <p id="currentModeDisplay" class="text-3xl font-bold">
+                    <h3 class="text-lg md:text-xl font-bold mb-2">Current Mode:</h3>
+                    <p id="currentModeDisplay" class="text-2xl md:text-3xl font-bold">
                         <span id="modeIcon">📦</span>
                         <span id="modeText">LOADING</span>
                     </p>
                 </div>
-                <div class="text-right">
-                    <button onclick="toggleOperationMode()" class="neu-button text-white text-lg px-8 py-4" id="toggleModeBtn">
+                <div class="w-full md:w-auto text-right">
+                    <button onclick="toggleOperationMode()" class="neu-button text-white text-base md:text-lg px-6 md:px-8 py-3 md:py-4 w-full md:w-auto" id="toggleModeBtn">
                         <i class="bi bi-arrow-repeat"></i> Switch to UNLOADING
                     </button>
                 </div>
