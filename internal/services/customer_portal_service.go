@@ -10,12 +10,13 @@ import (
 )
 
 type CustomerPortalService struct {
-	CustomerRepo      *repositories.CustomerRepository
-	EntryRepo         *repositories.EntryRepository
-	RoomEntryRepo     *repositories.RoomEntryRepository
-	GatePassRepo      *repositories.GatePassRepository
-	RentPaymentRepo   *repositories.RentPaymentRepository
-	SystemSettingRepo *repositories.SystemSettingRepository
+	CustomerRepo       *repositories.CustomerRepository
+	EntryRepo          *repositories.EntryRepository
+	RoomEntryRepo      *repositories.RoomEntryRepository
+	GatePassRepo       *repositories.GatePassRepository
+	RentPaymentRepo    *repositories.RentPaymentRepository
+	SystemSettingRepo  *repositories.SystemSettingRepository
+	GatePassPickupRepo *repositories.GatePassPickupRepository
 }
 
 func NewCustomerPortalService(
@@ -25,14 +26,16 @@ func NewCustomerPortalService(
 	gatePassRepo *repositories.GatePassRepository,
 	rentPaymentRepo *repositories.RentPaymentRepository,
 	systemSettingRepo *repositories.SystemSettingRepository,
+	gatePassPickupRepo *repositories.GatePassPickupRepository,
 ) *CustomerPortalService {
 	return &CustomerPortalService{
-		CustomerRepo:      customerRepo,
-		EntryRepo:         entryRepo,
-		RoomEntryRepo:     roomEntryRepo,
-		GatePassRepo:      gatePassRepo,
-		RentPaymentRepo:   rentPaymentRepo,
-		SystemSettingRepo: systemSettingRepo,
+		CustomerRepo:       customerRepo,
+		EntryRepo:          entryRepo,
+		RoomEntryRepo:      roomEntryRepo,
+		GatePassRepo:       gatePassRepo,
+		RentPaymentRepo:    rentPaymentRepo,
+		SystemSettingRepo:  systemSettingRepo,
+		GatePassPickupRepo: gatePassPickupRepo,
 	}
 }
 
@@ -115,14 +118,26 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 			entryTotalPaid += payment.AmountPaid
 		}
 
-		// Calculate rent based on STORED quantity (what was put in storage)
+		// Calculate rent based on ORIGINAL STORED quantity
 		// Use system rent_per_item setting
 		rentPerItem := systemRentPerItem
 
-		// Calculate total rent based on stored quantity (actual_quantity from room_entries)
-		// Rent is charged on what was stored, NOT current inventory
-		storedQuantity := entry.ActualQuantity
-		entryTotalRent := float64(storedQuantity) * rentPerItem
+		// Calculate original stored quantity for rent
+		// Handle inconsistent pickup behavior where some reduce room_entries, some don't
+		// Heuristic: if room_entries == 0 and there are pickups, use pickup total as original
+		storedQuantityForRent := currentInventory
+		if currentInventory == 0 && s.GatePassPickupRepo != nil {
+			// Room was fully depleted - get total pickups by thock number
+			pickups, pickupErr := s.GatePassPickupRepo.GetPickupsByThockNumber(ctx, entry.ThockNumber)
+			if pickupErr == nil {
+				for _, p := range pickups {
+					storedQuantityForRent += p.PickupQuantity
+				}
+			}
+		}
+
+		// Calculate total rent based on ORIGINAL stored quantity
+		entryTotalRent := float64(storedQuantityForRent) * rentPerItem
 
 		// Calculate balance (rent - paid)
 		entryBalance := entryTotalRent - entryTotalPaid
