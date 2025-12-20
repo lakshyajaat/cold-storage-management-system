@@ -115,12 +115,14 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 			entryTotalPaid += payment.AmountPaid
 		}
 
-		// Calculate rent based on current inventory (items still in storage)
+		// Calculate rent based on STORED quantity (what was put in storage)
 		// Use system rent_per_item setting
 		rentPerItem := systemRentPerItem
 
-		// Calculate total rent based on current inventory
-		entryTotalRent := float64(currentInventory) * rentPerItem
+		// Calculate total rent based on stored quantity (actual_quantity from room_entries)
+		// Rent is charged on what was stored, NOT current inventory
+		storedQuantity := entry.ActualQuantity
+		entryTotalRent := float64(storedQuantity) * rentPerItem
 
 		// Calculate balance (rent - paid)
 		entryBalance := entryTotalRent - entryTotalPaid
