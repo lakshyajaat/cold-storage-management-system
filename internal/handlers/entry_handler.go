@@ -144,6 +144,13 @@ func (h *EntryHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch updated entry to return the new thock number
+	entry, err := h.Service.GetEntry(context.Background(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Entry updated successfully"})
+	json.NewEncoder(w).Encode(entry)
 }

@@ -1118,9 +1118,10 @@
                     throw new Error(error);
                 }
 
+                const updatedEntry = await response.json();
                 closeEditEntryModal();
                 loadRecentEntries();
-                alert(i18n.t('entry_updated', 'Entry updated successfully!'));
+                alert(i18n.t('entry_updated_thock', 'Entry updated! New Thock No: ') + updatedEntry.thock_number);
             } catch (error) {
                 console.error('Error updating entry:', error);
                 alert('Error: ' + error.message);
