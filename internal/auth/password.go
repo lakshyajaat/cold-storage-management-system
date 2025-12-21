@@ -2,9 +2,10 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
-// bcryptCost of 10 is OWASP recommended minimum, provides good security/performance balance
-// Cost 10 = ~100ms, Cost 12 = ~400ms, Cost 14 = ~1.6s per hash
-const bcryptCost = 10
+// bcryptCost of 8 for performance on low-CPU K3s nodes
+// Cost 8 = ~25ms, Cost 10 = ~100ms, Cost 12 = ~400ms per hash
+// Acceptable for internal cold storage system with rate limiting
+const bcryptCost = 8
 
 // HashPassword generates a bcrypt hash of the password
 func HashPassword(password string) (string, error) {
