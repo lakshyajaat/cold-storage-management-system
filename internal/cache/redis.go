@@ -14,18 +14,14 @@ var client *redis.Client
 
 // Init initializes the Redis connection
 func Init() error {
-	host := os.Getenv("REDIS_HOST")
+	// K8s sets REDIS_SERVICE_HOST and REDIS_SERVICE_PORT for services
+	host := os.Getenv("REDIS_SERVICE_HOST")
 	if host == "" {
-		host = "redis"  // K8s service name
+		host = "redis"  // fallback to service name
 	}
-	port := os.Getenv("REDIS_PORT")
+	port := os.Getenv("REDIS_SERVICE_PORT")
 	if port == "" {
 		port = "6379"
-	}
-
-	// Handle case where REDIS_HOST contains full URL
-	if len(host) > 6 && host[:6] == "tcp://" {
-		host = "redis"
 	}
 
 	client = redis.NewClient(&redis.Options{
