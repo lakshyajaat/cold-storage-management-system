@@ -143,6 +143,11 @@ func (s *EntryService) UpdateEntry(ctx context.Context, id int, req *models.Upda
 		return errors.New("phone number must be exactly 10 digits")
 	}
 
+	// Validate category if provided
+	if req.ThockCategory != "" && req.ThockCategory != "seed" && req.ThockCategory != "sell" {
+		return errors.New("thock category must be 'seed' or 'sell'")
+	}
+
 	// Update fields
 	entry.Name = req.Name
 	entry.Phone = req.Phone
@@ -150,6 +155,9 @@ func (s *EntryService) UpdateEntry(ctx context.Context, id int, req *models.Upda
 	entry.SO = req.SO
 	entry.ExpectedQuantity = req.ExpectedQuantity
 	entry.Remark = req.Remark
+	if req.ThockCategory != "" {
+		entry.ThockCategory = req.ThockCategory
+	}
 
 	return s.EntryRepo.Update(ctx, entry)
 }

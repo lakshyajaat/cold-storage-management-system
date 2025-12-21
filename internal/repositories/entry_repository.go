@@ -193,9 +193,9 @@ func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber stri
 // Update updates an existing entry
 func (r *EntryRepository) Update(ctx context.Context, e *models.Entry) error {
 	query := `UPDATE entries SET name=$1, phone=$2, village=$3, so=$4,
-	          expected_quantity=$5, remark=$6, updated_at=NOW()
-	          WHERE id=$7`
+	          expected_quantity=$5, remark=$6, thock_category=$7, updated_at=NOW()
+	          WHERE id=$8`
 	_, err := r.DB.Exec(ctx, query, e.Name, e.Phone, e.Village, e.SO,
-		e.ExpectedQuantity, e.Remark, e.ID)
+		e.ExpectedQuantity, e.Remark, e.ThockCategory, e.ID)
 	return err
 }

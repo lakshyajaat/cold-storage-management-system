@@ -474,6 +474,13 @@
                         <input type="number" id="editEntryQty" required min="1" class="w-full neu-input" placeholder="Quantity">
                     </div>
                     <div>
+                        <label class="block text-sm font-semibold mb-1" data-i18n="category">Category</label>
+                        <select id="editEntryCategory" required class="w-full neu-input">
+                            <option value="seed">SEED (1-1500)</option>
+                            <option value="sell">SELL (1501+)</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-sm font-semibold mb-1" data-i18n="variety">Variety</label>
                         <input type="text" id="editEntryRemark" class="w-full neu-input" placeholder="Variety (comma-separated)">
                     </div>
@@ -1067,6 +1074,7 @@
                 document.getElementById('editEntryVillage').value = entry.village || '';
                 document.getElementById('editEntrySO').value = entry.so || '';
                 document.getElementById('editEntryQty').value = entry.expected_quantity || 1;
+                document.getElementById('editEntryCategory').value = entry.thock_category || 'seed';
                 document.getElementById('editEntryRemark').value = entry.remark || '';
 
                 document.getElementById('editEntryModal').style.display = 'flex';
@@ -1091,6 +1099,7 @@
                 village: document.getElementById('editEntryVillage').value,
                 so: document.getElementById('editEntrySO').value,
                 expected_quantity: parseInt(document.getElementById('editEntryQty').value),
+                thock_category: document.getElementById('editEntryCategory').value,
                 remark: document.getElementById('editEntryRemark').value
             };
 

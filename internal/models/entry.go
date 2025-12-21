@@ -39,4 +39,5 @@ type UpdateEntryRequest struct {
 	SO               string `json:"so"`
 	ExpectedQuantity int    `json:"expected_quantity"`
 	Remark           string `json:"remark"`
+	ThockCategory    string `json:"thock_category"`
 }
