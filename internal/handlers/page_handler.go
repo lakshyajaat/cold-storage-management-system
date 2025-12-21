@@ -169,3 +169,8 @@ func (h *PageHandler) MonitoringDashboardPage(w http.ResponseWriter, r *http.Req
 func (h *PageHandler) CustomerPDFExportPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "customer_pdf_export.html", nil)
 }
+
+// CustomerEditPage serves the customer edit/management page
+func (h *PageHandler) CustomerEditPage(w http.ResponseWriter, r *http.Request) {
+	h.templates.ExecuteTemplate(w, "customer_edit.html", nil)
+}

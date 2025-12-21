@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management - Cold Storage</title>
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/arbitrary.css" rel="stylesheet">
+    <link href="/static/css/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        .neu-brutal {
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0px #000;
+            transition: all 0.2s ease;
+        }
+        .neu-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px #000;
+        }
+        .neu-brutal:active {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0px #000;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show { display: flex; }
+        .clickable-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clickable-row:hover {
+            background-color: #fef3c7;
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl md:text-4xl font-bold flex items-center gap-3">
+                    <i class="bi bi-people-fill text-blue-600"></i>
+                    Customer Management
+                </h1>
+                <p class="text-gray-600 mt-2 text-sm md:text-base">View and edit customer details</p>
+            </div>
+            <div class="flex flex-wrap gap-2 md:gap-4 w-full md:w-auto justify-end">
+                <button onclick="window.location.href='/admin/dashboard'" class="bg-gray-200 px-6 py-3 neu-brutal">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="mb-6 bg-white p-4 neu-brutal">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="font-semibold mr-4">Search:</label>
+                    <input type="text" id="searchInput" onkeyup="filterCustomers()"
+                           class="px-4 py-2 neu-brutal bg-white w-full md:w-96"
+                           placeholder="Search by name, phone, or village...">
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-600" id="customerCount">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers Table -->
+        <div class="bg-white p-6 neu-brutal overflow-x-auto">
+            <table class="w-full min-w-[600px]">
+                <thead>
+                    <tr class="border-b-4 border-black">
+                        <th class="text-left p-4 font-bold">ID</th>
+                        <th class="text-left p-4 font-bold">Name</th>
+                        <th class="text-left p-4 font-bold">Phone</th>
+                        <th class="text-left p-4 font-bold">S/O</th>
+                        <th class="text-left p-4 font-bold">Village</th>
+                        <th class="text-right p-4 font-bold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customersTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center p-8 text-gray-500">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="customerModal" class="modal items-center justify-center">
+        <div class="bg-white p-8 neu-brutal max-w-md w-full mx-4">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-pencil-square text-blue-600"></i>
+                Edit Customer
+            </h2>
+            <form id="customerForm" class="space-y-4">
+                <input type="hidden" id="customerId">
+
+                <div>
+                    <label class="block font-semibold mb-2">Name *</label>
+                    <input type="text" id="customerName" required class="w-full p-3 neu-brutal bg-white" placeholder="Customer Name">
+                </div>
+
+                <div>
+                    <label class="block font-semibold mb-2">Phone *</label>
+                    <input type="tel" id="customerPhone" required maxlength="10" minlength="10"
+                           pattern="[0-9]{10}" class="w-full p-3 neu-brutal bg-white" placeholder="10-digit phone number">
+                </div>
+
+                <div>
+                    <label class="block font-semibold mb-2">S/O (Father's Name)</label>
+                    <input type="text" id="customerSO" class="w-full p-3 neu-brutal bg-white" placeholder="Son Of / Father's Name">
+                </div>
+
+                <div>
+                    <label class="block font-semibold mb-2">Village</label>
+                    <input type="text" id="customerVillage" class="w-full p-3 neu-brutal bg-white" placeholder="Village">
+                </div>
+
+                <div class="flex gap-4 mt-6">
+                    <button type="submit" class="flex-1 bg-[#2ecc71] text-white py-3 neu-brutal">
+                        <i class="bi bi-check-circle"></i> Save
+                    </button>
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-gray-300 py-3 neu-brutal">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal items-center justify-center">
+        <div class="bg-white p-8 neu-brutal max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-red-600 flex items-center gap-2">
+                <i class="bi bi-exclamation-triangle"></i>
+                Confirm Delete
+            </h2>
+            <p class="mb-6">Are you sure you want to delete customer <strong id="deleteCustomerName"></strong>?</p>
+            <p class="text-sm text-red-600 mb-6">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button onclick="confirmDelete()" class="flex-1 bg-red-500 text-white py-3 neu-brutal">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+                <button onclick="closeDeleteModal()" class="flex-1 bg-gray-300 py-3 neu-brutal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let allCustomers = [];
+        let deleteCustomerId = null;
+
+        // Capitalize first letter
+        function capitalizeFirstLetter(input) {
+            const value = input.value;
+            if (value.length > 0) {
+                input.value = value.charAt(0).toUpperCase() + value.slice(1);
+            }
+        }
+
+        // Apply auto-capitalize to text inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const textInputs = document.querySelectorAll('input[type="text"]');
+            textInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    capitalizeFirstLetter(this);
+                });
+            });
+        });
+
+        // Load customers on page load
+        document.addEventListener('DOMContentLoaded', loadCustomers);
+
+        async function loadCustomers() {
+            try {
+                const response = await fetch('/api/customers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load customers');
+
+                allCustomers = await response.json() || [];
+                renderCustomers(allCustomers);
+                document.getElementById('customerCount').textContent = `Total: ${allCustomers.length} customers`;
+            } catch (error) {
+                console.error('Error loading customers:', error);
+                document.getElementById('customersTableBody').innerHTML =
+                    '<tr><td colspan="6" class="text-center p-8 text-red-500">Failed to load customers</td></tr>';
+            }
+        }
+
+        function renderCustomers(customers) {
+            const tbody = document.getElementById('customersTableBody');
+
+            if (!customers || customers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-8 text-gray-500">No customers found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = customers.map(customer => `
+                <tr class="border-b-2 border-gray-200 clickable-row" onclick="editCustomer(${customer.id})">
+                    <td class="p-4 font-mono text-gray-600">#${customer.id}</td>
+                    <td class="p-4 font-bold">${customer.name || '-'}</td>
+                    <td class="p-4">
+                        <span class="bg-blue-100 px-2 py-1 rounded font-mono">${customer.phone}</span>
+                    </td>
+                    <td class="p-4">${customer.so || '-'}</td>
+                    <td class="p-4">${customer.village || '-'}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="event.stopPropagation(); editCustomer(${customer.id})"
+                                class="bg-blue-500 text-white px-4 py-2 neu-brutal text-sm mr-2">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button onclick="event.stopPropagation(); showDeleteModal(${customer.id}, '${customer.name}')"
+                                class="bg-red-500 text-white px-4 py-2 neu-brutal text-sm">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterCustomers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = allCustomers.filter(customer => {
+                const name = (customer.name || '').toLowerCase();
+                const phone = (customer.phone || '').toLowerCase();
+                const village = (customer.village || '').toLowerCase();
+                const so = (customer.so || '').toLowerCase();
+
+                return name.includes(searchTerm) ||
+                       phone.includes(searchTerm) ||
+                       village.includes(searchTerm) ||
+                       so.includes(searchTerm);
+            });
+
+            renderCustomers(filtered);
+            document.getElementById('customerCount').textContent =
+                `Showing: ${filtered.length} of ${allCustomers.length} customers`;
+        }
+
+        function editCustomer(id) {
+            const customer = allCustomers.find(c => c.id === id);
+            if (!customer) return;
+
+            document.getElementById('customerId').value = customer.id;
+            document.getElementById('customerName').value = customer.name || '';
+            document.getElementById('customerPhone').value = customer.phone || '';
+            document.getElementById('customerSO').value = customer.so || '';
+            document.getElementById('customerVillage').value = customer.village || '';
+
+            document.getElementById('customerModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('customerModal').classList.remove('show');
+            document.getElementById('customerForm').reset();
+        }
+
+        function showDeleteModal(id, name) {
+            deleteCustomerId = id;
+            document.getElementById('deleteCustomerName').textContent = name;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            deleteCustomerId = null;
+        }
+
+        async function confirmDelete() {
+            if (!deleteCustomerId) return;
+
+            try {
+                const response = await fetch(`/api/customers/${deleteCustomerId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                closeDeleteModal();
+                loadCustomers();
+                alert('Customer deleted successfully!');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Form submission
+        document.getElementById('customerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('customerId').value;
+            const customerData = {
+                name: document.getElementById('customerName').value,
+                phone: document.getElementById('customerPhone').value,
+                so: document.getElementById('customerSO').value,
+                village: document.getElementById('customerVillage').value
+            };
+
+            try {
+                const response = await fetch(`/api/customers/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(customerData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                closeModal();
+                loadCustomers();
+                alert('Customer updated successfully!');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

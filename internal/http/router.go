@@ -85,6 +85,7 @@ func NewRouter(
 	r.HandleFunc("/infrastructure/nodes", pageHandler.NodeProvisioningPage).Methods("GET")
 	r.HandleFunc("/monitoring", pageHandler.MonitoringDashboardPage).Methods("GET")
 	r.HandleFunc("/customer-export", pageHandler.CustomerPDFExportPage).Methods("GET")
+	r.HandleFunc("/customer-edit", pageHandler.CustomerEditPage).Methods("GET")
 
 	// Protected API routes - System Settings
 	settingsAPI := r.PathPrefix("/api/settings").Subrouter()
