@@ -633,6 +633,7 @@
 
         // Filter and display villages
         function filterVillages() {
+            villageHighlightIndex = -1; // Reset highlight on filter
             const searchTerm = document.getElementById('userVillage').value;
             const filtered = villages.filter(village => fuzzyMatchVillage(searchTerm, village));
 
@@ -723,6 +724,7 @@
 
         // Filter and display phones
         function filterPhones() {
+            phoneHighlightIndex = -1; // Reset highlight on filter
             const searchTerm = document.getElementById('userPhone').value;
             const filtered = customerPhones.filter(phoneData => fuzzyMatchPhone(searchTerm, phoneData));
 
@@ -770,6 +772,78 @@
             const phoneDropdown = document.getElementById('phoneDropdown');
             if (phoneInput && phoneDropdown && !phoneInput.contains(e.target) && !phoneDropdown.contains(e.target)) {
                 phoneDropdown.classList.add('hidden');
+            }
+        });
+
+        // Keyboard navigation for dropdowns
+        let villageHighlightIndex = -1;
+        let phoneHighlightIndex = -1;
+
+        // Update highlighted item in a list
+        function updateHighlight(listId, index) {
+            const list = document.getElementById(listId);
+            const items = list.querySelectorAll('.village-item');
+            items.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('highlighted');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('highlighted');
+                }
+            });
+        }
+
+        // Village input keyboard handler
+        document.getElementById('userVillage').addEventListener('keydown', function(e) {
+            const dropdown = document.getElementById('villageDropdown');
+            const list = document.getElementById('villageList');
+            const items = list.querySelectorAll('.village-item');
+
+            if (dropdown.classList.contains('hidden') || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                villageHighlightIndex = Math.min(villageHighlightIndex + 1, items.length - 1);
+                updateHighlight('villageList', villageHighlightIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                villageHighlightIndex = Math.max(villageHighlightIndex - 1, 0);
+                updateHighlight('villageList', villageHighlightIndex);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (villageHighlightIndex >= 0 && villageHighlightIndex < items.length) {
+                    items[villageHighlightIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.classList.add('hidden');
+                villageHighlightIndex = -1;
+            }
+        });
+
+        // Phone input keyboard handler
+        document.getElementById('userPhone').addEventListener('keydown', function(e) {
+            const dropdown = document.getElementById('phoneDropdown');
+            const list = document.getElementById('phoneList');
+            const items = list.querySelectorAll('.village-item');
+
+            if (dropdown.classList.contains('hidden') || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                phoneHighlightIndex = Math.min(phoneHighlightIndex + 1, items.length - 1);
+                updateHighlight('phoneList', phoneHighlightIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                phoneHighlightIndex = Math.max(phoneHighlightIndex - 1, 0);
+                updateHighlight('phoneList', phoneHighlightIndex);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (phoneHighlightIndex >= 0 && phoneHighlightIndex < items.length) {
+                    items[phoneHighlightIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.classList.add('hidden');
+                phoneHighlightIndex = -1;
             }
         });
 
