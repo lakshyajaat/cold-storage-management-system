@@ -190,12 +190,60 @@ func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber stri
 	return &entry, err
 }
 
-// Update updates an existing entry
-func (r *EntryRepository) Update(ctx context.Context, e *models.Entry) error {
-	query := `UPDATE entries SET name=$1, phone=$2, village=$3, so=$4,
-	          expected_quantity=$5, remark=$6, thock_category=$7, updated_at=NOW()
-	          WHERE id=$8`
-	_, err := r.DB.Exec(ctx, query, e.Name, e.Phone, e.Village, e.SO,
-		e.ExpectedQuantity, e.Remark, e.ThockCategory, e.ID)
-	return err
+// Update updates an existing entry (recalculates thock_number if category or quantity changes)
+func (r *EntryRepository) Update(ctx context.Context, e *models.Entry, oldCategory string, oldQty int) error {
+	// Check if we need to regenerate thock_number
+	categoryChanged := oldCategory != e.ThockCategory
+	qtyChanged := oldQty != e.ExpectedQuantity
+
+	if categoryChanged {
+		// Category changed - need new thock number based on new category count
+		var baseOffset int
+		if e.ThockCategory == "seed" {
+			baseOffset = 1
+		} else {
+			baseOffset = 1501
+		}
+
+		// Get count of entries in new category and generate new thock number
+		query := `
+			WITH next_num AS (
+				SELECT COALESCE(COUNT(*), 0) + $1 as num
+				FROM entries
+				WHERE thock_category = $2
+			)
+			UPDATE entries
+			SET name=$3, phone=$4, village=$5, so=$6, expected_quantity=$7, remark=$8, thock_category=$9,
+			    thock_number = CASE WHEN $9 = 'seed'
+			        THEN LPAD((SELECT num FROM next_num)::text, 4, '0') || '/' || $7::text
+			        ELSE (SELECT num FROM next_num)::text || '/' || $7::text
+			    END,
+			    updated_at=NOW()
+			WHERE id=$10`
+		_, err := r.DB.Exec(ctx, query, baseOffset, e.ThockCategory, e.Name, e.Phone, e.Village, e.SO,
+			e.ExpectedQuantity, e.Remark, e.ThockCategory, e.ID)
+		return err
+	} else if qtyChanged {
+		// Only quantity changed - update the quantity part of thock_number
+		query := `
+			UPDATE entries
+			SET name=$1, phone=$2, village=$3, so=$4, expected_quantity=$5, remark=$6, thock_category=$7,
+			    thock_number = CASE WHEN thock_category = 'seed'
+			        THEN LPAD(SPLIT_PART(thock_number, '/', 1), 4, '0') || '/' || $5::text
+			        ELSE SPLIT_PART(thock_number, '/', 1) || '/' || $5::text
+			    END,
+			    updated_at=NOW()
+			WHERE id=$8`
+		_, err := r.DB.Exec(ctx, query, e.Name, e.Phone, e.Village, e.SO,
+			e.ExpectedQuantity, e.Remark, e.ThockCategory, e.ID)
+		return err
+	} else {
+		// No category or quantity change - simple update
+		query := `UPDATE entries SET name=$1, phone=$2, village=$3, so=$4,
+		          expected_quantity=$5, remark=$6, thock_category=$7, updated_at=NOW()
+		          WHERE id=$8`
+		_, err := r.DB.Exec(ctx, query, e.Name, e.Phone, e.Village, e.SO,
+			e.ExpectedQuantity, e.Remark, e.ThockCategory, e.ID)
+		return err
+	}
 }
