@@ -85,6 +85,7 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 		SO:               req.SO,
 		ExpectedQuantity: req.ExpectedQuantity,
 		ThockCategory:    req.ThockCategory,
+		Remark:           req.Remark,
 		CreatedByUserID:  userID,
 	}
 

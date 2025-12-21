@@ -98,6 +98,14 @@
             border: 2px solid #000;
             box-shadow: 2px 2px 0px #000;
         }
+        .variety-chip.selected {
+            background-color: #10b981;
+            color: white;
+            border-color: #059669;
+        }
+        .variety-chip.selected:hover {
+            background-color: #059669;
+        }
     </style>
 </head>
 <body class="bg-[#FFF9E6] min-h-screen p-4 md:p-8">
@@ -266,6 +274,67 @@
                     >
                 </div>
 
+                <!-- Variety Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <span data-i18n="variety_label">Variety</span> <span class="text-sm text-gray-500">(<span data-i18n="select_multiple">Select multiple</span>)</span>
+                    </label>
+                    <div id="varietyChips" class="flex flex-wrap gap-2">
+                        <button type="button" onclick="toggleVariety(this, 'Chipsona 1')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Chipsona 1
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Chipsona 3')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Chipsona 3
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, '3797')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            3797
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'S4')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            S4
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Sangam')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Sangam
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Khayat')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Khayat
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Neel Kanth')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Neel Kanth
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Fry Sona')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Fry Sona
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Surya')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Surya
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'L.R.')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            L.R.
+                        </button>
+                        <button type="button" onclick="toggleVariety(this, 'Pakhraaj')" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            Pakhraaj
+                        </button>
+                        <button type="button" onclick="toggleCustomVariety()" class="variety-chip px-3 py-1 text-sm font-medium rounded-full border-2 border-dashed border-gray-400 bg-white hover:bg-gray-50 transition-colors">
+                            <i class="bi bi-plus"></i> Custom
+                        </button>
+                    </div>
+                    <!-- Custom variety input (hidden by default) -->
+                    <div id="customVarietyInput" class="hidden mt-2">
+                        <input
+                            type="text"
+                            id="customVarietyText"
+                            class="w-full neu-input text-sm"
+                            placeholder="Enter custom variety name"
+                            onkeypress="addCustomVariety(event)"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">Press Enter to add</p>
+                    </div>
+                    <!-- Selected varieties display -->
+                    <input type="hidden" id="selectedVarieties" value="">
+                    <p id="selectedVarietiesDisplay" class="text-sm text-gray-600 mt-2 hidden">
+                        <span data-i18n="selected">Selected</span>: <span id="varietyList"></span>
+                    </p>
+                </div>
+
                 <div id="truckPreview" class="mb-4 p-3 bg-blue-50 neu-border hidden">
                     <p class="text-sm text-gray-600 mb-1">
                         <i class="bi bi-truck"></i>
@@ -410,6 +479,96 @@
 
         // Village list for searchable dropdown
         const villages = ["Jahangirabad","Anupshahr","Achalpur","Ahamad Nagar Urf Touli","Ahar Bangar","Ahar Khadar","Akbarpur Urf Bachchikhera Bang","Alampur Urf Torai Bangar","Amarpur","Amba","Ametha","Aniwas","Anjni","Badarkha","Badshahpur Pauta","Bagsara","Bamanpur","Banawaripur","Barhpura","Begampur Urf Jairampur","Bhailai","Bhaipur","Bhiroli","Bhopur","Bibiyana","Bichaula","Bidhipur","Birauli","Borha","Chacharai","Charaura","Chhaturiya","Dabka","Daraura","Daravar","Davkora","Devakaranpur Urf Bajhera","Dugrau","Dungara Jogi","Enchora","Faridpur Bariyan","Fatahpur","Gahana Govardhanpur","Gangabas Pahara","Garhara","Godhana","Harchandpur","Hasanpur Bangar","Hisavati","Hoshiyarpur Urf Adhiyar","Jafrabad Urf Gangabas Bangar","Jahangirabad Rural","Jairampur Kudena","Jalilpur","Jamrau","Jasar","Jatpura","Jatvai","Jugasana Kalan","Jugasana Khurd","Karanpur Kalan","Karanpur Urf Nurpur","Karonji","Katiyavali","Khadana","Khalaur","Khalikabad/Dungrajat","Khalikpur","Khanpura","Khaunada","Khijarabad","Khushalgarh","Kishanpur Urf Kishan Khera","Kubari","Lachchhampur","Lachhoi","Madagavan","Madhogarh","Malakpur","Man Karora","Mau","Mauharsa","Maujpur","Mohammadpur Bangar","Mohammadpur Khadar","Mubarikpur","Mubarikpur Bangar","Muradnagar","Nagala Nalu","Navabpur Urf Dharampur","Navi Nagar","Pachdevra","Pagauna","Paharpur","Parali","Patrampur","Pipehara","Pootha","Rajapur","Rajaur","Rajner Urf Sorla","Rajpur","Raura","Rohallapur/Kharva","Ronda","Roopvas","Rooth Bangar","Rootha","Sahibad Urf Kakarai","Salamatpur","Salgavan","Sankhani","Shahjahanpur","Shekupur Raura","Sherpur Bangar","Shikoi","Shyampuri","Shyaurampur Jinai","Sihlinagar","Siraura Bangar","Soharkhan","Sunai","Sunana","Suratgarh Urf Lodhai","Telia Nagla","Titota Urf Birgaon","Ugevan","Abhaypur","Akapur Riyana","Alampur Nagla","Alavas Baturi","Amargarh","Amarthal Urf Unchagaon","Aurangabad Tahapur Bager","Aurangabad Tahapur Khader","B B Nagar","Badshahpur Gadia","Badshahpur Talab","Bahainpur","Baharmpur Urf Pali","Bahedi Khera","Bainipur","Balipur","Bamanpur Talluka","Bansuri","Barauli Basdevpur","Barhana","Barkatpur","Basi Bangar","Basi Khadar","Bathada Vajidpur","Bhadaura","Bhadoi Asarfpur","Bhagawantpur","Bhainsaura","Bhamrauli","Bhansa Khur","Bharkau","Bharra","Bhatpura","Bhaupur","Bhirawti","Bhurawala","Bigraon","Biharipur","Bihata","Chandpur Poothi","Chandyana","Chasi","Chatehra","Chhanaura","Chhatamwala","Chigrawati","Chitsona Alipur","Darauli","Darveshpur","Daulatpur Kalan","Dehra","Dhakauli","Dhakka","Dhakrauli","Dhalna","Dhaniyawali","Dulkhara","Eklaidi","Emamabad","Farida Bager","Farida Khadar","Fatehpur","Fatehpur Gujar","Fulaira","Gasupur","Ghansoorpur","Ghunghraoli","Ginaura Nagli","Giraura","Gulab Nagar","Guraoli","Hajipur","Harwanpur Urf Bhagawanpur","Hasanpur Ujarra","Hingbara","Ilna","Imalia","Ishanpur","Jadaul","Jadauli","Jalalpur","Jaria Alampur","Jawasa","Kachraut","Kalyanpur","Kamalpur","Kanauna","Kapsaipur","Karaitha","Karauthi","Karethha","Kariyari","Kaura Shamshadbad","Kesorpur Sathla","Khad Mohan Nagar","Khandoi","Khanpur Guntu","Khanpur Majra","Kharkali","Kharpur","Khijarpur","Kisola","Kriyawali","Kuchesar","Kurena","Ladana","Lalgarhi","Launga","Madangarh","Madona Jafrabad","Maduhasan Garhi Bager","Maduhasan Garhi Khadar","Mahav","Mahiuddinpur Bukalana","Mahuddinpur","Makri","Mangalpur","Mania Tikri","Manpur","Mathura Nagal","Maua Khera","Mavai","Mirzapur Nagli","Modh Allipur Urf Nima Patty Al","Mohamadpurbarwala","Mullani","Nagaur","Nagla Madaripur","Narendrapur","Narsena","Nehchauli","Nikhob","Nirsukha","Nittyanandpur Nagli","Nizampur Bager","Nizampur Khadar","Pali","Pali Anandgarhi","Palipartapur","Parawana Mahmudpur","Pempur","Pilkhani","Pirpur","Pota Kabulpur","Pyana Kalan","Pyana Khurd","Raghunathpur","Rahmatpur Augna","Rampur Pitampur","Ranapur","Rasulpur","Ratanpur","Rausla","Ravani Katiri Bangar","Ravani Katiri Khadar","Sabdalpur","Sahanpur","Sahera","Saidpur","Salabad Dhamaira","Saujna Rani","Sega Jagatpur","Seorampur","Shadipur Banboi","Shafi Nagar","Shakarpur","Shekhupura","Sikri","Sinhali Jhaya","Siyana","Sojna Jhaya","Sulaila","Surajpur Tikri","Takrarpur Ladpor","Tehgora","Thalinayatpur","Thana Gajraula","Thauna","Tibra","Timarpur","Umarpur","Verafirojpur","Yunispur","Abdullapur Hulasan","Ahmad Baj","Ahmadgarh","Ajijabad","Akbarpur Bas Kaneni","Allipur","Allipura Mubarikpur","Amarpur","Anaouna","Anchar Kalan","Ancharu Khurd","Asawari","Ashrefpur Abdullapur","Asrauli","Aurangabad Chandok","Azampur Dariapur","Bad","Badarkha Sirbas","Badrampur","Bailonth","Bamanpur","Ban","Banaul","Barasau","Barauda","Barauli","Barkatpur","Barkhara Hasangarhi","Beram Nagar","Bhaipur","Bhalolpur","Bhansroli Nasirpur","Bhataula","Bhonpur","Bohich","Chakla","Chitsaun","Dargahpur Basauti","Derveshpur","Dhalna","Dhaurau","Dhooturi","Domla Hasangarh","Faizallapur Ajnara","Faridpur Haveli","Fatahabad","Fatehgarh","Fazilpur","Ganga Garh","Gangabaj","Ghungravali Banvaripur","Golabas","Halpura","Hatampur","Hauganpur","Hazaratpur","Hinnaut","Hurthala","Jagdishpur Aurangabad","Jainawai","Jakhauta","Jalalpur","Jalalpur Karira","Jalalpur Katora","Jalaluddinpur Ginauri","Jalphi","Jamalpur","Janipur Kalan","Janipur Khurd","Jatpura","Jeerajpur","Kadon","Kadrabad","Kailawali","Kaisawan","Kamauna","Kaneni Badrampur","Karaina","Karauda","Karira","Kastaba Dhadd","Kasumi","Keratpur","Khailia Kalyanpur","Khairpur","Khakuda","Khandar","Khandwama","Khassia","Kiryawali","Kondupur","Kutubpur","Kuwarpur","Lalgarhi","Lalner","Lohra","Ludhpura","Madanpur Mubarakpur","Mahmudpur","Mahuwa Khara","Mamau","Mandawali","Maudi","Meerapur","Mohammadpur Ginauri","Morauni","Mukeempur","Mukhara","Mustfabad Daduwa","Nagalia Lachhamanpur","Nagla Dalpatpur","Nagla Lutf Alipur","Nagla Naw","Nagla Sarangpur","Nagla Urf Fattapur","Narau","Nawada","Noorpur Nagalia","Padha","Paharpur Haveli","Paharpur Surjawali","Pahasu Dehat","Pandrawal","Pitampur","Poothri Khurd","Poroli","Ragsonth","Rahmapur","Rajpura","Rajupura","Rampur Manpur","Ranau Raham Alipur","Ranayach Narendrapur","Rangpur","Raniwala","Rasulgarhi","Rasulpur","Rasulpur Nagla Bichat","Risalu","Riwara","Runsi","Sahar","Sahatpur Khairi","Saidh Garhi","Salabad","Salbahanpur","Salempur","Samanpur","Samaspur","Sarawa","Sarbhanna","Sargaon","Shikarpur","Shikarpur Rural","Siddhpur","Sidgarhi","Soi","Sujapur Pootha","Sultanpur Khader","Sultanpur Mirgarhi","Surajpur Nisfi","Surjawali","Surkharu","Syarli","Tayabpur","Teyor Bujurag","Teyori","Tunda Khera","Turkipura Khas","Urdmi","Urf Dusari","Utrawali","Yakubpur"];
+
+        // Selected varieties array for multi-select
+        let selectedVarieties = [];
+
+        // Toggle variety selection
+        function toggleVariety(button, variety) {
+            const index = selectedVarieties.indexOf(variety);
+            if (index > -1) {
+                // Remove from selection
+                selectedVarieties.splice(index, 1);
+                button.classList.remove('selected');
+            } else {
+                // Add to selection
+                selectedVarieties.push(variety);
+                button.classList.add('selected');
+            }
+            updateVarietyDisplay();
+        }
+
+        // Toggle custom variety input visibility
+        function toggleCustomVariety() {
+            const customInput = document.getElementById('customVarietyInput');
+            customInput.classList.toggle('hidden');
+            if (!customInput.classList.contains('hidden')) {
+                document.getElementById('customVarietyText').focus();
+            }
+        }
+
+        // Add custom variety on Enter key
+        function addCustomVariety(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = document.getElementById('customVarietyText');
+                const variety = input.value.trim();
+                if (variety && !selectedVarieties.includes(variety)) {
+                    selectedVarieties.push(variety);
+
+                    // Add a new chip for the custom variety
+                    const chipsContainer = document.getElementById('varietyChips');
+                    const customButton = chipsContainer.querySelector('button:last-child');
+                    const newChip = document.createElement('button');
+                    newChip.type = 'button';
+                    newChip.className = 'variety-chip selected px-3 py-1 text-sm font-medium rounded-full border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors';
+                    newChip.textContent = variety;
+                    newChip.onclick = function() { toggleVariety(this, variety); };
+                    chipsContainer.insertBefore(newChip, customButton);
+
+                    updateVarietyDisplay();
+                }
+                input.value = '';
+                document.getElementById('customVarietyInput').classList.add('hidden');
+            }
+        }
+
+        // Update the variety display text
+        function updateVarietyDisplay() {
+            const display = document.getElementById('selectedVarietiesDisplay');
+            const list = document.getElementById('varietyList');
+            const hiddenInput = document.getElementById('selectedVarieties');
+
+            if (selectedVarieties.length > 0) {
+                display.classList.remove('hidden');
+                list.textContent = selectedVarieties.join(', ');
+                hiddenInput.value = selectedVarieties.join(', ');
+            } else {
+                display.classList.add('hidden');
+                list.textContent = '';
+                hiddenInput.value = '';
+            }
+        }
+
+        // Clear variety selection (called by resetForm)
+        function clearVarietySelection() {
+            selectedVarieties = [];
+            document.querySelectorAll('.variety-chip.selected').forEach(chip => {
+                chip.classList.remove('selected');
+            });
+            // Remove any dynamically added custom chips
+            const customChips = document.querySelectorAll('.variety-chip');
+            const defaultVarieties = ['Chipsona 1', 'Chipsona 3', '3797', 'S4', 'Sangam', 'Khayat', 'Neel Kanth', 'Fry Sona', 'Surya', 'L.R.', 'Pakhraaj'];
+            customChips.forEach(chip => {
+                const text = chip.textContent.trim();
+                if (!defaultVarieties.includes(text) && !text.includes('Custom')) {
+                    chip.remove();
+                }
+            });
+            updateVarietyDisplay();
+            document.getElementById('customVarietyInput').classList.add('hidden');
+            document.getElementById('customVarietyText').value = '';
+        }
 
         // Capitalize first letter of input field
         function capitalizeFirstLetter(input) {
@@ -860,7 +1019,8 @@
                 village: village,
                 so: so,
                 expected_quantity: quantity,
-                thock_category: category
+                thock_category: category,
+                remark: selectedVarieties.join(', ')
             };
 
             // Disable button and set loading state
@@ -963,6 +1123,9 @@
             // Uncheck all radio buttons
             const radios = document.querySelectorAll('input[name="thockCategory"]');
             radios.forEach(radio => radio.checked = false);
+
+            // Clear variety selection
+            clearVarietySelection();
 
             currentUser = null;
 

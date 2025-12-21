@@ -13,6 +13,7 @@ type Entry struct {
 	ActualQuantity   int       `json:"actual_quantity"` // Sum of room_entries.quantity for this entry
 	ThockCategory    string    `json:"thock_category"`  // 'seed' or 'sell'
 	ThockNumber      string    `json:"thock_number"`
+	Remark           string    `json:"remark"` // Variety/varieties (comma-separated): Chipsona 1, Chipsona 3, 3797, S4, etc.
 	CreatedByUserID  int       `json:"created_by_user_id"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
@@ -27,4 +28,5 @@ type CreateEntryRequest struct {
 	SO               string `json:"so"`
 	ExpectedQuantity int    `json:"expected_quantity"`
 	ThockCategory    string `json:"thock_category"`
+	Remark           string `json:"remark"` // Variety/varieties (comma-separated)
 }

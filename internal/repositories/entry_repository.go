@@ -42,13 +42,14 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 			FROM entries
 			WHERE thock_category = $2
 		)
-		INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, created_by_user_id)
+		INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, remark, created_by_user_id)
 		SELECT $3, $4, $5, $6, $7, $8::integer, $9::text,
 			CASE WHEN $9::text = 'seed'
 				THEN LPAD(num::text, 4, '0') || '/' || $8::text
 				ELSE num::text || '/' || $8::text
 			END,
-			$10
+			$10,
+			$11
 		FROM next_num
 		RETURNING id, thock_number, created_at, updated_at
 	`
@@ -63,7 +64,8 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 		e.SO,                 // $7
 		e.ExpectedQuantity,   // $8
 		e.ThockCategory,      // $9
-		e.CreatedByUserID,    // $10
+		e.Remark,             // $10
+		e.CreatedByUserID,    // $11
 	).Scan(&e.ID, &e.ThockNumber, &e.CreatedAt, &e.UpdatedAt)
 }
 
@@ -71,12 +73,12 @@ func (r *EntryRepository) Get(ctx context.Context, id int) (*models.Entry, error
 	row := r.DB.QueryRow(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e WHERE e.id=$1`, id)
 
 	var entry models.Entry
 	err := row.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-		&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
+		&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
 		&entry.CreatedAt, &entry.UpdatedAt)
 	return &entry, err
 }
@@ -85,7 +87,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e ORDER BY e.created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -96,7 +98,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -110,7 +112,7 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e WHERE e.customer_id=$1 ORDER BY e.created_at DESC`, customerID)
 	if err != nil {
 		return nil, err
@@ -121,7 +123,7 @@ func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -149,7 +151,7 @@ func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, 
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e
          LEFT JOIN room_entries re ON e.id = re.entry_id
          WHERE re.id IS NULL
@@ -163,7 +165,7 @@ func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, 
 	for rows.Next() {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
+			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
 			&entry.CreatedAt, &entry.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -178,12 +180,12 @@ func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber stri
 	row := r.DB.QueryRow(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, e.created_by_user_id, e.created_at, e.updated_at
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e WHERE e.thock_number=$1`, thockNumber)
 
 	var entry models.Entry
 	err := row.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
-		&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.CreatedByUserID,
+		&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
 		&entry.CreatedAt, &entry.UpdatedAt)
 	return &entry, err
 }
