@@ -371,51 +371,36 @@ func (h *InfrastructureHandler) GetPostgreSQLPods(w http.ResponseWriter, r *http
 		lag := "N/A"
 		cacheHit := "N/A"
 
-		// Only run kubectl exec if pod is Running
+		// Only run kubectl exec if pod is Running - use SINGLE combined query for speed
 		if pod.Status.Phase == "Running" {
-			// Get database size
-			dbSizeCmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c",
-				"SELECT pg_size_pretty(pg_database_size('cold_db'));")
-			if dbSizeOutput, err := dbSizeCmd.Output(); err == nil {
-				if size := strings.TrimSpace(string(dbSizeOutput)); size != "" {
-					dbSize = size
-				}
-			}
+			// Combined query: db_size | connections | cache_hit | repl_lag (4 values separated by |)
+			combinedQuery := `SELECT
+				pg_size_pretty(pg_database_size('cold_db')) || '|' ||
+				(SELECT count(*) FROM pg_stat_activity WHERE datname = 'cold_db' AND pid <> pg_backend_pid()) || '|' ||
+				COALESCE(ROUND(100.0 * sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0), 1)::text || '%', 'N/A') || '|' ||
+				COALESCE(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::text, '0')
+				FROM pg_stat_database WHERE datname = 'cold_db';`
 
-			// Get active connections
-			connCmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c",
-				"SELECT count(*) FROM pg_stat_activity WHERE datname = 'cold_db' AND pid <> pg_backend_pid();")
-			if connOutput, err := connCmd.Output(); err == nil {
-				if conn := strings.TrimSpace(string(connOutput)); conn != "" {
-					connections = conn
-				}
-			}
-
-			// Get cache hit ratio
-			cacheCmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c",
-				"SELECT ROUND(100.0 * sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0), 1)::text || '%' FROM pg_stat_database WHERE datname = 'cold_db';")
-			if cacheOutput, err := cacheCmd.Output(); err == nil {
-				if c := strings.TrimSpace(string(cacheOutput)); c != "" && c != "%" {
-					cacheHit = c
-				}
-			}
-
-			// Get replication lag for replicas using WAL bytes difference (accurate even when idle)
-			if role == "Replica" {
-				lagCmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c",
-					`SELECT COALESCE(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn()), 0)`)
-				if lagOutput, err := lagCmd.Output(); err == nil {
-					if l := strings.TrimSpace(string(lagOutput)); l != "" {
-						// Convert bytes to human-readable format
-						if bytes, err := strconv.ParseFloat(l, 64); err == nil {
-							if bytes == 0 {
-								lag = "0"
-							} else if bytes < 1024 {
-								lag = fmt.Sprintf("%.0f B", bytes)
-							} else if bytes < 1024*1024 {
-								lag = fmt.Sprintf("%.1f KB", bytes/1024)
-							} else {
-								lag = fmt.Sprintf("%.1f MB", bytes/(1024*1024))
+			cmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c", combinedQuery)
+			if output, err := cmd.Output(); err == nil {
+				parts := strings.Split(strings.TrimSpace(string(output)), "|")
+				if len(parts) >= 4 {
+					dbSize = strings.TrimSpace(parts[0])
+					connections = strings.TrimSpace(parts[1])
+					cacheHit = strings.TrimSpace(parts[2])
+					// Parse replication lag
+					if role == "Replica" {
+						if l := strings.TrimSpace(parts[3]); l != "" {
+							if bytes, err := strconv.ParseFloat(l, 64); err == nil {
+								if bytes == 0 {
+									lag = "0"
+								} else if bytes < 1024 {
+									lag = fmt.Sprintf("%.0f B", bytes)
+								} else if bytes < 1024*1024 {
+									lag = fmt.Sprintf("%.1f KB", bytes/1024)
+								} else {
+									lag = fmt.Sprintf("%.1f MB", bytes/(1024*1024))
+								}
 							}
 						}
 					}
