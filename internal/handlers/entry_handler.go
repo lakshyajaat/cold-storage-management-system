@@ -8,17 +8,22 @@ import (
 
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 
 	"github.com/gorilla/mux"
 )
 
 type EntryHandler struct {
-	Service *services.EntryService
+	Service     *services.EntryService
+	EditLogRepo *repositories.EntryEditLogRepository
 }
 
-func NewEntryHandler(s *services.EntryService) *EntryHandler {
-	return &EntryHandler{Service: s}
+func NewEntryHandler(s *services.EntryService, editLogRepo *repositories.EntryEditLogRepository) *EntryHandler {
+	return &EntryHandler{
+		Service:     s,
+		EditLogRepo: editLogRepo,
+	}
 }
 
 func (h *EntryHandler) CreateEntry(w http.ResponseWriter, r *http.Request) {
@@ -133,15 +138,75 @@ func (h *EntryHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user ID from JWT context for logging
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
 	var req models.UpdateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	// Get old entry before update for logging
+	oldEntry, err := h.Service.GetEntry(context.Background(), id)
+	if err != nil {
+		http.Error(w, "Entry not found", http.StatusNotFound)
+		return
+	}
+
+	// Update the entry
 	if err := h.Service.UpdateEntry(context.Background(), id, &req); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Log the edit if EditLogRepo is available
+	if h.EditLogRepo != nil {
+		editLog := &models.EntryEditLog{
+			EntryID:        id,
+			EditedByUserID: userID,
+		}
+
+		// Only log fields that changed
+		if oldEntry.Name != req.Name {
+			editLog.OldName = &oldEntry.Name
+			editLog.NewName = &req.Name
+		}
+		if oldEntry.Phone != req.Phone {
+			editLog.OldPhone = &oldEntry.Phone
+			editLog.NewPhone = &req.Phone
+		}
+		if oldEntry.Village != req.Village {
+			editLog.OldVillage = &oldEntry.Village
+			editLog.NewVillage = &req.Village
+		}
+		if oldEntry.SO != req.SO {
+			editLog.OldSO = &oldEntry.SO
+			editLog.NewSO = &req.SO
+		}
+		if oldEntry.ExpectedQuantity != req.ExpectedQuantity {
+			editLog.OldExpectedQuantity = &oldEntry.ExpectedQuantity
+			editLog.NewExpectedQuantity = &req.ExpectedQuantity
+		}
+		if oldEntry.ThockCategory != req.ThockCategory {
+			editLog.OldThockCategory = &oldEntry.ThockCategory
+			editLog.NewThockCategory = &req.ThockCategory
+		}
+		if oldEntry.Remark != req.Remark {
+			editLog.OldRemark = &oldEntry.Remark
+			editLog.NewRemark = &req.Remark
+		}
+
+		// Only create log if something changed
+		if editLog.OldName != nil || editLog.OldPhone != nil || editLog.OldVillage != nil ||
+			editLog.OldSO != nil || editLog.OldExpectedQuantity != nil ||
+			editLog.OldThockCategory != nil || editLog.OldRemark != nil {
+			h.EditLogRepo.CreateEditLog(context.Background(), editLog)
+		}
 	}
 
 	// Fetch updated entry to return the new thock number

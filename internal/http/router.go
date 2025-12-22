@@ -20,6 +20,7 @@ func NewRouter(
 	invoiceHandler *handlers.InvoiceHandler,
 	loginLogHandler *handlers.LoginLogHandler,
 	roomEntryEditLogHandler *handlers.RoomEntryEditLogHandler,
+	entryEditLogHandler *handlers.EntryEditLogHandler,
 	adminActionLogHandler *handlers.AdminActionLogHandler,
 	gatePassHandler *handlers.GatePassHandler,
 	seasonHandler *handlers.SeasonHandler,
@@ -183,6 +184,12 @@ func NewRouter(
 	editLogsAPI := r.PathPrefix("/api/edit-logs").Subrouter()
 	editLogsAPI.Use(authMiddleware.Authenticate)
 	editLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(roomEntryEditLogHandler.ListEditLogs)).ServeHTTP).Methods("GET")
+
+	// Protected API routes - Entry Edit Logs (admin only)
+	entryEditLogsAPI := r.PathPrefix("/api/entry-edit-logs").Subrouter()
+	entryEditLogsAPI.Use(authMiddleware.Authenticate)
+	entryEditLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(entryEditLogHandler.ListAll)).ServeHTTP).Methods("GET")
+	entryEditLogsAPI.HandleFunc("/{id}", authMiddleware.RequireRole("admin")(http.HandlerFunc(entryEditLogHandler.ListByEntry)).ServeHTTP).Methods("GET")
 
 	// Protected API routes - Admin Action Logs (admin only)
 	adminActionLogsAPI := r.PathPrefix("/api/admin-action-logs").Subrouter()

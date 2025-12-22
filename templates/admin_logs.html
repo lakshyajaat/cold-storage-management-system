@@ -226,19 +226,31 @@
             </div>
         </div>
 
-        <!-- Room Entry Edit Logs Tab -->
+        <!-- Edit Logs Tab (Room Entry & Entry Edits) -->
         <div id="editlogs-tab" class="tab-content neu-border bg-white p-6">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold flex items-center gap-2">
                     <i class="bi bi-pencil-square"></i>
-                    Room Entry Edit History
+                    <span id="editLogTitle">Room Entry Edit History</span>
                 </h2>
                 <input type="text" id="editLogSearch" placeholder="Search edit logs..." class="neu-border p-2" onkeyup="filterEditLogs()">
             </div>
-            <p class="text-sm text-gray-600 mb-4">Track all changes made to room entries with who edited what and when</p>
+            <p class="text-sm text-gray-600 mb-4" id="editLogDesc">Track all changes made to room entries with who edited what and when</p>
 
-            <!-- Filter by Change Type -->
-            <div class="flex gap-2 mb-4 flex-wrap">
+            <!-- Toggle between Room Entry Edits and Entry Edits -->
+            <div class="flex gap-2 mb-4">
+                <button onclick="setEditLogType('room')" id="editType-room"
+                        class="px-4 py-2 rounded border-2 border-black bg-blue-500 text-white text-sm font-bold ring-2 ring-black">
+                    <i class="bi bi-door-open"></i> Room Entry Edits
+                </button>
+                <button onclick="setEditLogType('entry')" id="editType-entry"
+                        class="px-4 py-2 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    <i class="bi bi-box-seam"></i> Entry Edits
+                </button>
+            </div>
+
+            <!-- Filter by Change Type (Room Entry) -->
+            <div class="flex gap-2 mb-4 flex-wrap" id="roomEditFilters">
                 <button onclick="setEditLogFilter('all')" id="editFilter-all"
                         class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
                     All
@@ -261,6 +273,42 @@
                 </button>
                 <button onclick="setEditLogFilter('remark')" id="editFilter-remark"
                         class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
+                    Remark
+                </button>
+            </div>
+
+            <!-- Filter by Change Type (Entry) -->
+            <div class="flex gap-2 mb-4 flex-wrap" id="entryEditFilters" style="display: none;">
+                <button onclick="setEntryEditLogFilter('all')" id="entryEditFilter-all"
+                        class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
+                    All
+                </button>
+                <button onclick="setEntryEditLogFilter('name')" id="entryEditFilter-name"
+                        class="px-3 py-1 rounded border-2 border-black bg-blue-100 text-sm font-bold">
+                    Name
+                </button>
+                <button onclick="setEntryEditLogFilter('phone')" id="entryEditFilter-phone"
+                        class="px-3 py-1 rounded border-2 border-black bg-purple-100 text-sm font-bold">
+                    Phone
+                </button>
+                <button onclick="setEntryEditLogFilter('village')" id="entryEditFilter-village"
+                        class="px-3 py-1 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    Village
+                </button>
+                <button onclick="setEntryEditLogFilter('so')" id="entryEditFilter-so"
+                        class="px-3 py-1 rounded border-2 border-black bg-yellow-100 text-sm font-bold">
+                    S/O
+                </button>
+                <button onclick="setEntryEditLogFilter('quantity')" id="entryEditFilter-quantity"
+                        class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
+                    Quantity
+                </button>
+                <button onclick="setEntryEditLogFilter('category')" id="entryEditFilter-category"
+                        class="px-3 py-1 rounded border-2 border-black bg-pink-100 text-sm font-bold">
+                    Category
+                </button>
+                <button onclick="setEntryEditLogFilter('remark')" id="entryEditFilter-remark"
+                        class="px-3 py-1 rounded border-2 border-black bg-red-100 text-sm font-bold">
                     Remark
                 </button>
             </div>
@@ -565,10 +613,13 @@
         let allUsers = [];
         let allLoginLogs = [];
         let allEditLogs = [];
+        let allEntryEditLogs = [];
         let allAdminActions = [];
         let allGatePasses = [];
         let allExpiredPasses = [];
         let editLogFilter = 'all';  // Filter: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
+        let editLogType = 'room';  // Filter: 'room' for room entries, 'entry' for entries
+        let entryEditLogFilter = 'all';  // Filter for entry edits: 'all', 'name', 'phone', 'village', 'so', 'quantity', 'category', 'remark'
 
         // Security: Escape HTML to prevent XSS attacks
         function escapeHtml(unsafe) {
@@ -616,6 +667,7 @@
                 loadPayments(),
                 loadLoginLogs(),
                 loadEditLogs(),
+                loadEntryEditLogs(),
                 loadAdminActions(),
                 loadGatePasses(),
                 loadExpiredPasses()
@@ -725,6 +777,25 @@
                 console.error('Error loading edit logs:', error);
                 allEditLogs = [];
                 displayEditLogs();
+            }
+        }
+
+        async function loadEntryEditLogs() {
+            try {
+                const response = await fetch('/api/entry-edit-logs', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load entry edit logs');
+
+                allEntryEditLogs = await response.json() || [];
+                // Refresh display if entry type is selected
+                if (editLogType === 'entry') {
+                    displayEditLogs();
+                }
+            } catch (error) {
+                console.error('Error loading entry edit logs:', error);
+                allEntryEditLogs = [];
             }
         }
 
@@ -1068,7 +1139,42 @@
             }).join('');
         }
 
-        // Set edit log filter and update display
+        // Set edit log type (room vs entry)
+        function setEditLogType(type) {
+            editLogType = type;
+
+            // Update type toggle button styles
+            const roomBtn = document.getElementById('editType-room');
+            const entryBtn = document.getElementById('editType-entry');
+            const roomFilters = document.getElementById('roomEditFilters');
+            const entryFilters = document.getElementById('entryEditFilters');
+            const title = document.getElementById('editLogTitle');
+            const desc = document.getElementById('editLogDesc');
+
+            if (type === 'room') {
+                roomBtn.classList.add('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
+                roomBtn.classList.remove('bg-blue-100');
+                entryBtn.classList.remove('bg-green-500', 'text-white', 'ring-2', 'ring-black');
+                entryBtn.classList.add('bg-green-100');
+                roomFilters.style.display = 'flex';
+                entryFilters.style.display = 'none';
+                title.textContent = 'Room Entry Edit History';
+                desc.textContent = 'Track all changes made to room entries with who edited what and when';
+            } else {
+                entryBtn.classList.add('bg-green-500', 'text-white', 'ring-2', 'ring-black');
+                entryBtn.classList.remove('bg-green-100');
+                roomBtn.classList.remove('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
+                roomBtn.classList.add('bg-blue-100');
+                roomFilters.style.display = 'none';
+                entryFilters.style.display = 'flex';
+                title.textContent = 'Entry Edit History';
+                desc.textContent = 'Track all changes made to entries (customer info, quantity, category) with who edited what and when';
+            }
+
+            displayEditLogs();  // Re-render
+        }
+
+        // Set edit log filter and update display (room entry edits)
         function setEditLogFilter(filterType) {
             editLogFilter = filterType;
 
@@ -1087,11 +1193,39 @@
             displayEditLogs();  // Re-render with filter
         }
 
+        // Set entry edit log filter
+        function setEntryEditLogFilter(filterType) {
+            entryEditLogFilter = filterType;
+
+            // Update button styles
+            ['all', 'name', 'phone', 'village', 'so', 'quantity', 'category', 'remark'].forEach(type => {
+                const btn = document.getElementById(`entryEditFilter-${type}`);
+                if (btn) {
+                    if (type === filterType) {
+                        btn.classList.add('ring-2', 'ring-black');
+                    } else {
+                        btn.classList.remove('ring-2', 'ring-black');
+                    }
+                }
+            });
+
+            displayEditLogs();  // Re-render with filter
+        }
+
         function displayEditLogs() {
             const tbody = document.getElementById('editLogsBody');
 
+            // Display based on type toggle
+            if (editLogType === 'room') {
+                displayRoomEntryEditLogs(tbody);
+            } else {
+                displayEntryEditLogs(tbody);
+            }
+        }
+
+        function displayRoomEntryEditLogs(tbody) {
             if (allEditLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No edit logs found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No room entry edit logs found</td></tr>';
                 return;
             }
 
@@ -1180,7 +1314,7 @@
 
             // Show message if no logs match filter
             if (flattenedLogs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">No ${editLogFilter === 'all' ? '' : editLogFilter + ' '}edit logs found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">No ${editLogFilter === 'all' ? '' : editLogFilter + ' '}room entry edit logs found</td></tr>`;
                 return;
             }
 
@@ -1195,6 +1329,152 @@
                         <td class="p-2"><span class="px-2 py-1 bg-blue-100 rounded text-xs font-bold">${log.field}</span></td>
                         <td class="p-2 text-red-600 line-through">${log.old_value}</td>
                         <td class="p-2 text-green-600 font-semibold">${log.new_value}</td>
+                        <td class="p-2 text-sm">${log.edited_at}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function displayEntryEditLogs(tbody) {
+            if (allEntryEditLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No entry edit logs found</td></tr>';
+                return;
+            }
+
+            // Flatten entry edit logs to show each field change as a separate row
+            const flattenedLogs = [];
+            allEntryEditLogs.forEach(log => {
+                const editedAt = new Date(log.edited_at).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Name changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'name') &&
+                    (log.old_name !== undefined || log.new_name !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Name',
+                        old_value: log.old_name || '-',
+                        new_value: log.new_name || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // Phone changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'phone') &&
+                    (log.old_phone !== undefined || log.new_phone !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Phone',
+                        old_value: log.old_phone || '-',
+                        new_value: log.new_phone || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // Village changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'village') &&
+                    (log.old_village !== undefined || log.new_village !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Village',
+                        old_value: log.old_village || '-',
+                        new_value: log.new_village || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // S/O changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'so') &&
+                    (log.old_so !== undefined || log.new_so !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'S/O',
+                        old_value: log.old_so || '-',
+                        new_value: log.new_so || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // Expected Quantity changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'quantity') &&
+                    (log.old_expected_quantity !== undefined || log.new_expected_quantity !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Expected Qty',
+                        old_value: log.old_expected_quantity || '-',
+                        new_value: log.new_expected_quantity || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // Thock Category changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'category') &&
+                    (log.old_thock_category !== undefined || log.new_thock_category !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Category',
+                        old_value: log.old_thock_category || '-',
+                        new_value: log.new_thock_category || '-',
+                        edited_at: editedAt
+                    });
+                }
+
+                // Remark changes
+                if ((entryEditLogFilter === 'all' || entryEditLogFilter === 'remark') &&
+                    (log.old_remark !== undefined || log.new_remark !== undefined)) {
+                    flattenedLogs.push({
+                        thock_number: log.thock_number,
+                        customer_name: log.customer_name,
+                        editor_name: log.editor_name,
+                        edited_by_user_id: log.edited_by_user_id,
+                        field: 'Remark',
+                        old_value: log.old_remark || '-',
+                        new_value: log.new_remark || '-',
+                        edited_at: editedAt
+                    });
+                }
+            });
+
+            // Show message if no logs match filter
+            if (flattenedLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">No ${entryEditLogFilter === 'all' ? '' : entryEditLogFilter + ' '}entry edit logs found</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = flattenedLogs.map(log => {
+                const thockColor = getThockColor(log.thock_number);
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-green-50">
+                        <td class="p-2 font-bold ${thockColor}">${log.thock_number}</td>
+                        <td class="p-2 font-semibold">${capitalizeText(log.editor_name)}</td>
+                        <td class="p-2">#${log.edited_by_user_id}</td>
+                        <td class="p-2"><span class="px-2 py-1 bg-green-100 rounded text-xs font-bold">${log.field}</span></td>
+                        <td class="p-2 text-red-600 line-through">${escapeHtml(log.old_value)}</td>
+                        <td class="p-2 text-green-600 font-semibold">${escapeHtml(log.new_value)}</td>
                         <td class="p-2 text-sm">${log.edited_at}</td>
                     </tr>
                 `;

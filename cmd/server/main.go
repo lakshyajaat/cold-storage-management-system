@@ -151,6 +151,7 @@ func main() {
 	invoiceRepo := repositories.NewInvoiceRepository(pool)
 	loginLogRepo := repositories.NewLoginLogRepository(pool)
 	roomEntryEditLogRepo := repositories.NewRoomEntryEditLogRepository(pool)
+	entryEditLogRepo := repositories.NewEntryEditLogRepository(pool)
 	adminActionLogRepo := repositories.NewAdminActionLogRepository(pool)
 	gatePassPickupRepo := repositories.NewGatePassPickupRepository(pool)
 
@@ -217,7 +218,7 @@ func main() {
 		userHandler := handlers.NewUserHandler(userService, adminActionLogRepo)
 		authHandler := handlers.NewAuthHandler(userService, loginLogRepo)
 		customerHandler := handlers.NewCustomerHandler(customerService)
-		entryHandler := handlers.NewEntryHandler(entryService)
+		entryHandler := handlers.NewEntryHandler(entryService, entryEditLogRepo)
 		roomEntryHandler := handlers.NewRoomEntryHandler(roomEntryService, roomEntryEditLogRepo)
 		entryEventHandler := handlers.NewEntryEventHandler(entryEventRepo)
 		systemSettingHandler := handlers.NewSystemSettingHandler(systemSettingService)
@@ -225,6 +226,7 @@ func main() {
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		loginLogHandler := handlers.NewLoginLogHandler(loginLogRepo)
 		roomEntryEditLogHandler := handlers.NewRoomEntryEditLogHandler(roomEntryEditLogRepo)
+		entryEditLogHandler := handlers.NewEntryEditLogHandler(entryEditLogRepo)
 		adminActionLogHandler := handlers.NewAdminActionLogHandler(adminActionLogRepo)
 		gatePassHandler := handlers.NewGatePassHandler(gatePassService, adminActionLogRepo)
 
@@ -275,7 +277,7 @@ func main() {
 		deploymentHandler := handlers.NewDeploymentHandler(deploymentService)
 
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {
