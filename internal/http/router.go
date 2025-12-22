@@ -25,6 +25,7 @@ func NewRouter(
 	gatePassHandler *handlers.GatePassHandler,
 	seasonHandler *handlers.SeasonHandler,
 	guardEntryHandler *handlers.GuardEntryHandler,
+	tokenColorHandler *handlers.TokenColorHandler,
 	pageHandler *handlers.PageHandler,
 	healthHandler *handlers.HealthHandler,
 	authMiddleware *middleware.AuthMiddleware,
@@ -244,6 +245,31 @@ func NewRouter(
 		// Process entry - only employee or admin can mark as processed
 		guardAPI.HandleFunc("/entries/{id}/process", authMiddleware.RequireRole("employee", "admin")(
 			http.HandlerFunc(guardEntryHandler.ProcessGuardEntry),
+		).ServeHTTP).Methods("PUT")
+	}
+
+	// Token Color API routes
+	if tokenColorHandler != nil {
+		tokenColorAPI := r.PathPrefix("/api/token-color").Subrouter()
+
+		// Public endpoint for guards to get today's color (requires only auth)
+		tokenColorAPI.HandleFunc("/today", authMiddleware.Authenticate(
+			http.HandlerFunc(tokenColorHandler.GetTodayColor),
+		).ServeHTTP).Methods("GET")
+
+		// Get color by date (requires auth)
+		tokenColorAPI.HandleFunc("", authMiddleware.Authenticate(
+			http.HandlerFunc(tokenColorHandler.GetColorByDate),
+		).ServeHTTP).Methods("GET")
+
+		// Get upcoming colors (requires auth)
+		tokenColorAPI.HandleFunc("/upcoming", authMiddleware.Authenticate(
+			http.HandlerFunc(tokenColorHandler.GetUpcoming),
+		).ServeHTTP).Methods("GET")
+
+		// Set color for a date - admin only
+		tokenColorAPI.HandleFunc("", authMiddleware.Authenticate(
+			authMiddleware.RequireAdmin(http.HandlerFunc(tokenColorHandler.SetColor)),
 		).ServeHTTP).Methods("PUT")
 	}
 

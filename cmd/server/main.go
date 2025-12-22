@@ -155,6 +155,7 @@ func main() {
 	adminActionLogRepo := repositories.NewAdminActionLogRepository(pool)
 	gatePassPickupRepo := repositories.NewGatePassPickupRepository(pool)
 	guardEntryRepo := repositories.NewGuardEntryRepository(pool)
+	tokenColorRepo := repositories.NewTokenColorRepository(pool)
 
 	// Initialize middleware (needed for both modes)
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userRepo)
@@ -235,6 +236,9 @@ func main() {
 		guardEntryService := services.NewGuardEntryService(guardEntryRepo)
 		guardEntryHandler := handlers.NewGuardEntryHandler(guardEntryService)
 
+		// Initialize token color handler
+		tokenColorHandler := handlers.NewTokenColorHandler(tokenColorRepo)
+
 		// Initialize season repository
 		seasonRequestRepo := repositories.NewSeasonRequestRepository(pool)
 
@@ -282,7 +286,7 @@ func main() {
 		deploymentHandler := handlers.NewDeploymentHandler(deploymentService)
 
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

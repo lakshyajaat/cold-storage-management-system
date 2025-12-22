@@ -182,19 +182,31 @@
         <div class="neu-border bg-white p-8 mt-8">
             <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
                 <i class="bi bi-palette-fill text-orange-600"></i>
-                Token Color of the Day
+                Token Color Management
             </h2>
 
             <div class="mb-6 p-4 bg-orange-50 neu-border">
                 <p class="text-sm text-orange-800">
                     <i class="bi bi-info-circle"></i>
-                    <strong>Note:</strong> This color will be displayed to guards and on the entry form to identify today's token color.
+                    <strong>Note:</strong> Set token colors for today and future dates.
+                    <strong>Same color cannot be used on consecutive days.</strong>
                 </p>
             </div>
 
+            <!-- Date Selection -->
             <div class="mb-6">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Select Token Color
+                    Select Date
+                </label>
+                <div class="flex flex-wrap gap-2" id="dateButtons">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Color Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Select Color for <span id="selectedDateDisplay" class="font-bold text-orange-600">Today</span>
                 </label>
                 <div class="grid grid-cols-4 md:grid-cols-8 gap-3" id="tokenColorGrid">
                     <button type="button" onclick="selectTokenColor('RED')" data-color="RED"
@@ -232,14 +244,26 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 p-4 neu-border bg-gray-50">
-                <span class="font-bold">Current Color:</span>
-                <span id="currentTokenColor" class="px-6 py-2 border-3 border-black font-bold text-lg">Loading...</span>
+            <!-- Upcoming Colors Schedule -->
+            <div class="mt-6 p-4 neu-border bg-gray-50">
+                <h3 class="font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-calendar-week"></i>
+                    Upcoming Token Colors (Next 7 Days)
+                </h3>
+                <div id="upcomingColors" class="grid grid-cols-7 gap-2">
+                    <!-- Will be populated by JavaScript -->
+                </div>
             </div>
 
             <div id="tokenColorSuccess" class="hidden mt-4 p-4 bg-green-100 border-3 border-green-600">
                 <p class="text-green-800 font-bold">
                     <i class="bi bi-check-circle-fill"></i> Token color updated successfully!
+                </p>
+            </div>
+
+            <div id="tokenColorError" class="hidden mt-4 p-4 bg-red-100 border-3 border-red-600">
+                <p class="text-red-800 font-bold">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <span id="tokenColorErrorText"></span>
                 </p>
             </div>
         </div>
@@ -545,41 +569,69 @@
 
         // Token color management
         const tokenColorMap = {
-            'RED': { bg: '#EF4444', text: '#FFFFFF' },
-            'BLUE': { bg: '#3B82F6', text: '#FFFFFF' },
-            'GREEN': { bg: '#22C55E', text: '#FFFFFF' },
-            'YELLOW': { bg: '#EAB308', text: '#000000' },
-            'ORANGE': { bg: '#F97316', text: '#FFFFFF' },
-            'PINK': { bg: '#EC4899', text: '#FFFFFF' },
-            'WHITE': { bg: '#FFFFFF', text: '#000000' },
-            'PURPLE': { bg: '#9333EA', text: '#FFFFFF' },
+            'RED': { bg: '#EF4444', text: '#FFFFFF', name: 'RED', nameHi: 'लाल' },
+            'BLUE': { bg: '#3B82F6', text: '#FFFFFF', name: 'BLUE', nameHi: 'नीला' },
+            'GREEN': { bg: '#22C55E', text: '#FFFFFF', name: 'GREEN', nameHi: 'हरा' },
+            'YELLOW': { bg: '#EAB308', text: '#000000', name: 'YELLOW', nameHi: 'पीला' },
+            'ORANGE': { bg: '#F97316', text: '#FFFFFF', name: 'ORANGE', nameHi: 'नारंगी' },
+            'PINK': { bg: '#EC4899', text: '#FFFFFF', name: 'PINK', nameHi: 'गुलाबी' },
+            'WHITE': { bg: '#FFFFFF', text: '#000000', name: 'WHITE', nameHi: 'सफेद' },
+            'PURPLE': { bg: '#9333EA', text: '#FFFFFF', name: 'PURPLE', nameHi: 'बैंगनी' },
         };
 
-        async function loadTokenColor() {
-            try {
-                const res = await fetch('/api/settings/token_color', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+        let selectedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        let upcomingColorsData = {};
 
-                if (res.ok) {
-                    const data = await res.json();
-                    const colorKey = (data.setting_value || 'RED').toUpperCase();
-                    updateTokenColorDisplay(colorKey);
-                }
-            } catch (error) {
-                console.error('Error loading token color:', error);
+        // Initialize date buttons for next 7 days
+        function initDateButtons() {
+            const container = document.getElementById('dateButtons');
+            container.innerHTML = '';
+
+            const today = new Date();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = dayNames[date.getDay()];
+                const dayNum = date.getDate();
+                const isToday = i === 0;
+
+                const btn = document.createElement('button');
+                btn.className = `date-btn neu-button px-4 py-2 ${isToday ? 'bg-orange-500 text-white' : 'bg-white'}`;
+                btn.dataset.date = dateStr;
+                btn.innerHTML = `<div class="text-center"><div class="text-xs">${dayName}</div><div class="font-bold">${dayNum}</div>${isToday ? '<div class="text-xs">Today</div>' : ''}</div>`;
+                btn.onclick = () => selectDate(dateStr);
+                container.appendChild(btn);
             }
         }
 
-        function updateTokenColorDisplay(colorKey) {
-            const displayEl = document.getElementById('currentTokenColor');
-            const color = tokenColorMap[colorKey] || tokenColorMap['RED'];
+        function selectDate(dateStr) {
+            selectedDate = dateStr;
 
-            displayEl.textContent = colorKey;
-            displayEl.style.backgroundColor = color.bg;
-            displayEl.style.color = color.text;
+            // Update button styles
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                if (btn.dataset.date === dateStr) {
+                    btn.classList.add('bg-orange-500', 'text-white');
+                    btn.classList.remove('bg-white');
+                } else {
+                    btn.classList.remove('bg-orange-500', 'text-white');
+                    btn.classList.add('bg-white');
+                }
+            });
 
-            // Highlight selected button
+            // Update display text
+            const date = new Date(dateStr);
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            document.getElementById('selectedDateDisplay').textContent = isToday ? 'Today' : date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+            // Highlight current color for selected date
+            const currentColor = upcomingColorsData[dateStr];
+            highlightSelectedColor(currentColor);
+        }
+
+        function highlightSelectedColor(colorKey) {
             document.querySelectorAll('.token-color-btn').forEach(btn => {
                 if (btn.dataset.color === colorKey) {
                     btn.style.boxShadow = '0 0 0 4px #000, 0 0 0 6px #FFD700';
@@ -591,32 +643,102 @@
             });
         }
 
-        async function selectTokenColor(colorKey) {
+        async function loadTokenColor() {
             try {
-                const res = await fetch('/api/settings/token_color', {
+                // Load upcoming colors
+                const res = await fetch('/api/token-color/upcoming?days=7', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    upcomingColorsData = {};
+                    (data || []).forEach(item => {
+                        upcomingColorsData[item.date] = item.color;
+                    });
+                    displayUpcomingColors();
+
+                    // Highlight current selection
+                    const todayColor = upcomingColorsData[selectedDate];
+                    highlightSelectedColor(todayColor);
+                }
+            } catch (error) {
+                console.error('Error loading token colors:', error);
+            }
+        }
+
+        function displayUpcomingColors() {
+            const container = document.getElementById('upcomingColors');
+            container.innerHTML = '';
+
+            const today = new Date();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = dayNames[date.getDay()];
+                const dayNum = date.getDate();
+                const color = upcomingColorsData[dateStr];
+                const colorInfo = tokenColorMap[color] || { bg: '#E5E7EB', text: '#6B7280', name: 'Not Set', nameHi: '-' };
+                const isToday = i === 0;
+
+                const div = document.createElement('div');
+                div.className = `text-center p-2 border-2 border-black ${isToday ? 'ring-2 ring-orange-500' : ''}`;
+                div.style.backgroundColor = colorInfo.bg;
+                div.style.color = colorInfo.text;
+                div.innerHTML = `
+                    <div class="text-xs font-semibold">${dayName}</div>
+                    <div class="font-bold">${dayNum}</div>
+                    <div class="text-xs mt-1">${color || '-'}</div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        async function selectTokenColor(colorKey) {
+            // Hide any previous messages
+            document.getElementById('tokenColorSuccess').classList.add('hidden');
+            document.getElementById('tokenColorError').classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/token-color', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ value: colorKey })
+                    body: JSON.stringify({
+                        date: selectedDate,
+                        color: colorKey
+                    })
                 });
 
                 if (res.ok) {
-                    updateTokenColorDisplay(colorKey);
+                    // Update local data
+                    upcomingColorsData[selectedDate] = colorKey;
+                    highlightSelectedColor(colorKey);
+                    displayUpcomingColors();
 
                     // Show success message
-                    const successEl = document.getElementById('tokenColorSuccess');
-                    successEl.classList.remove('hidden');
-                    setTimeout(() => successEl.classList.add('hidden'), 3000);
+                    document.getElementById('tokenColorSuccess').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('tokenColorSuccess').classList.add('hidden'), 3000);
                 } else {
-                    throw new Error('Failed to update token color');
+                    const errorText = await res.text();
+                    throw new Error(errorText);
                 }
             } catch (error) {
                 console.error('Error updating token color:', error);
-                alert('Error updating token color: ' + error.message);
+                document.getElementById('tokenColorErrorText').textContent = error.message;
+                document.getElementById('tokenColorError').classList.remove('hidden');
             }
         }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initDateButtons();
+        });
 
         function updateModeDisplay(mode) {
             const modeIcon = document.getElementById('modeIcon');
