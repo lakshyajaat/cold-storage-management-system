@@ -211,6 +211,15 @@
         function buildCustomerAccounts(entries, roomEntries, payments) {
             const customerMap = {};
 
+            // Build a map of thock_number -> total stored quantity from room entries
+            const thockStoredQty = {};
+            (roomEntries || []).forEach(re => {
+                if (!thockStoredQty[re.thock_number]) {
+                    thockStoredQty[re.thock_number] = 0;
+                }
+                thockStoredQty[re.thock_number] += re.quantity || 0;
+            });
+
             // Group entries by customer phone
             (entries || []).forEach(entry => {
                 if (!entry.phone) return;
@@ -232,24 +241,19 @@
                 const customer = customerMap[entry.phone];
                 customer.thock_count++;
 
-                // Use actual_quantity for rent calculation (what's actually stored)
-                const actualQty = entry.actual_quantity || 0;
-                const expectedQty = entry.expected_quantity || 0;
-                const quantity = actualQty > 0 ? actualQty : expectedQty;
-                const rent = quantity * rentRate;
-                // Display: "23 → 22" if different
-                const qtyDisplay = actualQty > 0 && expectedQty !== actualQty
-                    ? `${expectedQty} → ${actualQty}`
-                    : quantity;
+                // Use STORED quantity from room_entries for rent calculation
+                // Only charge for items actually stored in rooms
+                const storedQty = thockStoredQty[entry.thock_number] || 0;
+                const rent = storedQty * rentRate;
 
-                customer.total_quantity += quantity;
+                customer.total_quantity += storedQty;
                 customer.total_rent += rent;
 
                 customer.thocks.push({
                     thock_number: entry.thock_number,
                     category: entry.thock_category,
-                    quantity: quantity,
-                    qtyDisplay: qtyDisplay, // For UI display
+                    quantity: storedQty,
+                    qtyDisplay: storedQty,
                     rent: rent,
                     is_outgoing: false,
                     date: entry.created_at
