@@ -399,7 +399,7 @@
         let customerPayments = [];
         let isSubmittingGatePass = false; // Debounce flag for gate pass submission
         let isSubmittingApproval = false; // Debounce flag for approval submission
-        let customerRentRate = 10; // Default ₹10 per item, will be loaded from system settings
+        let customerRentRate = 0; // Loaded from API
         let totalRentOwed = 0;
         let totalPaid = 0;
         let balanceDue = 0;

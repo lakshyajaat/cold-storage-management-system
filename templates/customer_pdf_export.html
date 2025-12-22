@@ -145,7 +145,7 @@
 
     <script>
         const token = localStorage.getItem('token');
-        let rentRate = 160;
+        let rentRate = 0; // Loaded from API
         let allAccounts = [];
         let allEntries = [];
         let allRoomEntries = [];
@@ -170,7 +170,7 @@
                 });
                 if (settingsRes.ok) {
                     const setting = await settingsRes.json();
-                    rentRate = parseFloat(setting.setting_value) || 160;
+                    rentRate = parseFloat(setting.setting_value) || 0;
                 }
             } catch (e) {}
 

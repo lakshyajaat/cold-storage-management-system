@@ -350,7 +350,7 @@
                 rentPerItem = parseFloat(setting.setting_value);
             } catch (error) {
                 console.error('Error loading rent setting:', error);
-                rentPerItem = 10; // Default fallback
+                // API failed - rentPerItem stays at 0
             }
         }
 
