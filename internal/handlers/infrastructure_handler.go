@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -480,7 +481,9 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 	}
 
 	// Connect directly to streaming replica via network
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable connect_timeout=5", host, port, dbUser, dbPassword, dbName)
+	// Use URL-style connection string for proper password escaping
+	escapedPassword := url.QueryEscape(dbPassword)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&connect_timeout=5", dbUser, escapedPassword, host, port, dbName)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
