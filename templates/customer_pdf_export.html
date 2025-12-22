@@ -165,12 +165,12 @@
 
             // Load rent rate
             try {
-                const settingsRes = await fetch('/api/settings/rent_rate_per_item', {
+                const settingsRes = await fetch('/api/settings/rent_per_item', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (settingsRes.ok) {
                     const setting = await settingsRes.json();
-                    rentRate = parseFloat(setting.value) || 160;
+                    rentRate = parseFloat(setting.setting_value) || 160;
                 }
             } catch (e) {}
 
