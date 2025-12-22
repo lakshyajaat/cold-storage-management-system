@@ -137,12 +137,13 @@
                             <th class="px-4 py-2 text-left font-bold">DB Size</th>
                             <th class="px-4 py-2 text-left font-bold">Connections</th>
                             <th class="px-4 py-2 text-left font-bold">Repl. Lag</th>
+                            <th class="px-4 py-2 text-left font-bold">Sync %</th>
                             <th class="px-4 py-2 text-left font-bold">Cache Hit</th>
                         </tr>
                     </thead>
                     <tbody id="pgPodsList">
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-gray-500">Loading...</td>
+                            <td colspan="9" class="text-center py-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1096,6 +1097,19 @@
                         const maxConn = pod.max_conn || 200;
                         const connDisplay = connections !== 'N/A' ? `${connections} / ${maxConn}` : 'N/A';
 
+                        // Sync percentage display
+                        const syncPct = pod.sync_pct;
+                        let syncDisplay = 'N/A';
+                        let syncClass = 'text-gray-400';
+                        if (pod.role === 'Primary') {
+                            syncDisplay = 'N/A';
+                        } else if (syncPct !== undefined && syncPct >= 0) {
+                            syncDisplay = syncPct.toFixed(1) + '%';
+                            if (syncPct >= 99.9) syncClass = 'text-green-600';
+                            else if (syncPct >= 95) syncClass = 'text-yellow-600';
+                            else syncClass = 'text-red-600';
+                        }
+
                         return `
                         <tr class="${rowClass}">
                             <td class="px-4 py-3 font-mono text-xs">${pod.name}</td>
@@ -1114,6 +1128,7 @@
                             <td class="px-4 py-3 font-mono text-xs">${pod.disk_used}</td>
                             <td class="px-4 py-3 font-mono text-xs">${connDisplay}</td>
                             <td class="px-4 py-3 font-mono text-xs ${pod.repl_lag !== 'N/A' && pod.repl_lag !== 'N/A' ? 'text-orange-600' : 'text-gray-400'}">${pod.repl_lag}</td>
+                            <td class="px-4 py-3 font-mono text-xs ${syncClass}">${syncDisplay}</td>
                             <td class="px-4 py-3 font-mono text-xs ${cacheHit !== 'N/A' ? 'text-green-600' : 'text-gray-400'}">${cacheHit}</td>
                         </tr>
                     `}).join('');
@@ -1121,10 +1136,10 @@
                     // Update PostgreSQL charts with pod data
                     updatePgCharts(data.pods);
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No pods found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">No pods found</td></tr>';
                 }
             } catch (error) {
-                document.getElementById('pgPodsList').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500">Error loading PostgreSQL pods</td></tr>';
+                document.getElementById('pgPodsList').innerHTML = '<tr><td colspan="9" class="text-center py-4 text-red-500">Error loading PostgreSQL pods</td></tr>';
                 console.error('PostgreSQL pods check failed:', error);
             }
         }

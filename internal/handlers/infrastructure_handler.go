@@ -370,21 +370,29 @@ func (h *InfrastructureHandler) GetPostgreSQLPods(w http.ResponseWriter, r *http
 		connections := "N/A"
 		lag := "N/A"
 		cacheHit := "N/A"
+		var syncPct float64 = -1 // -1 means N/A (primary), 0-100 for replicas
 
 		// Only run kubectl exec if pod is Running - use SINGLE combined query for speed
 		if pod.Status.Phase == "Running" {
-			// Combined query: db_size | connections | cache_hit | repl_lag (4 values separated by |)
+			// Combined query: db_size | connections | cache_hit | repl_lag | sync_pct (5 values separated by |)
 			combinedQuery := `SELECT
 				pg_size_pretty(pg_database_size('cold_db')) || '|' ||
 				(SELECT count(*) FROM pg_stat_activity WHERE datname = 'cold_db' AND pid <> pg_backend_pid()) || '|' ||
 				COALESCE(ROUND(100.0 * sum(blks_hit) / NULLIF(sum(blks_hit) + sum(blks_read), 0), 1)::text || '%', 'N/A') || '|' ||
-				COALESCE(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::text, '0')
+				COALESCE(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::text, '0') || '|' ||
+				CASE
+					WHEN pg_is_in_recovery() = false THEN '-1'
+					WHEN pg_last_wal_receive_lsn() IS NULL THEN '0'
+					WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN '100'
+					ELSE ROUND(100.0 - (pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::float /
+						GREATEST(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), '0/0')::float, 1) * 100), 1)::text
+				END
 				FROM pg_stat_database WHERE datname = 'cold_db';`
 
 			cmd := exec.Command("kubectl", "exec", pod.Metadata.Name, "--", "psql", "-U", "postgres", "-d", "cold_db", "-t", "-c", combinedQuery)
 			if output, err := cmd.Output(); err == nil {
 				parts := strings.Split(strings.TrimSpace(string(output)), "|")
-				if len(parts) >= 4 {
+				if len(parts) >= 5 {
 					dbSize = strings.TrimSpace(parts[0])
 					connections = strings.TrimSpace(parts[1])
 					cacheHit = strings.TrimSpace(parts[2])
@@ -404,6 +412,12 @@ func (h *InfrastructureHandler) GetPostgreSQLPods(w http.ResponseWriter, r *http
 							}
 						}
 					}
+					// Parse sync percentage
+					if sp := strings.TrimSpace(parts[4]); sp != "" {
+						if pct, err := strconv.ParseFloat(sp, 64); err == nil {
+							syncPct = pct
+						}
+					}
 				}
 			}
 		}
@@ -418,6 +432,7 @@ func (h *InfrastructureHandler) GetPostgreSQLPods(w http.ResponseWriter, r *http
 			"max_conn":    200,
 			"repl_lag":    lag,
 			"cache_hit":   cacheHit,
+			"sync_pct":    syncPct,
 			"is_external": false,
 		})
 	}
@@ -446,6 +461,7 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 	replLag := "N/A"
 	status := "Running"
 	role := "Unknown"
+	var syncPct float64 = -1 // -1 means N/A
 
 	// Get credentials from environment - NEVER hardcode
 	dbUser := os.Getenv("METRICS_DB_USER")
@@ -455,7 +471,7 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 	dbPassword := os.Getenv("METRICS_DB_PASSWORD")
 	if dbPassword == "" {
 		status = "Error"
-		return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role)
+		return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role, syncPct)
 	}
 	dbName := os.Getenv("METRICS_DB_NAME")
 	if dbName == "" {
@@ -470,7 +486,7 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		status = "Error"
-		return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role)
+		return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role, syncPct)
 	}
 	defer db.Close()
 
@@ -491,12 +507,28 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 			// Format bytes lag
 			if lag.Float64 == 0 {
 				replLag = "0"
+				syncPct = 100
 			} else if lag.Float64 < 1024 {
 				replLag = fmt.Sprintf("%.0f B", lag.Float64)
 			} else if lag.Float64 < 1024*1024 {
 				replLag = fmt.Sprintf("%.1f KB", lag.Float64/1024)
 			} else {
 				replLag = fmt.Sprintf("%.1f MB", lag.Float64/(1024*1024))
+			}
+		}
+		// Get sync percentage
+		if syncPct != 100 {
+			var pct sql.NullFloat64
+			err = db.QueryRowContext(ctx, `
+				SELECT CASE
+					WHEN pg_last_wal_receive_lsn() IS NULL THEN 0
+					WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 100
+					ELSE ROUND(100.0 - (pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::float /
+						GREATEST(pg_wal_lsn_diff(pg_last_wal_receive_lsn(), '0/0')::float, 1) * 100), 1)
+				END
+			`).Scan(&pct)
+			if err == nil && pct.Valid {
+				syncPct = pct.Float64
 			}
 		}
 	} else {
@@ -532,10 +564,10 @@ func (h *InfrastructureHandler) getMetricsDBStatus() map[string]interface{} {
 		cacheHit = cache.String
 	}
 
-	return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role)
+	return h.buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role, syncPct)
 }
 
-func (h *InfrastructureHandler) buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role string) map[string]interface{} {
+func (h *InfrastructureHandler) buildMetricsDBResponse(host, port, dbSize, connections, cacheHit, replLag, status, role string, syncPct float64) map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "streaming-replica (192.168.15.195)",
 		"role":        role,
@@ -546,6 +578,7 @@ func (h *InfrastructureHandler) buildMetricsDBResponse(host, port, dbSize, conne
 		"max_conn":    200,
 		"repl_lag":    replLag,
 		"cache_hit":   cacheHit,
+		"sync_pct":    syncPct,
 		"is_external": true,
 	}
 }
