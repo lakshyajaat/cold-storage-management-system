@@ -1488,8 +1488,8 @@
                 const receiptHTML = `
                     <div class="receipt">
                         <div class="header">
-                            <h1>गुड़ कृपा कोल्ड स्टोर</h1>
-                            <p>Gud Kripa Cold Store</p>
+                            <h1>गुरु कृपा कोल्ड स्टोर</h1>
+                            <p>Guru Kripa Cold Store</p>
                             <p>कोल्ड स्टोर लाइसेंस/गोदाम | Cold Store License/Warehouse</p>
                             <p style="font-weight: bold; margin-top: 2px;">Mobile: 7505837172</p>
                         </div>
@@ -1501,7 +1501,7 @@
                         <div class="info-section">
                             <div class="info-row">
                                 <span class="label">ग्राहक का नाम | Customer:</span>
-                                <span class="value">${capitalizeText(entry.name)}</span>
+                                <span class="value">${capitalizeText(entry.name)}${entry.so ? ' S/O ' + capitalizeText(entry.so) : ''}</span>
                             </div>
                             <div class="info-row">
                                 <span class="label">फोन | Phone:</span>
@@ -1548,7 +1548,6 @@
                             </div>
                         </div>
 
-                        ${roomEntry.remark ? '<div class="remark">टिप्पणी | Note: ' + roomEntry.remark + '</div>' : ''}
                     </div>
                 `;
 
