@@ -240,14 +240,16 @@
                 const entries = await entriesRes.json();
                 const roomEntries = await roomEntriesRes.json();
 
-                // Calculate today's date
-                const today = new Date().toISOString().split('T')[0];
+                // Calculate today's date (use local timezone)
+                const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format in local timezone
 
                 // Filter entries created by current employee today
                 const myEntriesToday = entries.filter(e => {
-                    const entryDate = new Date(e.created_at).toISOString().split('T')[0];
+                    const entryDate = new Date(e.created_at).toLocaleDateString('en-CA'); // Local timezone
                     return entryDate === today && e.created_by_user_id === currentUser.id;
                 });
+
+                console.log('Debug - User ID:', currentUser.id, 'Today:', today, 'My entries count:', myEntriesToday.length);
 
                 // Calculate total bags
                 const totalBags = roomEntries.reduce((sum, r) => sum + (r.quantity || 0), 0);
