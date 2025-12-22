@@ -402,6 +402,7 @@
                                     <th class="p-2 text-left border-b-2 border-black">Phone</th>
                                     <th class="p-2 text-left border-b-2 border-black">Village</th>
                                     <th class="p-2 text-right border-b-2 border-black">Thoks</th>
+                                    <th class="p-2 text-right border-b-2 border-black">Qty</th>
                                     <th class="p-2 text-right border-b-2 border-black">Total Rent</th>
                                     <th class="p-2 text-right border-b-2 border-black">Paid</th>
                                     <th class="p-2 text-right border-b-2 border-black">Balance</th>
@@ -416,6 +417,7 @@
                                         <td class="p-2">${a.phone}</td>
                                         <td class="p-2">${a.village || '-'}</td>
                                         <td class="p-2 text-right">${a.thock_count || 0}</td>
+                                        <td class="p-2 text-right font-medium">${a.total_quantity || 0}</td>
                                         <td class="p-2 text-right">${formatCurrency(a.total_rent)}</td>
                                         <td class="p-2 text-right text-green-600">${formatCurrency(a.total_paid)}</td>
                                         <td class="p-2 text-right font-bold ${a.balance > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(a.balance)}</td>
@@ -430,6 +432,7 @@
                             <tfoot class="bg-gray-100 font-bold">
                                 <tr class="border-t-2 border-black">
                                     <td class="p-2" colspan="5">TOTAL</td>
+                                    <td class="p-2 text-right">${filteredAccounts.reduce((s, a) => s + (a.total_quantity || 0), 0)}</td>
                                     <td class="p-2 text-right">${formatCurrency(filteredAccounts.reduce((s, a) => s + (a.total_rent || 0), 0))}</td>
                                     <td class="p-2 text-right text-green-600">${formatCurrency(filteredAccounts.reduce((s, a) => s + (a.total_paid || 0), 0))}</td>
                                     <td class="p-2 text-right text-red-600">${formatCurrency(filteredAccounts.reduce((s, a) => s + (a.balance || 0), 0))}</td>
