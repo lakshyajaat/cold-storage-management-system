@@ -71,7 +71,7 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 	}
 
 	// Get rent_per_item setting from system settings
-	var systemRentPerItem float64 = 160.0 // Default fallback
+	var systemRentPerItem float64 = 0.0 // No hardcoded fallback - use API only
 	if s.SystemSettingRepo != nil {
 		rentSetting, err := s.SystemSettingRepo.Get(ctx, "rent_per_item")
 		if err == nil && rentSetting != nil {

@@ -105,7 +105,7 @@
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6 mb-6 md:mb-8">
             <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-3 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
@@ -123,6 +123,16 @@
                         <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalThocks">0</p>
                     </div>
                     <i class="bi bi-truck text-3xl md:text-5xl opacity-50"></i>
+                </div>
+            </div>
+
+            <div class="neu-border bg-gradient-to-br from-teal-400 to-teal-600 text-white p-3 md:p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs md:text-sm opacity-90">Total Qty</p>
+                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalQuantity">0</p>
+                    </div>
+                    <i class="bi bi-box-seam text-3xl md:text-5xl opacity-50"></i>
                 </div>
             </div>
 
@@ -891,11 +901,13 @@
         function updateSummary() {
             const totalCustomers = allCustomerAccounts.length;
             const totalThocks = allCustomerAccounts.reduce((sum, c) => sum + c.thocks.length, 0);
+            const totalQty = allCustomerAccounts.reduce((sum, c) => sum + c.totalQuantity, 0);
             const totalOutstanding = allCustomerAccounts.reduce((sum, c) => sum + c.balance, 0);
             const totalCollected = allCustomerAccounts.reduce((sum, c) => sum + c.totalPaid, 0);
 
             document.getElementById('totalCustomers').textContent = totalCustomers;
             document.getElementById('totalThocks').textContent = totalThocks;
+            document.getElementById('totalQuantity').textContent = totalQty.toLocaleString('en-IN');
             document.getElementById('totalOutstanding').textContent = '₹' + totalOutstanding.toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('totalCollected').textContent = '₹' + totalCollected.toLocaleString('en-IN', {minimumFractionDigits: 2});
         }
