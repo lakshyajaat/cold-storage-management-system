@@ -334,6 +334,7 @@ func NewRouter(
 	infraAPI.HandleFunc("/backup-schedule", authMiddleware.RequireAdmin(http.HandlerFunc(infraHandler.UpdateBackupSchedule)).ServeHTTP).Methods("POST")
 	infraAPI.HandleFunc("/failover", authMiddleware.RequireAdmin(http.HandlerFunc(infraHandler.ExecuteFailover)).ServeHTTP).Methods("POST")
 	infraAPI.HandleFunc("/recover-stuck-pods", authMiddleware.RequireAdmin(http.HandlerFunc(infraHandler.RecoverStuckPods)).ServeHTTP).Methods("POST")
+	infraAPI.HandleFunc("/download-database", authMiddleware.RequireAdmin(http.HandlerFunc(infraHandler.DownloadDatabase)).ServeHTTP).Methods("GET")
 
 	// Protected API routes - Node Provisioning (admin only)
 	if nodeProvisioningHandler != nil {

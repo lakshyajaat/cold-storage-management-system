@@ -177,6 +177,16 @@
                         <div class="text-xs text-gray-500">NAS Archive</div>
                         <div id="backup-db-nas" class="font-bold text-sm">--</div>
                     </div>
+                    <div class="p-3 bg-orange-50 rounded border">
+                        <div class="text-xs text-gray-500">Offsite (69.169.105.219)</div>
+                        <div id="backup-db-offsite-status" class="font-bold text-sm flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span> Checking...
+                        </div>
+                    </div>
+                    <div class="p-3 bg-orange-50 rounded border">
+                        <div class="text-xs text-gray-500">Offsite Snapshots</div>
+                        <div id="backup-db-offsite-snapshots" class="font-bold text-sm">--</div>
+                    </div>
                 </div>
             </div>
 
@@ -518,6 +528,17 @@
                 document.getElementById('backup-db-mem').textContent = `${(data.memory_percent || 0).toFixed(1)}%`;
                 document.getElementById('backup-db-disk').textContent = `${data.disk_used || '--'} / ${data.disk_total || '--'}`;
                 document.getElementById('backup-db-nas').textContent = data.nas_archive_size || '--';
+
+                // Offsite backup status
+                const offsiteStatusEl = document.getElementById('backup-db-offsite-status');
+                if (data.offsite_reachable) {
+                    offsiteStatusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500"></span> Online';
+                    offsiteStatusEl.className = 'font-bold text-sm flex items-center gap-1 text-green-600';
+                } else {
+                    offsiteStatusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Offline';
+                    offsiteStatusEl.className = 'font-bold text-sm flex items-center gap-1 text-red-600';
+                }
+                document.getElementById('backup-db-offsite-snapshots').textContent = data.offsite_snapshots || '0';
             } catch (e) {
                 console.error('Failed to load backup DB status:', e);
             }

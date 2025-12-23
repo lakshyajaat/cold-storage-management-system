@@ -50,7 +50,7 @@
         </div>
 
         <!-- Overall System Status -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div class="neu-border bg-white p-4">
                 <div class="text-sm text-gray-600 mb-2">K3s Cluster</div>
                 <div id="k3sStatus" class="flex items-center gap-2">
@@ -75,6 +75,13 @@
             <div class="neu-border bg-white p-4">
                 <div class="text-sm text-gray-600 mb-2">Backup Server</div>
                 <div id="backupStatus" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
+                    <span class="font-bold">Checking...</span>
+                </div>
+            </div>
+            <div class="neu-border bg-white p-4">
+                <div class="text-sm text-gray-600 mb-2">Offsite Backup</div>
+                <div id="offsiteStatusHeader" class="flex items-center gap-2">
                     <div class="w-4 h-4 rounded-full status-unknown pulse"></div>
                     <span class="font-bold">Checking...</span>
                 </div>
@@ -526,8 +533,33 @@
                 </div>
             </div>
 
+            <!-- Offsite Backup Monitoring -->
+            <div class="neu-border bg-orange-50 p-4 mb-4">
+                <h3 class="font-bold mb-3">
+                    <i class="bi bi-cloud-upload"></i> Offsite Backup (69.169.105.219)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <div class="text-sm text-gray-600">Status</div>
+                        <div id="offsiteStatus" class="text-xl font-bold">--</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Archive Size</div>
+                        <div id="offsiteSize" class="text-xl font-bold">--</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Total Snapshots</div>
+                        <div id="offsiteSnapshots" class="text-xl font-bold">--</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Last Backup</div>
+                        <div id="offsiteLastBackup" class="text-xl font-bold">--</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Backup Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Manual Backup -->
                 <div class="neu-border bg-green-50 p-4">
                     <h3 class="font-bold mb-2">
@@ -539,6 +571,20 @@
                     </button>
                     <div id="backupProgress" class="mt-2 text-sm text-center hidden">
                         <i class="bi bi-hourglass-split"></i> Backing up...
+                    </div>
+                </div>
+
+                <!-- Download Database -->
+                <div class="neu-border bg-blue-50 p-4">
+                    <h3 class="font-bold mb-2">
+                        <i class="bi bi-download"></i> Download Database
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-3">Download complete database as SQL file</p>
+                    <button onclick="downloadDatabase()" class="neu-border bg-blue-500 text-white px-6 py-3 w-full">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Download DB
+                    </button>
+                    <div id="downloadProgress" class="mt-2 text-sm text-center hidden">
+                        <i class="bi bi-hourglass-split"></i> Preparing download...
                     </div>
                 </div>
 
@@ -1015,6 +1061,19 @@
                 document.getElementById('nasSnapshots').textContent = data.nas_snapshots || '0';
                 document.getElementById('nasOldest').textContent = data.nas_oldest || 'N/A';
 
+                // Offsite Backup monitoring (69.169.105.219)
+                const offsiteReachable = data.offsite_reachable || false;
+                document.getElementById('offsiteStatus').innerHTML = offsiteReachable
+                    ? '<span class="text-green-600">Online</span>'
+                    : '<span class="text-red-600">Offline</span>';
+                document.getElementById('offsiteSize').textContent = data.offsite_size || '0';
+                document.getElementById('offsiteSnapshots').textContent = data.offsite_snapshots || '0';
+                document.getElementById('offsiteLastBackup').textContent = data.offsite_last_backup || 'Never';
+
+                // Update header status for offsite
+                updateStatus('offsiteStatusHeader', offsiteReachable ? 'healthy' : 'critical',
+                    offsiteReachable ? `${data.offsite_snapshots || 0} snapshots` : 'Unreachable');
+
                 // Load current backup schedule
                 if (data.backup_schedule) {
                     document.getElementById('backupFrequency').value = data.backup_schedule;
@@ -1174,6 +1233,48 @@
             } catch (error) {
                 progressEl.classList.add('hidden');
                 alert('Failed to trigger backup: ' + error.message);
+            }
+        }
+
+        async function downloadDatabase() {
+            if (!confirm('This will download the entire database as a SQL file. Continue?')) return;
+
+            const progressEl = document.getElementById('downloadProgress');
+            progressEl.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/infrastructure/download-database', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                // Get the filename from the Content-Disposition header or generate one
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'cold_db_backup.sql';
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                progressEl.classList.add('hidden');
+            } catch (error) {
+                progressEl.classList.add('hidden');
+                alert('Failed to download database: ' + error.message);
             }
         }
 
