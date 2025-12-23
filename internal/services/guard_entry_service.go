@@ -51,6 +51,7 @@ func (s *GuardEntryService) CreateGuardEntry(ctx context.Context, req *models.Cr
 		Mobile:          req.Mobile,
 		DriverNo:        req.DriverNo,
 		Category:        req.Category,
+		Quantity:        req.Quantity,
 		Remarks:         req.Remarks,
 		CreatedByUserID: userID,
 	}

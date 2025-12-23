@@ -11,6 +11,7 @@ type GuardEntry struct {
 	DriverNo          string     `json:"driver_no"`
 	ArrivalTime       time.Time  `json:"arrival_time"`
 	Category          string     `json:"category"` // 'seed', 'sell', or 'both'
+	Quantity          int        `json:"quantity"` // Approximate number of bags
 	Remarks           string     `json:"remarks"`
 	Status            string     `json:"status"` // 'pending' or 'processed'
 	CreatedByUserID   int        `json:"created_by_user_id"`
@@ -31,5 +32,6 @@ type CreateGuardEntryRequest struct {
 	Mobile       string `json:"mobile"`
 	DriverNo     string `json:"driver_no"`
 	Category     string `json:"category"` // 'seed', 'sell', or 'both'
+	Quantity     int    `json:"quantity"` // Approximate number of bags
 	Remarks      string `json:"remarks"`
 }

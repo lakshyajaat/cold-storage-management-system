@@ -207,7 +207,7 @@
                 </div>
 
                 <!-- Category Selection -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="form-label" data-i18n="category">Category (श्रेणी)</label>
                     <div class="flex flex-wrap gap-3">
                         <button type="button" class="category-btn bg-green-200" data-category="seed" onclick="selectCategory('seed')">
@@ -221,6 +221,14 @@
                         </button>
                     </div>
                     <input type="hidden" id="category" required>
+                </div>
+
+                <!-- Quantity -->
+                <div class="mb-6">
+                    <label class="form-label" data-i18n="quantity">Quantity / Bags (बोरी)</label>
+                    <input type="number" id="quantity" class="form-input" min="1" max="9999"
+                           placeholder="Number of bags" data-i18n-placeholder="enter_quantity"
+                           style="max-width: 200px;">
                 </div>
 
                 <!-- Submit Button -->
@@ -483,12 +491,15 @@
             const driverSame = document.getElementById('driverSameAsCustomer').checked;
             const driverNo = driverSame ? mobile : document.getElementById('driverNo').value.trim();
 
+            const quantity = parseInt(document.getElementById('quantity').value) || 0;
+
             const data = {
                 customer_name: document.getElementById('customerName').value.trim(),
                 village: document.getElementById('village').value.trim(),
                 mobile: mobile,
                 driver_no: driverNo,
                 category: selectedCategory,
+                quantity: quantity,
                 remarks: document.getElementById('remarks').value.trim()
             };
 
@@ -517,6 +528,7 @@
                 selectedCategory = null;
                 document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('selected'));
                 document.getElementById('category').value = '';
+                document.getElementById('quantity').value = '';
                 document.getElementById('driverSameAsCustomer').checked = true;
                 document.getElementById('driverNoContainer').classList.add('hidden');
                 document.getElementById('customerStatus').classList.add('hidden');
@@ -568,12 +580,14 @@
                     const statusText = entry.status === 'pending'
                         ? (lang === 'hi' ? 'लंबित' : 'Pending')
                         : (lang === 'hi' ? 'प्रोसेस्ड' : 'Processed');
+                    const qtyDisplay = entry.quantity > 0 ? entry.quantity : '-';
 
                     return `
                         <div class="entry-row flex flex-wrap items-center gap-2 md:gap-4">
                             <span class="font-mono text-sm bg-gray-100 px-2 py-1 border border-black">${time}</span>
                             <span class="font-bold flex-1">${entry.customer_name}</span>
                             <span class="text-sm text-gray-600">${entry.village}</span>
+                            <span class="text-sm bg-yellow-100 px-2 py-1 border border-black font-semibold">${qtyDisplay}</span>
                             <span class="text-sm bg-gray-100 px-2 py-1 border border-black">${categoryLabels[entry.category]}</span>
                             <span class="text-xs px-2 py-1 border border-black ${statusClass}">${statusText}</span>
                         </div>

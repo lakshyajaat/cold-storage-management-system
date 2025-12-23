@@ -61,6 +61,7 @@
                 <option value="all">All Users</option>
                 <option value="admin">Admins Only</option>
                 <option value="employee">Employees Only</option>
+                <option value="guard">Guards Only</option>
             </select>
         </div>
 
@@ -114,6 +115,7 @@
                     <select id="userRole" required class="w-full p-3 neu-brutal bg-white">
                         <option value="employee">Employee</option>
                         <option value="admin">Admin</option>
+                        <option value="guard">Guard</option>
                     </select>
                 </div>
 
@@ -217,7 +219,7 @@
                     <td class="p-4 font-semibold">${capitalizeText(user.name)}</td>
                     <td class="p-4">${user.email}</td>
                     <td class="p-4">
-                        <span class="px-3 py-1 rounded text-white ${user.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'}">
+                        <span class="px-3 py-1 rounded text-white ${user.role === 'admin' ? 'bg-red-500' : user.role === 'guard' ? 'bg-orange-500' : 'bg-blue-500'}">
                             ${user.role.toUpperCase()}
                         </span>
                         ${user.has_accountant_access && user.role !== 'admin' ? '<span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs rounded">+Accountant</span>' : ''}
