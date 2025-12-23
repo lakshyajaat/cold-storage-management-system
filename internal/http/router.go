@@ -94,13 +94,9 @@ func NewRouter(
 	r.HandleFunc("/customer-export", pageHandler.CustomerPDFExportPage).Methods("GET")
 	r.HandleFunc("/customer-edit", pageHandler.CustomerEditPage).Methods("GET")
 
-	// Guard pages - accessible by guard, employee, admin
-	r.HandleFunc("/guard/dashboard", authMiddleware.RequireRole("guard", "employee", "admin")(
-		http.HandlerFunc(pageHandler.GuardDashboardPage),
-	).ServeHTTP).Methods("GET")
-	r.HandleFunc("/guard/register", authMiddleware.RequireRole("guard", "employee", "admin")(
-		http.HandlerFunc(pageHandler.GuardRegisterPage),
-	).ServeHTTP).Methods("GET")
+	// Guard pages (auth handled client-side via localStorage token)
+	r.HandleFunc("/guard/dashboard", pageHandler.GuardDashboardPage).Methods("GET")
+	r.HandleFunc("/guard/register", pageHandler.GuardRegisterPage).Methods("GET")
 
 	// Protected API routes - System Settings
 	settingsAPI := r.PathPrefix("/api/settings").Subrouter()
