@@ -955,11 +955,6 @@
                 section.classList.remove('hidden');
 
                 const lang = localStorage.getItem('lang') || 'en';
-                const categoryLabels = {
-                    seed: lang === 'hi' ? 'बीज' : 'Seed',
-                    sell: lang === 'hi' ? 'बिक्री' : 'Sell',
-                    both: lang === 'hi' ? 'दोनों' : 'Both'
-                };
 
                 list.innerHTML = entries.map(entry => {
                     const time = new Date(entry.arrival_time).toLocaleTimeString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
@@ -967,17 +962,39 @@
                         minute: '2-digit'
                     });
 
+                    // Build quantity display
+                    let qtyParts = [];
+                    if (entry.seed_quantity > 0) {
+                        qtyParts.push(`<span class="bg-green-100 px-2 py-1 border border-black">S:${entry.seed_quantity}</span>`);
+                    }
+                    if (entry.sell_quantity > 0) {
+                        qtyParts.push(`<span class="bg-blue-100 px-2 py-1 border border-black">B:${entry.sell_quantity}</span>`);
+                    }
+                    const qtyDisplay = qtyParts.length > 0 ? qtyParts.join(' ') : '';
+
+                    // S/O display
+                    const soDisplay = entry.so ? ` S/O ${entry.so}` : '';
+
+                    // Token number
+                    const tokenDisplay = entry.token_number ? `<span class="font-mono text-lg bg-yellow-200 px-2 py-1 border-2 border-black font-bold">#${entry.token_number}</span>` : '';
+
+                    // Determine category for form
+                    let category = 'seed';
+                    if (entry.seed_quantity > 0 && entry.sell_quantity > 0) category = 'both';
+                    else if (entry.sell_quantity > 0) category = 'sell';
+
                     return `
                         <div class="flex flex-wrap items-center gap-2 p-3 bg-white border-2 border-black cursor-pointer hover:bg-yellow-100"
-                             onclick="selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.village}', '${entry.mobile}', '${entry.category}')">
+                             onclick="selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', '${category}', ${entry.seed_quantity || 0}, ${entry.sell_quantity || 0})">
+                            ${tokenDisplay}
                             <span class="font-mono text-sm bg-orange-100 px-2 py-1 border border-black">${time}</span>
-                            <span class="font-bold">${entry.customer_name}</span>
+                            <span class="font-bold">${entry.customer_name}${soDisplay}</span>
                             <span class="text-sm text-gray-600">${entry.village}</span>
                             <span class="text-sm">${entry.mobile}</span>
-                            <span class="text-xs bg-blue-100 px-2 py-1 border border-black">${categoryLabels[entry.category]}</span>
+                            <div class="flex gap-1 text-xs">${qtyDisplay}</div>
                             <span class="text-xs text-gray-500">${lang === 'hi' ? 'गार्ड' : 'Guard'}: ${entry.created_by_user_name || 'Unknown'}</span>
                             <button class="ml-auto text-sm bg-green-200 px-3 py-1 border-2 border-black hover:bg-green-300"
-                                    onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.village}', '${entry.mobile}', '${entry.category}')">
+                                    onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', '${category}', ${entry.seed_quantity || 0}, ${entry.sell_quantity || 0})">
                                 <i class="bi bi-arrow-right"></i> ${lang === 'hi' ? 'चुनें' : 'Select'}
                             </button>
                         </div>
@@ -989,13 +1006,17 @@
             }
         }
 
-        function selectGuardEntry(id, name, village, mobile, category) {
+        function selectGuardEntry(id, name, so, village, mobile, category, seedQty, sellQty) {
             selectedGuardEntry = id;
 
             // Fill the form with guard entry data
             document.getElementById('userPhone').value = mobile;
             document.getElementById('userName').value = name;
             document.getElementById('userVillage').value = village;
+
+            // Fill S/O if available
+            const soField = document.getElementById('userSO');
+            if (soField) soField.value = so || '';
 
             // Set category based on guard entry
             if (category === 'seed') {
@@ -1004,6 +1025,12 @@
                 document.querySelector('input[name="thockCategory"][value="sell"]').checked = true;
             }
             // If 'both', don't auto-select - employee chooses
+
+            // Pre-fill quantity if available
+            const totalQty = (seedQty || 0) + (sellQty || 0);
+            if (totalQty > 0) {
+                document.getElementById('expectedQuantity').value = totalQty;
+            }
 
             // Update category info
             updateCategoryInfo();
@@ -1017,7 +1044,7 @@
             formSection.querySelector('h2').innerHTML = `
                 <i class="bi bi-truck text-orange-600"></i>
                 <span data-i18n="processing_guard_entry">Processing Guard Entry</span>
-                <span class="text-sm bg-orange-200 px-2 py-1 border border-black ml-2">#${id}</span>
+                <span class="text-sm bg-yellow-200 px-2 py-1 border-2 border-black ml-2 font-bold">#${id}</span>
             `;
         }
 
