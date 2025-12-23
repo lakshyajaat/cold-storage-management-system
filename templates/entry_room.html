@@ -1099,7 +1099,7 @@
             }
         }
 
-        async function markGuardEntryProcessed() {
+        function markGuardEntryProcessed() {
             // Don't auto-mark, let user do it manually with ✓ button
             if (!selectedGuardEntry) return;
 
@@ -1107,19 +1107,16 @@
             selectedGuardEntry = null;
             selectedGuardPortion = null;
 
-                // Reset form styling
-                const formSection = document.getElementById('entryForm');
-                formSection.style.backgroundColor = 'white';
-                formSection.querySelector('h2').innerHTML = `
-                    <i class="bi bi-person-check"></i>
-                    <span data-i18n="user_details_entry">User Details & Entry</span>
-                `;
+            // Reset form styling
+            const formSection = document.getElementById('entryForm');
+            formSection.style.backgroundColor = 'white';
+            formSection.querySelector('h2').innerHTML = `
+                <i class="bi bi-person-check"></i>
+                <span data-i18n="user_details_entry">User Details & Entry</span>
+            `;
 
-                // Reload guard entries
-                loadGuardEntries();
-            } catch (error) {
-                console.error('Error marking guard entry as processed:', error);
-            }
+            // Reload guard entries
+            loadGuardEntries();
         }
 
         // Load recent entries on page load
