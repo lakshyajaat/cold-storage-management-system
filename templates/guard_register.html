@@ -269,11 +269,19 @@
 
         <!-- Today's Entries -->
         <div class="neu-border bg-white p-4 md:p-6">
-            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                <i class="bi bi-list-ul text-blue-600"></i>
-                <span data-i18n="todays_entries">Today's Entries</span>
-                <span id="entryCount" class="text-sm bg-orange-200 px-2 py-1 border border-black">0</span>
-            </h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i class="bi bi-list-ul text-blue-600"></i>
+                    <span data-i18n="todays_entries">Today's Entries</span>
+                    <span id="entryCount" class="text-sm bg-orange-200 px-2 py-1 border border-black">0</span>
+                </h3>
+                <div class="flex items-center gap-2">
+                    <span id="entriesRefreshTimer" class="text-xs bg-blue-100 px-2 py-1 border border-black font-mono">5s</span>
+                    <button onclick="loadEntries(); resetEntriesTimer();" class="text-sm bg-gray-200 px-3 py-1 border-2 border-black">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
 
             <div id="entriesList" class="max-h-96 overflow-y-auto">
                 <p class="text-gray-500 text-center py-4" data-i18n="loading">Loading...</p>
@@ -724,14 +732,31 @@
                         ? (lang === 'hi' ? 'लंबित' : 'Pending')
                         : (lang === 'hi' ? 'प्रोसेस्ड' : 'Processed');
 
-                    // Build quantity display
+                    // Build quantity display - show individual quantities separately
                     let qtyParts = [];
-                    if (entry.seed_quantity > 0) {
-                        qtyParts.push(`<span class="bg-green-100 px-2 py-1 border border-black">S:${entry.seed_quantity}</span>`);
+
+                    // Get individual seed quantities
+                    const seedQtys = [entry.seed_qty_1 || 0, entry.seed_qty_2 || 0, entry.seed_qty_3 || 0, entry.seed_qty_4 || 0].filter(q => q > 0);
+                    if (seedQtys.length > 0) {
+                        seedQtys.forEach(qty => {
+                            qtyParts.push(`<span class="bg-green-100 px-2 py-1 border border-black">S${qty}</span>`);
+                        });
+                    } else if (entry.seed_quantity > 0) {
+                        // Fallback for old entries
+                        qtyParts.push(`<span class="bg-green-100 px-2 py-1 border border-black">S${entry.seed_quantity}</span>`);
                     }
-                    if (entry.sell_quantity > 0) {
-                        qtyParts.push(`<span class="bg-red-100 px-2 py-1 border border-black">B:${entry.sell_quantity}</span>`);
+
+                    // Get individual sell quantities
+                    const sellQtys = [entry.sell_qty_1 || 0, entry.sell_qty_2 || 0, entry.sell_qty_3 || 0, entry.sell_qty_4 || 0].filter(q => q > 0);
+                    if (sellQtys.length > 0) {
+                        sellQtys.forEach(qty => {
+                            qtyParts.push(`<span class="bg-red-100 px-2 py-1 border border-black">B${qty}</span>`);
+                        });
+                    } else if (entry.sell_quantity > 0) {
+                        // Fallback for old entries
+                        qtyParts.push(`<span class="bg-red-100 px-2 py-1 border border-black">B${entry.sell_quantity}</span>`);
                     }
+
                     const qtyDisplay = qtyParts.length > 0 ? qtyParts.join(' ') : '-';
 
                     const soDisplay = entry.so ? ` S/O ${entry.so}` : '';
@@ -795,9 +820,43 @@
             document.getElementById('langSelector').value = lang;
         })();
 
+        // Entries auto-refresh timer
+        let entriesRefreshInterval = null;
+        let entriesTimerInterval = null;
+        let entriesTimerCount = 5;
+
+        function startEntriesTimer() {
+            entriesTimerCount = 5;
+            updateEntriesTimerDisplay();
+            if (entriesTimerInterval) clearInterval(entriesTimerInterval);
+            entriesTimerInterval = setInterval(() => {
+                entriesTimerCount--;
+                if (entriesTimerCount <= 0) {
+                    entriesTimerCount = 5;
+                }
+                updateEntriesTimerDisplay();
+            }, 1000);
+        }
+
+        function updateEntriesTimerDisplay() {
+            const timerEl = document.getElementById('entriesRefreshTimer');
+            if (timerEl) {
+                timerEl.textContent = entriesTimerCount + 's';
+            }
+        }
+
+        function resetEntriesTimer() {
+            entriesTimerCount = 5;
+            updateEntriesTimerDisplay();
+        }
+
         window.addEventListener('load', () => {
             displayTokenColor();
             loadEntries();
+
+            // Start 5-second auto-refresh
+            startEntriesTimer();
+            entriesRefreshInterval = setInterval(loadEntries, 5000);
         });
     </script>
 </body>
