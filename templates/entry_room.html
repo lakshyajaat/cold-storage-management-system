@@ -1190,8 +1190,8 @@
             // Start auto-refresh for room entries (every 5 seconds)
             startAutoRefresh();
 
-            // Auto-refresh guard entries every 30 seconds
-            guardEntriesRefreshInterval = setInterval(loadGuardEntries, 30000);
+            // Auto-refresh guard entries every 5 seconds
+            guardEntriesRefreshInterval = setInterval(loadGuardEntries, 5000);
         });
 
         async function updateCategoryInfo() {
