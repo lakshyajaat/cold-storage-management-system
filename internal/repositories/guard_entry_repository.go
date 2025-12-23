@@ -39,8 +39,10 @@ func (r *GuardEntryRepository) Create(ctx context.Context, entry *models.GuardEn
 	}
 
 	query := `
-		INSERT INTO guard_entries (token_number, customer_name, so, village, mobile, driver_no, seed_quantity, sell_quantity, remarks, created_by_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO guard_entries (token_number, customer_name, so, village, mobile, driver_no, seed_quantity, sell_quantity,
+			seed_qty_1, seed_qty_2, seed_qty_3, seed_qty_4, sell_qty_1, sell_qty_2, sell_qty_3, sell_qty_4,
+			remarks, created_by_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		RETURNING id, arrival_time, status, created_at, updated_at
 	`
 	err = r.DB.QueryRow(ctx, query,
@@ -52,6 +54,14 @@ func (r *GuardEntryRepository) Create(ctx context.Context, entry *models.GuardEn
 		entry.DriverNo,
 		entry.SeedQuantity,
 		entry.SellQuantity,
+		entry.SeedQty1,
+		entry.SeedQty2,
+		entry.SeedQty3,
+		entry.SeedQty4,
+		entry.SellQty1,
+		entry.SellQty2,
+		entry.SellQty3,
+		entry.SellQty4,
 		entry.Remarks,
 		entry.CreatedByUserID,
 	).Scan(&entry.ID, &entry.ArrivalTime, &entry.Status, &entry.CreatedAt, &entry.UpdatedAt)
@@ -68,6 +78,8 @@ func (r *GuardEntryRepository) Get(ctx context.Context, id int) (*models.GuardEn
 		SELECT g.id, COALESCE(g.token_number, 0) as token_number,
 		       g.customer_name, COALESCE(g.so, '') as so, g.village, g.mobile, COALESCE(g.driver_no, '') as driver_no,
 		       g.arrival_time, COALESCE(g.seed_quantity, 0) as seed_quantity, COALESCE(g.sell_quantity, 0) as sell_quantity,
+		       COALESCE(g.seed_qty_1, 0), COALESCE(g.seed_qty_2, 0), COALESCE(g.seed_qty_3, 0), COALESCE(g.seed_qty_4, 0),
+		       COALESCE(g.sell_qty_1, 0), COALESCE(g.sell_qty_2, 0), COALESCE(g.sell_qty_3, 0), COALESCE(g.sell_qty_4, 0),
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at,
@@ -85,6 +97,8 @@ func (r *GuardEntryRepository) Get(ctx context.Context, id int) (*models.GuardEn
 		&entry.ID, &entry.TokenNumber,
 		&entry.CustomerName, &entry.SO, &entry.Village, &entry.Mobile, &entry.DriverNo,
 		&entry.ArrivalTime, &entry.SeedQuantity, &entry.SellQuantity,
+		&entry.SeedQty1, &entry.SeedQty2, &entry.SeedQty3, &entry.SeedQty4,
+		&entry.SellQty1, &entry.SellQty2, &entry.SellQty3, &entry.SellQty4,
 		&entry.Remarks, &entry.Status,
 		&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 		&entry.CreatedAt, &entry.UpdatedAt,
@@ -103,6 +117,8 @@ func (r *GuardEntryRepository) ListTodayByUser(ctx context.Context, userID int) 
 		SELECT g.id, COALESCE(g.token_number, 0) as token_number,
 		       g.customer_name, COALESCE(g.so, '') as so, g.village, g.mobile, COALESCE(g.driver_no, '') as driver_no,
 		       g.arrival_time, COALESCE(g.seed_quantity, 0) as seed_quantity, COALESCE(g.sell_quantity, 0) as sell_quantity,
+		       COALESCE(g.seed_qty_1, 0), COALESCE(g.seed_qty_2, 0), COALESCE(g.seed_qty_3, 0), COALESCE(g.seed_qty_4, 0),
+		       COALESCE(g.sell_qty_1, 0), COALESCE(g.sell_qty_2, 0), COALESCE(g.sell_qty_3, 0), COALESCE(g.sell_qty_4, 0),
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at
@@ -124,6 +140,8 @@ func (r *GuardEntryRepository) ListTodayByUser(ctx context.Context, userID int) 
 			&entry.ID, &entry.TokenNumber,
 			&entry.CustomerName, &entry.SO, &entry.Village, &entry.Mobile, &entry.DriverNo,
 			&entry.ArrivalTime, &entry.SeedQuantity, &entry.SellQuantity,
+			&entry.SeedQty1, &entry.SeedQty2, &entry.SeedQty3, &entry.SeedQty4,
+			&entry.SellQty1, &entry.SellQty2, &entry.SellQty3, &entry.SellQty4,
 			&entry.Remarks, &entry.Status,
 			&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 			&entry.CreatedAt, &entry.UpdatedAt,
@@ -143,6 +161,8 @@ func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.Guard
 		SELECT g.id, COALESCE(g.token_number, 0) as token_number,
 		       g.customer_name, COALESCE(g.so, '') as so, g.village, g.mobile, COALESCE(g.driver_no, '') as driver_no,
 		       g.arrival_time, COALESCE(g.seed_quantity, 0) as seed_quantity, COALESCE(g.sell_quantity, 0) as sell_quantity,
+		       COALESCE(g.seed_qty_1, 0), COALESCE(g.seed_qty_2, 0), COALESCE(g.seed_qty_3, 0), COALESCE(g.seed_qty_4, 0),
+		       COALESCE(g.sell_qty_1, 0), COALESCE(g.sell_qty_2, 0), COALESCE(g.sell_qty_3, 0), COALESCE(g.sell_qty_4, 0),
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at,
@@ -172,6 +192,8 @@ func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.Guard
 			&entry.ID, &entry.TokenNumber,
 			&entry.CustomerName, &entry.SO, &entry.Village, &entry.Mobile, &entry.DriverNo,
 			&entry.ArrivalTime, &entry.SeedQuantity, &entry.SellQuantity,
+			&entry.SeedQty1, &entry.SeedQty2, &entry.SeedQty3, &entry.SeedQty4,
+			&entry.SellQty1, &entry.SellQty2, &entry.SellQty3, &entry.SellQty4,
 			&entry.Remarks, &entry.Status,
 			&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 			&entry.CreatedAt, &entry.UpdatedAt,
@@ -295,6 +317,8 @@ func (r *GuardEntryRepository) SearchByPhone(ctx context.Context, phone string) 
 		SELECT g.id, COALESCE(g.token_number, 0) as token_number,
 		       g.customer_name, COALESCE(g.so, '') as so, g.village, g.mobile, COALESCE(g.driver_no, '') as driver_no,
 		       g.arrival_time, COALESCE(g.seed_quantity, 0) as seed_quantity, COALESCE(g.sell_quantity, 0) as sell_quantity,
+		       COALESCE(g.seed_qty_1, 0), COALESCE(g.seed_qty_2, 0), COALESCE(g.seed_qty_3, 0), COALESCE(g.seed_qty_4, 0),
+		       COALESCE(g.sell_qty_1, 0), COALESCE(g.sell_qty_2, 0), COALESCE(g.sell_qty_3, 0), COALESCE(g.sell_qty_4, 0),
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at
@@ -316,6 +340,8 @@ func (r *GuardEntryRepository) SearchByPhone(ctx context.Context, phone string) 
 			&entry.ID, &entry.TokenNumber,
 			&entry.CustomerName, &entry.SO, &entry.Village, &entry.Mobile, &entry.DriverNo,
 			&entry.ArrivalTime, &entry.SeedQuantity, &entry.SellQuantity,
+			&entry.SeedQty1, &entry.SeedQty2, &entry.SeedQty3, &entry.SeedQty4,
+			&entry.SellQty1, &entry.SellQty2, &entry.SellQty3, &entry.SellQty4,
 			&entry.Remarks, &entry.Status,
 			&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 			&entry.CreatedAt, &entry.UpdatedAt,

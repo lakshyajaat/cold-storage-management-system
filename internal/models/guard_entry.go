@@ -14,6 +14,14 @@ type GuardEntry struct {
 	ArrivalTime       time.Time  `json:"arrival_time"`
 	SeedQuantity      int        `json:"seed_quantity"`   // Number of seed bags
 	SellQuantity      int        `json:"sell_quantity"`   // Number of sell bags
+	SeedQty1          int        `json:"seed_qty_1"`      // Individual seed quantity 1
+	SeedQty2          int        `json:"seed_qty_2"`      // Individual seed quantity 2
+	SeedQty3          int        `json:"seed_qty_3"`      // Individual seed quantity 3
+	SeedQty4          int        `json:"seed_qty_4"`      // Individual seed quantity 4
+	SellQty1          int        `json:"sell_qty_1"`      // Individual sell quantity 1
+	SellQty2          int        `json:"sell_qty_2"`      // Individual sell quantity 2
+	SellQty3          int        `json:"sell_qty_3"`      // Individual sell quantity 3
+	SellQty4          int        `json:"sell_qty_4"`      // Individual sell quantity 4
 	Remarks           string     `json:"remarks"`
 	Status            string     `json:"status"`          // 'pending' or 'processed'
 	CreatedByUserID   int        `json:"created_by_user_id"`
@@ -44,6 +52,14 @@ type CreateGuardEntryRequest struct {
 	DriverNo     string `json:"driver_no"`
 	SeedQuantity int    `json:"seed_quantity"` // Number of seed bags
 	SellQuantity int    `json:"sell_quantity"` // Number of sell bags
+	SeedQty1     int    `json:"seed_qty_1"`    // Individual seed quantity 1
+	SeedQty2     int    `json:"seed_qty_2"`    // Individual seed quantity 2
+	SeedQty3     int    `json:"seed_qty_3"`    // Individual seed quantity 3
+	SeedQty4     int    `json:"seed_qty_4"`    // Individual seed quantity 4
+	SellQty1     int    `json:"sell_qty_1"`    // Individual sell quantity 1
+	SellQty2     int    `json:"sell_qty_2"`    // Individual sell quantity 2
+	SellQty3     int    `json:"sell_qty_3"`    // Individual sell quantity 3
+	SellQty4     int    `json:"sell_qty_4"`    // Individual sell quantity 4
 	Remarks      string `json:"remarks"`
 }
 

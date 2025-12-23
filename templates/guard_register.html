@@ -607,14 +607,16 @@
             document.getElementById('seedTotal').textContent = `= ${seedTotal}`;
             document.getElementById('sellTotal').textContent = `= ${sellTotal}`;
 
-            return { seedTotal, sellTotal };
+            return { seedTotal, sellTotal, seed1, seed2, seed3, seed4, sell1, sell2, sell3, sell4 };
         }
 
         // Submit entry
         async function submitEntry(e) {
             e.preventDefault();
 
-            const { seedTotal: seedQty, sellTotal: sellQty } = updateTotals();
+            const totals = updateTotals();
+            const seedQty = totals.seedTotal;
+            const sellQty = totals.sellTotal;
 
             if (seedQty <= 0 && sellQty <= 0) {
                 alert(i18n.t('at_least_one_qty_error', 'At least one quantity (seed or sell) must be greater than 0'));
@@ -637,6 +639,14 @@
                 driver_no: driverNo,
                 seed_quantity: seedQty,
                 sell_quantity: sellQty,
+                seed_qty_1: totals.seed1,
+                seed_qty_2: totals.seed2,
+                seed_qty_3: totals.seed3,
+                seed_qty_4: totals.seed4,
+                sell_qty_1: totals.sell1,
+                sell_qty_2: totals.sell2,
+                sell_qty_3: totals.sell3,
+                sell_qty_4: totals.sell4,
                 remarks: document.getElementById('remarks').value.trim()
             };
 
