@@ -287,6 +287,8 @@
     <script src="/static/js/i18n.js"></script>
     <script>
         const token = localStorage.getItem('token');
+        const userRole = localStorage.getItem('role') || '';
+        const isAdmin = userRole === 'admin';
         let lookupTimeout = null;
         let villageHighlightIndex = -1;
 
@@ -683,6 +685,13 @@
 
                     const soDisplay = entry.so ? ` S/O ${entry.so}` : '';
 
+                    // Delete button only for admin
+                    const deleteBtn = isAdmin ? `
+                        <button onclick="deleteEntry(${entry.id})" class="text-red-600 hover:bg-red-100 px-2 py-1 border border-red-400" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    ` : '';
+
                     return `
                         <div class="entry-row flex flex-wrap items-center gap-2 md:gap-4">
                             <span class="font-mono text-lg bg-yellow-200 px-3 py-1 border-2 border-black font-bold">#${entry.token_number}</span>
@@ -691,6 +700,7 @@
                             <span class="text-sm text-gray-600">${entry.village}</span>
                             <div class="flex gap-1 text-sm">${qtyDisplay}</div>
                             <span class="text-xs px-2 py-1 border border-black ${statusClass}">${statusText}</span>
+                            ${deleteBtn}
                         </div>
                     `;
                 }).join('');
@@ -700,6 +710,31 @@
                 document.getElementById('entriesList').innerHTML = `
                     <p class="text-red-500 text-center py-4">Error loading entries</p>
                 `;
+            }
+        }
+
+        // Delete entry (admin only)
+        async function deleteEntry(id) {
+            const lang = localStorage.getItem('lang') || 'en';
+            const confirmMsg = lang === 'hi' ? 'क्या आप इस एंट्री को हटाना चाहते हैं?' : 'Are you sure you want to delete this entry?';
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const res = await fetch(`/api/guard/entries/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(error);
+                }
+
+                // Reload entries
+                loadEntries();
+            } catch (error) {
+                alert(i18n.t('error', 'Error') + ': ' + error.message);
             }
         }
 
