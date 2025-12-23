@@ -962,41 +962,48 @@
                         minute: '2-digit'
                     });
 
-                    // Build quantity display
-                    let qtyParts = [];
-                    if (entry.seed_quantity > 0) {
-                        qtyParts.push(`<span class="bg-green-100 px-2 py-1 border border-black">S:${entry.seed_quantity}</span>`);
-                    }
-                    if (entry.sell_quantity > 0) {
-                        qtyParts.push(`<span class="bg-blue-100 px-2 py-1 border border-black">B:${entry.sell_quantity}</span>`);
-                    }
-                    const qtyDisplay = qtyParts.length > 0 ? qtyParts.join(' ') : '';
-
                     // S/O display
                     const soDisplay = entry.so ? ` S/O ${entry.so}` : '';
 
                     // Token number
                     const tokenDisplay = entry.token_number ? `<span class="font-mono text-lg bg-yellow-200 px-2 py-1 border-2 border-black font-bold">#${entry.token_number}</span>` : '';
 
-                    // Determine category for form
-                    let category = 'seed';
-                    if (entry.seed_quantity > 0 && entry.sell_quantity > 0) category = 'both';
-                    else if (entry.sell_quantity > 0) category = 'sell';
+                    // Build separate buttons for seed and sell
+                    let actionButtons = [];
+
+                    // Seed button - if has seed quantity and not yet processed
+                    if (entry.seed_quantity > 0 && !entry.seed_processed) {
+                        actionButtons.push(`
+                            <button class="text-sm bg-green-200 px-3 py-1 border-2 border-black hover:bg-green-300 flex items-center gap-1"
+                                    onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'seed', ${entry.seed_quantity}, 0)">
+                                <i class="bi bi-flower1"></i> S:${entry.seed_quantity}
+                            </button>
+                        `);
+                    } else if (entry.seed_quantity > 0 && entry.seed_processed) {
+                        actionButtons.push(`<span class="text-xs bg-green-500 text-white px-2 py-1 border border-black">S:${entry.seed_quantity} ✓</span>`);
+                    }
+
+                    // Sell button - if has sell quantity and not yet processed
+                    if (entry.sell_quantity > 0 && !entry.sell_processed) {
+                        actionButtons.push(`
+                            <button class="text-sm bg-blue-200 px-3 py-1 border-2 border-black hover:bg-blue-300 flex items-center gap-1"
+                                    onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'sell', 0, ${entry.sell_quantity})">
+                                <i class="bi bi-shop"></i> B:${entry.sell_quantity}
+                            </button>
+                        `);
+                    } else if (entry.sell_quantity > 0 && entry.sell_processed) {
+                        actionButtons.push(`<span class="text-xs bg-blue-500 text-white px-2 py-1 border border-black">B:${entry.sell_quantity} ✓</span>`);
+                    }
 
                     return `
-                        <div class="flex flex-wrap items-center gap-2 p-3 bg-white border-2 border-black cursor-pointer hover:bg-yellow-100"
-                             onclick="selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', '${category}', ${entry.seed_quantity || 0}, ${entry.sell_quantity || 0})">
+                        <div class="flex flex-wrap items-center gap-2 p-3 bg-white border-2 border-black">
                             ${tokenDisplay}
                             <span class="font-mono text-sm bg-orange-100 px-2 py-1 border border-black">${time}</span>
                             <span class="font-bold">${entry.customer_name}${soDisplay}</span>
                             <span class="text-sm text-gray-600">${entry.village}</span>
                             <span class="text-sm">${entry.mobile}</span>
-                            <div class="flex gap-1 text-xs">${qtyDisplay}</div>
                             <span class="text-xs text-gray-500">${lang === 'hi' ? 'गार्ड' : 'Guard'}: ${entry.created_by_user_name || 'Unknown'}</span>
-                            <button class="ml-auto text-sm bg-green-200 px-3 py-1 border-2 border-black hover:bg-green-300"
-                                    onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', '${category}', ${entry.seed_quantity || 0}, ${entry.sell_quantity || 0})">
-                                <i class="bi bi-arrow-right"></i> ${lang === 'hi' ? 'चुनें' : 'Select'}
-                            </button>
+                            <div class="ml-auto flex gap-2">${actionButtons.join('')}</div>
                         </div>
                     `;
                 }).join('');
@@ -1006,8 +1013,11 @@
             }
         }
 
+        let selectedGuardPortion = null; // 'seed' or 'sell'
+
         function selectGuardEntry(id, name, so, village, mobile, category, seedQty, sellQty) {
             selectedGuardEntry = id;
+            selectedGuardPortion = category; // 'seed' or 'sell'
 
             // Fill the form with guard entry data
             document.getElementById('userPhone').value = mobile;
@@ -1018,18 +1028,17 @@
             const soField = document.getElementById('userSO');
             if (soField) soField.value = so || '';
 
-            // Set category based on guard entry
+            // Set category based on portion being processed
             if (category === 'seed') {
                 document.querySelector('input[name="thockCategory"][value="seed"]').checked = true;
             } else if (category === 'sell') {
                 document.querySelector('input[name="thockCategory"][value="sell"]').checked = true;
             }
-            // If 'both', don't auto-select - employee chooses
 
-            // Pre-fill quantity if available
-            const totalQty = (seedQty || 0) + (sellQty || 0);
-            if (totalQty > 0) {
-                document.getElementById('expectedQuantity').value = totalQty;
+            // Pre-fill quantity based on which portion is selected
+            const qty = category === 'seed' ? seedQty : sellQty;
+            if (qty > 0) {
+                document.getElementById('expectedQuantity').value = qty;
             }
 
             // Update category info
@@ -1041,10 +1050,13 @@
             // Highlight that we're processing a guard entry
             const formSection = document.getElementById('entryForm');
             formSection.style.backgroundColor = '#FEF3C7';
+            const portionLabel = category === 'seed' ? 'SEED' : 'SELL';
+            const portionColor = category === 'seed' ? 'bg-green-200' : 'bg-blue-200';
             formSection.querySelector('h2').innerHTML = `
                 <i class="bi bi-truck text-orange-600"></i>
                 <span data-i18n="processing_guard_entry">Processing Guard Entry</span>
                 <span class="text-sm bg-yellow-200 px-2 py-1 border-2 border-black ml-2 font-bold">#${id}</span>
+                <span class="text-sm ${portionColor} px-2 py-1 border border-black ml-1">${portionLabel}</span>
             `;
         }
 
@@ -1052,11 +1064,14 @@
             if (!selectedGuardEntry) return;
 
             try {
-                await fetch(`/api/guard/entries/${selectedGuardEntry}/process`, {
+                // Mark the specific portion as processed
+                const portion = selectedGuardPortion || 'seed';
+                await fetch(`/api/guard/entries/${selectedGuardEntry}/process/${portion}`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 selectedGuardEntry = null;
+                selectedGuardPortion = null;
 
                 // Reset form styling
                 const formSection = document.getElementById('entryForm');

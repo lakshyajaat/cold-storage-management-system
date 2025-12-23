@@ -71,6 +71,8 @@ func (r *GuardEntryRepository) Get(ctx context.Context, id int) (*models.GuardEn
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at,
+		       COALESCE(g.seed_processed, false) as seed_processed,
+		       COALESCE(g.sell_processed, false) as sell_processed,
 		       u1.name as created_by_name,
 		       COALESCE(u2.name, '') as processed_by_name
 		FROM guard_entries g
@@ -86,6 +88,7 @@ func (r *GuardEntryRepository) Get(ctx context.Context, id int) (*models.GuardEn
 		&entry.Remarks, &entry.Status,
 		&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 		&entry.CreatedAt, &entry.UpdatedAt,
+		&entry.SeedProcessed, &entry.SellProcessed,
 		&entry.CreatedByUserName, &entry.ProcessedByUserName,
 	)
 	if err != nil {
@@ -134,6 +137,7 @@ func (r *GuardEntryRepository) ListTodayByUser(ctx context.Context, userID int) 
 }
 
 // ListPending returns all pending guard entries with guard names (for entry room)
+// Shows entries that have at least one unprocessed portion
 func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.GuardEntry, error) {
 	query := `
 		SELECT g.id, COALESCE(g.token_number, 0) as token_number,
@@ -142,10 +146,17 @@ func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.Guard
 		       COALESCE(g.remarks, '') as remarks, g.status,
 		       g.created_by_user_id, g.processed_by_user_id, g.processed_at,
 		       g.created_at, g.updated_at,
+		       COALESCE(g.seed_processed, false) as seed_processed,
+		       COALESCE(g.sell_processed, false) as sell_processed,
 		       u.name as created_by_name
 		FROM guard_entries g
 		LEFT JOIN users u ON g.created_by_user_id = u.id
 		WHERE g.status = 'pending'
+		  AND (
+		    (COALESCE(g.seed_quantity, 0) > 0 AND COALESCE(g.seed_processed, false) = false)
+		    OR
+		    (COALESCE(g.sell_quantity, 0) > 0 AND COALESCE(g.sell_processed, false) = false)
+		  )
 		ORDER BY g.arrival_time ASC
 	`
 	rows, err := r.DB.Query(ctx, query)
@@ -164,6 +175,7 @@ func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.Guard
 			&entry.Remarks, &entry.Status,
 			&entry.CreatedByUserID, &entry.ProcessedByUserID, &entry.ProcessedAt,
 			&entry.CreatedAt, &entry.UpdatedAt,
+			&entry.SeedProcessed, &entry.SellProcessed,
 			&entry.CreatedByUserName,
 		)
 		if err != nil {
@@ -174,7 +186,7 @@ func (r *GuardEntryRepository) ListPending(ctx context.Context) ([]*models.Guard
 	return entries, nil
 }
 
-// MarkAsProcessed marks a guard entry as processed
+// MarkAsProcessed marks a guard entry as fully processed
 func (r *GuardEntryRepository) MarkAsProcessed(ctx context.Context, id int, processedByUserID int) error {
 	query := `
 		UPDATE guard_entries
@@ -187,6 +199,65 @@ func (r *GuardEntryRepository) MarkAsProcessed(ctx context.Context, id int, proc
 	now := time.Now()
 	_, err := r.DB.Exec(ctx, query, id, processedByUserID, now)
 	return err
+}
+
+// MarkPortionProcessed marks either seed or sell portion as processed
+func (r *GuardEntryRepository) MarkPortionProcessed(ctx context.Context, id int, portion string, processedByUserID int) error {
+	now := time.Now()
+	var query string
+
+	if portion == "seed" {
+		query = `
+			UPDATE guard_entries
+			SET seed_processed = true,
+			    seed_processed_by = $2,
+			    seed_processed_at = $3,
+			    updated_at = $3
+			WHERE id = $1
+		`
+	} else if portion == "sell" {
+		query = `
+			UPDATE guard_entries
+			SET sell_processed = true,
+			    sell_processed_by = $2,
+			    sell_processed_at = $3,
+			    updated_at = $3
+			WHERE id = $1
+		`
+	} else {
+		return errors.New("invalid portion: must be 'seed' or 'sell'")
+	}
+
+	_, err := r.DB.Exec(ctx, query, id, processedByUserID, now)
+	if err != nil {
+		return err
+	}
+
+	// Check if both portions are now processed, if so mark the whole entry as processed
+	checkQuery := `
+		SELECT
+			COALESCE(seed_quantity, 0) as seed_qty,
+			COALESCE(sell_quantity, 0) as sell_qty,
+			COALESCE(seed_processed, false) as seed_done,
+			COALESCE(sell_processed, false) as sell_done
+		FROM guard_entries WHERE id = $1
+	`
+	var seedQty, sellQty int
+	var seedDone, sellDone bool
+	err = r.DB.QueryRow(ctx, checkQuery, id).Scan(&seedQty, &sellQty, &seedDone, &sellDone)
+	if err != nil {
+		return nil // Ignore check error, main update succeeded
+	}
+
+	// If all non-zero portions are processed, mark whole entry as processed
+	seedComplete := seedQty == 0 || seedDone
+	sellComplete := sellQty == 0 || sellDone
+
+	if seedComplete && sellComplete {
+		return r.MarkAsProcessed(ctx, id, processedByUserID)
+	}
+
+	return nil
 }
 
 // GetTodayCountByUser returns count of today's entries for a specific user

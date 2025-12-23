@@ -103,3 +103,33 @@ func (s *GuardEntryService) GetTodayCountByUser(ctx context.Context, userID int)
 func (s *GuardEntryService) DeleteGuardEntry(ctx context.Context, id int) error {
 	return s.GuardEntryRepo.Delete(ctx, id)
 }
+
+// MarkPortionProcessed marks seed or sell portion as processed
+func (s *GuardEntryService) MarkPortionProcessed(ctx context.Context, id int, portion string, processedByUserID int) error {
+	// Verify entry exists
+	entry, err := s.GuardEntryRepo.Get(ctx, id)
+	if err != nil {
+		return errors.New("guard entry not found")
+	}
+
+	// Validate portion and check if already processed
+	if portion == "seed" {
+		if entry.SeedQuantity <= 0 {
+			return errors.New("this entry has no seed quantity")
+		}
+		if entry.SeedProcessed {
+			return errors.New("seed portion already processed")
+		}
+	} else if portion == "sell" {
+		if entry.SellQuantity <= 0 {
+			return errors.New("this entry has no sell quantity")
+		}
+		if entry.SellProcessed {
+			return errors.New("sell portion already processed")
+		}
+	} else {
+		return errors.New("invalid portion: must be 'seed' or 'sell'")
+	}
+
+	return s.GuardEntryRepo.MarkPortionProcessed(ctx, id, portion, processedByUserID)
+}

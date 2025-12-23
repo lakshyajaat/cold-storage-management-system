@@ -248,6 +248,11 @@ func NewRouter(
 			http.HandlerFunc(guardEntryHandler.ProcessGuardEntry),
 		).ServeHTTP).Methods("PUT")
 
+		// Process portion (seed or sell) - only employee or admin
+		guardAPI.HandleFunc("/entries/{id}/process/{portion}", authMiddleware.RequireRole("employee", "admin")(
+			http.HandlerFunc(guardEntryHandler.ProcessPortion),
+		).ServeHTTP).Methods("PUT")
+
 		// Delete entry - admin only
 		guardAPI.HandleFunc("/entries/{id}", authMiddleware.RequireRole("admin")(
 			http.HandlerFunc(guardEntryHandler.DeleteGuardEntry),

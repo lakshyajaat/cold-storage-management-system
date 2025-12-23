@@ -22,6 +22,14 @@ type GuardEntry struct {
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 
+	// Partial processing fields
+	SeedProcessed   bool       `json:"seed_processed"`
+	SellProcessed   bool       `json:"sell_processed"`
+	SeedProcessedBy *int       `json:"seed_processed_by,omitempty"`
+	SellProcessedBy *int       `json:"sell_processed_by,omitempty"`
+	SeedProcessedAt *time.Time `json:"seed_processed_at,omitempty"`
+	SellProcessedAt *time.Time `json:"sell_processed_at,omitempty"`
+
 	// Joined fields - populated by certain queries
 	CreatedByUserName   string `json:"created_by_user_name,omitempty"`
 	ProcessedByUserName string `json:"processed_by_user_name,omitempty"`

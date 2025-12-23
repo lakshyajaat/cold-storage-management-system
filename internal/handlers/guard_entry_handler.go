@@ -173,3 +173,31 @@ func (h *GuardEntryHandler) DeleteGuardEntry(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Guard entry deleted"})
 }
+
+// ProcessPortion handles PUT /api/guard/entries/{id}/process/{portion}
+// portion can be "seed" or "sell"
+func (h *GuardEntryHandler) ProcessPortion(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+	portion := vars["portion"]
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid entry ID", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.Service.MarkPortionProcessed(context.Background(), id, portion, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": portion + " portion marked as processed"})
+}
