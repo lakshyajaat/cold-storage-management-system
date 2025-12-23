@@ -94,9 +94,13 @@ func NewRouter(
 	r.HandleFunc("/customer-export", pageHandler.CustomerPDFExportPage).Methods("GET")
 	r.HandleFunc("/customer-edit", pageHandler.CustomerEditPage).Methods("GET")
 
-	// Guard pages
-	r.HandleFunc("/guard/dashboard", pageHandler.GuardDashboardPage).Methods("GET")
-	r.HandleFunc("/guard/register", pageHandler.GuardRegisterPage).Methods("GET")
+	// Guard pages - only accessible by guard role
+	r.HandleFunc("/guard/dashboard", authMiddleware.RequireRole("guard")(
+		http.HandlerFunc(pageHandler.GuardDashboardPage),
+	).ServeHTTP).Methods("GET")
+	r.HandleFunc("/guard/register", authMiddleware.RequireRole("guard")(
+		http.HandlerFunc(pageHandler.GuardRegisterPage),
+	).ServeHTTP).Methods("GET")
 
 	// Protected API routes - System Settings
 	settingsAPI := r.PathPrefix("/api/settings").Subrouter()
@@ -217,23 +221,24 @@ func NewRouter(
 	}
 
 	// Protected API routes - Guard Entries (guard register feature)
+	// API accessible by guard, employee, admin - but guard pages only for guard role
 	if guardEntryHandler != nil {
 		guardAPI := r.PathPrefix("/api/guard").Subrouter()
 		guardAPI.Use(authMiddleware.Authenticate)
 
-		// Guard-only endpoints (create and list own entries)
-		guardAPI.HandleFunc("/entries", authMiddleware.RequireRole("guard")(
+		// Create and list entries - accessible by guard, employee, admin
+		guardAPI.HandleFunc("/entries", authMiddleware.RequireRole("guard", "employee", "admin")(
 			http.HandlerFunc(guardEntryHandler.CreateGuardEntry),
 		).ServeHTTP).Methods("POST")
-		guardAPI.HandleFunc("/entries", authMiddleware.RequireRole("guard")(
+		guardAPI.HandleFunc("/entries", authMiddleware.RequireRole("guard", "employee", "admin")(
 			http.HandlerFunc(guardEntryHandler.ListMyEntries),
 		).ServeHTTP).Methods("GET")
-		guardAPI.HandleFunc("/stats", authMiddleware.RequireRole("guard")(
+		guardAPI.HandleFunc("/stats", authMiddleware.RequireRole("guard", "employee", "admin")(
 			http.HandlerFunc(guardEntryHandler.GetMyStats),
 		).ServeHTTP).Methods("GET")
 
-		// Pending entries - accessible by employee, admin (for entry room)
-		guardAPI.HandleFunc("/entries/pending", authMiddleware.RequireRole("employee", "admin")(
+		// Pending entries - accessible by guard, employee, admin
+		guardAPI.HandleFunc("/entries/pending", authMiddleware.RequireRole("guard", "employee", "admin")(
 			http.HandlerFunc(guardEntryHandler.ListPendingEntries),
 		).ServeHTTP).Methods("GET")
 
