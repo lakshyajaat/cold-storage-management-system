@@ -319,8 +319,12 @@ func main() {
 		deploymentService := services.NewDeploymentService(infraRepo)
 		deploymentHandler := handlers.NewDeploymentHandler(deploymentService)
 
+		// Initialize report service (bulk PDF/CSV export with parallel processing)
+		reportService := services.NewReportService(pool, customerRepo, entryRepo, roomEntryRepo, rentPaymentRepo, systemSettingRepo)
+		reportHandler := handlers.NewReportHandler(reportService)
+
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

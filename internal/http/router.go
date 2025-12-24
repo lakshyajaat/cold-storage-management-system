@@ -34,6 +34,7 @@ func NewRouter(
 	apiLoggingMiddleware *middleware.APILoggingMiddleware,
 	nodeProvisioningHandler *handlers.NodeProvisioningHandler,
 	deploymentHandler *handlers.DeploymentHandler,
+	reportHandler *handlers.ReportHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -429,6 +430,25 @@ func NewRouter(
 
 		// Deployment status
 		deployAPI.HandleFunc("/status/{historyId}", deploymentHandler.GetDeploymentStatus).Methods("GET") // SSE
+	}
+
+	// Protected API routes - Reports (admin and accountant access)
+	if reportHandler != nil {
+		reportAPI := r.PathPrefix("/api/reports").Subrouter()
+		reportAPI.Use(authMiddleware.Authenticate)
+		reportAPI.Use(authMiddleware.RequireAccountantAccess)
+
+		// Customer reports
+		reportAPI.HandleFunc("/customers/csv", reportHandler.GetCustomersCSV).Methods("GET")
+		reportAPI.HandleFunc("/customers/pdf", reportHandler.GetCustomersPDFZip).Methods("GET")
+		reportAPI.HandleFunc("/customers/{phone}/pdf", reportHandler.GetSingleCustomerPDF).Methods("GET")
+
+		// Daily summary reports
+		reportAPI.HandleFunc("/daily-summary/csv", reportHandler.GetDailySummaryCSV).Methods("GET")
+		reportAPI.HandleFunc("/daily-summary/pdf", reportHandler.GetDailySummaryPDF).Methods("GET")
+
+		// Report stats (for UI)
+		reportAPI.HandleFunc("/stats", reportHandler.GetReportStats).Methods("GET")
 	}
 
 	// Health endpoints (basic health for K8s probes, detailed requires auth)
