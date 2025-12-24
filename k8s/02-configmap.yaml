@@ -24,7 +24,7 @@ data:
         - "Authorization"
 
     database:
-      host: cold-postgres-rw
+      host: 192.168.15.210
       port: 5432
       user: cold_user
       password: SecurePostgresPassword123

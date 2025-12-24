@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: cold-backend
-        image: cold-backend:v1.4
-        imagePullPolicy: Never
+        image: lakshyajaat/cold-backend:v1.5.176
+        imagePullPolicy: IfNotPresent
         args:
           - "-mode"
           - "employee"
