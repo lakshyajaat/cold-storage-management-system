@@ -36,6 +36,7 @@ func NewRouter(
 	deploymentHandler *handlers.DeploymentHandler,
 	reportHandler *handlers.ReportHandler,
 	accountHandler *handlers.AccountHandler,
+	entryRoomHandler *handlers.EntryRoomHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -457,6 +458,14 @@ func NewRouter(
 		accountAPI := r.PathPrefix("/api/accounts").Subrouter()
 		accountAPI.Use(authMiddleware.Authenticate)
 		accountAPI.HandleFunc("/summary", authMiddleware.RequireAccountantAccess(http.HandlerFunc(accountHandler.GetAccountSummary)).ServeHTTP).Methods("GET")
+	}
+
+	// Protected API routes - Entry Room (optimized single-call endpoint)
+	if entryRoomHandler != nil {
+		entryRoomAPI := r.PathPrefix("/api/entry-room").Subrouter()
+		entryRoomAPI.Use(authMiddleware.Authenticate)
+		entryRoomAPI.HandleFunc("/summary", entryRoomHandler.GetSummary).Methods("GET")
+		entryRoomAPI.HandleFunc("/since", entryRoomHandler.GetDelta).Methods("GET")
 	}
 
 	// Health endpoints (basic health for K8s probes, detailed requires auth)

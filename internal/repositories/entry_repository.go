@@ -84,11 +84,21 @@ func (r *EntryRepository) Get(ctx context.Context, id int) (*models.Entry, error
 }
 
 func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
+	// OPTIMIZED: Use LEFT JOIN with subquery aggregate instead of N+1 subqueries
+	// Before: 500 entries = 500 subqueries
+	// After: Single query with JOIN aggregate
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
-		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
-         FROM entries e ORDER BY e.created_at DESC`)
+		        COALESCE(rq.total_qty, 0) as actual_quantity,
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
+		        e.created_by_user_id, e.created_at, e.updated_at
+         FROM entries e
+         LEFT JOIN (
+             SELECT entry_id, SUM(quantity) as total_qty
+             FROM room_entries
+             GROUP BY entry_id
+         ) rq ON e.id = rq.entry_id
+         ORDER BY e.created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +119,54 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 }
 
 func (r *EntryRepository) ListByCustomer(ctx context.Context, customerID int) ([]*models.Entry, error) {
+	// OPTIMIZED: Use LEFT JOIN with subquery aggregate
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
-		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
-         FROM entries e WHERE e.customer_id=$1 ORDER BY e.created_at DESC`, customerID)
+		        COALESCE(rq.total_qty, 0) as actual_quantity,
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
+		        e.created_by_user_id, e.created_at, e.updated_at
+         FROM entries e
+         LEFT JOIN (
+             SELECT entry_id, SUM(quantity) as total_qty
+             FROM room_entries
+             GROUP BY entry_id
+         ) rq ON e.id = rq.entry_id
+         WHERE e.customer_id=$1
+         ORDER BY e.created_at DESC`, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []*models.Entry
+	for rows.Next() {
+		var entry models.Entry
+		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
+			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
+			&entry.CreatedAt, &entry.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, &entry)
+	}
+	return entries, nil
+}
+
+// ListSince returns entries created after the given timestamp (for delta refresh)
+func (r *EntryRepository) ListSince(ctx context.Context, since string) ([]*models.Entry, error) {
+	rows, err := r.DB.Query(ctx,
+		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
+		        COALESCE(rq.total_qty, 0) as actual_quantity,
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
+		        e.created_by_user_id, e.created_at, e.updated_at
+         FROM entries e
+         LEFT JOIN (
+             SELECT entry_id, SUM(quantity) as total_qty
+             FROM room_entries
+             GROUP BY entry_id
+         ) rq ON e.id = rq.entry_id
+         WHERE e.created_at > $1::timestamptz
+         ORDER BY e.created_at DESC`, since)
 	if err != nil {
 		return nil, err
 	}
@@ -148,10 +201,12 @@ func (r *EntryRepository) GetCountByCategory(ctx context.Context, category strin
 func (r *EntryRepository) ListUnassigned(ctx context.Context) ([]*models.Entry, error) {
 	// Get entries that don't have a room entry yet
 	// For unassigned entries, actual_quantity will be 0 (no room_entries yet)
+	// OPTIMIZED: No subquery needed - unassigned means 0 quantity
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
-		        COALESCE((SELECT SUM(quantity) FROM room_entries WHERE entry_id = e.id), 0) as actual_quantity,
-		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark, e.created_by_user_id, e.created_at, e.updated_at
+		        0 as actual_quantity,
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
+		        e.created_by_user_id, e.created_at, e.updated_at
          FROM entries e
          LEFT JOIN room_entries re ON e.id = re.entry_id
          WHERE re.id IS NULL

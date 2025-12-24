@@ -1208,25 +1208,263 @@
             loadGuardEntries();
         }
 
+        // Track last refresh time for delta updates
+        let lastRefreshTime = null;
+
+        // Optimized single API call to load all entry room data
+        async function loadEntryRoomData() {
+            try {
+                const response = await fetch('/api/entry-room/summary', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert(i18n.t('session_expired', 'Session expired. Please login again.'));
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error('Failed to load entry room data');
+                }
+
+                const data = await response.json();
+
+                // Display all data from single response
+                displayRecentEntries(data.entries || []);
+                displayRoomEntries(data.room_entries || []);
+                displayGuardEntriesFromData(data.guard_entries || []);
+
+                // Setup customer autocomplete
+                customerPhones = (data.customer_phones || []).map(c => ({
+                    phone: c.phone || '',
+                    name: c.name || '',
+                    village: c.village || '',
+                    so: '' // Not included in summary for performance
+                }));
+                console.log(`Loaded ${customerPhones.length} customers for autocomplete`);
+
+                // Track refresh time for delta updates
+                lastRefreshTime = data.generated_at || new Date().toISOString();
+
+            } catch (error) {
+                console.error('Error loading entry room data:', error);
+            }
+        }
+
+        // Delta refresh - only fetch new entries since last refresh
+        async function refreshEntryRoomDelta() {
+            if (!lastRefreshTime) {
+                // First load - do full refresh
+                await loadEntryRoomData();
+                return;
+            }
+
+            // Show loading animation
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.classList.add('spin-animation');
+            }
+
+            try {
+                const response = await fetch(`/api/entry-room/since?t=${encodeURIComponent(lastRefreshTime)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load delta');
+                }
+
+                const data = await response.json();
+
+                // Prepend new entries if any
+                if (data.entries && data.entries.length > 0) {
+                    prependNewEntries(data.entries);
+                }
+                if (data.room_entries && data.room_entries.length > 0) {
+                    prependNewRoomEntries(data.room_entries);
+                }
+                // Guard entries always show full pending list
+                if (data.guard_entries) {
+                    displayGuardEntriesFromData(data.guard_entries);
+                }
+
+                // Update last refresh time
+                lastRefreshTime = data.timestamp || new Date().toISOString();
+
+            } catch (error) {
+                console.error('Error loading delta:', error);
+            } finally {
+                if (refreshIcon) {
+                    setTimeout(() => {
+                        refreshIcon.classList.remove('spin-animation');
+                    }, 500);
+                }
+            }
+        }
+
+        // Prepend new entries to the table (avoid full re-render)
+        function prependNewEntries(newEntries) {
+            const tbody = document.getElementById('entriesTableBody');
+            if (!tbody || newEntries.length === 0) return;
+
+            // Check if "No entries" message is displayed
+            const noDataRow = tbody.querySelector('td[colspan="8"]');
+            if (noDataRow) {
+                tbody.innerHTML = '';
+            }
+
+            const fragment = document.createDocumentFragment();
+            newEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                const truckColor = getTruckColor(entry.thock_number);
+                const categoryColor = entry.thock_category === 'seed' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100';
+                const date = new Date(entry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                row.innerHTML = `
+                    <td class="p-2 font-bold ${truckColor}">${entry.thock_number}</td>
+                    <td class="p-2">${capitalizeText(entry.name)}</td>
+                    <td class="p-2">${entry.phone}</td>
+                    <td class="p-2">${capitalizeText(entry.village) || '-'}</td>
+                    <td class="p-2">${entry.expected_quantity}</td>
+                    <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${categoryColor}">${entry.thock_category.toUpperCase()}</span></td>
+                    <td class="p-2 text-xs">${formattedDate}</td>
+                    <td class="p-2 text-right">
+                        <button onclick="openEditEntryModal(${entry.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                `;
+                fragment.appendChild(row);
+            });
+            tbody.insertBefore(fragment, tbody.firstChild);
+        }
+
+        // Prepend new room entries to the table
+        function prependNewRoomEntries(newEntries) {
+            const tbody = document.getElementById('roomEntriesTableBody');
+            if (!tbody || newEntries.length === 0) return;
+
+            // Check if "No entries" message is displayed
+            const noDataRow = tbody.querySelector('td[colspan="7"]');
+            if (noDataRow) {
+                tbody.innerHTML = '';
+            }
+
+            const fragment = document.createDocumentFragment();
+            newEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors';
+                row.onclick = () => printReceipt(entry.entry_id, entry.id);
+                row.title = 'Click to print receipt';
+                const truckColor = getTruckColor(entry.thock_number);
+                const date = new Date(entry.created_at);
+                const formattedDate = date.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const breakdownDisplay = entry.quantity_breakdown ? `<span class="text-xs text-gray-500 block">(${entry.quantity_breakdown})</span>` : '';
+                row.innerHTML = `
+                    <td class="p-2 font-bold ${truckColor}">${entry.thock_number}</td>
+                    <td class="p-2">${entry.room_no}</td>
+                    <td class="p-2">${entry.floor}</td>
+                    <td class="p-2">${entry.gate_no}</td>
+                    <td class="p-2 font-bold">${entry.quantity} ${breakdownDisplay}</td>
+                    <td class="p-2 text-xs">${formattedDate}</td>
+                    <td class="p-2" onclick="event.stopPropagation()">
+                        <div class="flex gap-1">
+                            <button onclick="printReceipt(${entry.entry_id}, ${entry.id})" class="neu-button bg-blue-500 text-white text-xs px-2 py-1" title="Print Receipt">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                fragment.appendChild(row);
+            });
+            tbody.insertBefore(fragment, tbody.firstChild);
+        }
+
+        // Display guard entries from summary data (shared between full load and delta)
+        function displayGuardEntriesFromData(entries) {
+            const section = document.getElementById('guardEntriesSection');
+            const list = document.getElementById('guardEntriesList');
+            const countEl = document.getElementById('guardEntryCount');
+
+            countEl.textContent = entries.length;
+
+            if (entries.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            const lang = localStorage.getItem('lang') || 'en';
+
+            list.innerHTML = entries.map(entry => {
+                const time = new Date(entry.arrival_time).toLocaleTimeString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const soDisplay = entry.so ? ` S/O ${entry.so}` : '';
+                const tokenDisplay = entry.token_number ? `<span class="font-mono text-lg bg-yellow-200 px-2 py-1 border-2 border-black font-bold">#${entry.token_number}</span>` : '';
+                let actionButtons = [];
+                const seedQtys = [entry.seed_qty_1 || 0, entry.seed_qty_2 || 0, entry.seed_qty_3 || 0, entry.seed_qty_4 || 0].filter(q => q > 0);
+                const sellQtys = [entry.sell_qty_1 || 0, entry.sell_qty_2 || 0, entry.sell_qty_3 || 0, entry.sell_qty_4 || 0].filter(q => q > 0);
+
+                if (entry.seed_quantity > 0 && !entry.seed_processed) {
+                    if (seedQtys.length > 0) {
+                        seedQtys.forEach(qty => {
+                            actionButtons.push(`<button class="text-sm bg-green-200 px-2 py-1 border-2 border-black hover:bg-green-300" onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'seed', ${qty}, 0)">Seed${qty}</button>`);
+                        });
+                    } else {
+                        actionButtons.push(`<button class="text-sm bg-green-200 px-2 py-1 border-2 border-black hover:bg-green-300" onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'seed', ${entry.seed_quantity}, 0)">Seed${entry.seed_quantity}</button>`);
+                    }
+                    actionButtons.push(`<button class="text-xs bg-green-500 text-white px-2 py-1 border border-black hover:bg-green-600" onclick="event.stopPropagation(); markPortionDone(${entry.id}, 'seed')" title="Mark All Seed Done">✓</button>`);
+                } else if (entry.seed_quantity > 0 && entry.seed_processed) {
+                    if (seedQtys.length > 0) {
+                        seedQtys.forEach(qty => { actionButtons.push(`<span class="text-xs bg-green-500 text-white px-2 py-1 border border-black">Seed${qty}✓</span>`); });
+                    } else {
+                        actionButtons.push(`<span class="text-xs bg-green-500 text-white px-2 py-1 border border-black">Seed${entry.seed_quantity}✓</span>`);
+                    }
+                }
+                if (entry.sell_quantity > 0 && !entry.sell_processed) {
+                    if (sellQtys.length > 0) {
+                        sellQtys.forEach(qty => {
+                            actionButtons.push(`<button class="text-sm bg-red-200 px-2 py-1 border-2 border-black hover:bg-red-300" onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'sell', 0, ${qty})">Sell${qty}</button>`);
+                        });
+                    } else {
+                        actionButtons.push(`<button class="text-sm bg-red-200 px-2 py-1 border-2 border-black hover:bg-red-300" onclick="event.stopPropagation(); selectGuardEntry(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}', 'sell', 0, ${entry.sell_quantity})">Sell${entry.sell_quantity}</button>`);
+                    }
+                    actionButtons.push(`<button class="text-xs bg-red-500 text-white px-2 py-1 border border-black hover:bg-red-600" onclick="event.stopPropagation(); markPortionDone(${entry.id}, 'sell')" title="Mark All Sell Done">✓</button>`);
+                } else if (entry.sell_quantity > 0 && entry.sell_processed) {
+                    if (sellQtys.length > 0) {
+                        sellQtys.forEach(qty => { actionButtons.push(`<span class="text-xs bg-red-500 text-white px-2 py-1 border border-black">Sell${qty}✓</span>`); });
+                    } else {
+                        actionButtons.push(`<span class="text-xs bg-red-500 text-white px-2 py-1 border border-black">Sell${entry.sell_quantity}✓</span>`);
+                    }
+                }
+                return `<div class="flex items-center justify-between p-2 bg-yellow-50 neu-border mb-2 hover:bg-yellow-100 cursor-pointer" onclick="selectGuardEntryCard(${entry.id}, '${entry.customer_name}', '${entry.so || ''}', '${entry.village}', '${entry.mobile}')">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">${tokenDisplay}<span class="font-bold">${entry.customer_name}${soDisplay}</span><span class="text-xs text-gray-500">${entry.village}</span></div>
+                        <div class="text-xs text-gray-500">${entry.mobile} • ${time}</div>
+                    </div>
+                    <div class="flex gap-1 flex-wrap">${actionButtons.join('')}</div>
+                </div>`;
+            }).join('');
+        }
+
         // Load recent entries on page load
         window.addEventListener('load', async function() {
             // Check operation mode first - redirect if in unloading mode
             const shouldContinue = await checkOperationMode();
             if (!shouldContinue) return;
 
-            loadRecentEntries();
-            loadRoomEntries();
-            loadCustomerPhones(); // Load customer phones for dropdown
-            loadGuardEntries(); // Load pending guard entries
+            // Single optimized API call for all data
+            await loadEntryRoomData();
 
-            // Start auto-refresh for room entries (every 5 seconds)
+            // Start auto-refresh using delta updates (every 5 seconds)
             startAutoRefresh();
 
             // Start guard entries countdown timer
             startGuardTimer();
-
-            // Auto-refresh guard entries every 5 seconds
-            guardEntriesRefreshInterval = setInterval(loadGuardEntries, 5000);
         });
 
         async function updateCategoryInfo() {
@@ -2203,17 +2441,12 @@
             return 'text-gray-700';
         }
 
-        // Auto-refresh functions
+        // Auto-refresh functions - using delta updates for efficiency
         function startAutoRefresh() {
-            // Refresh room entries every 5 seconds
+            // Single 5-second interval using delta refresh (only fetches new entries)
             roomEntriesRefreshInterval = setInterval(() => {
-                loadRoomEntries();
+                refreshEntryRoomDelta();
             }, 5000);
-
-            // Refresh main entries every 10 seconds
-            entriesRefreshInterval = setInterval(() => {
-                loadRecentEntries();
-            }, 10000);
         }
 
         function stopAutoRefresh() {

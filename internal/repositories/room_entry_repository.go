@@ -65,6 +65,34 @@ func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, er
 	return roomEntries, nil
 }
 
+// ListSince returns room entries created after the given timestamp (for delta refresh)
+func (r *RoomEntryRepository) ListSince(ctx context.Context, since string) ([]*models.RoomEntry, error) {
+	rows, err := r.DB.Query(ctx,
+		`SELECT re.id, re.entry_id, re.thock_number, re.room_no, re.floor, re.gate_no, re.remark, re.quantity,
+		        COALESCE(re.quantity_breakdown, ''), re.created_by_user_id, re.created_at, re.updated_at,
+		        COALESCE(e.remark, '') as variety
+         FROM room_entries re
+         LEFT JOIN entries e ON re.entry_id = e.id
+         WHERE re.created_at > $1::timestamptz
+         ORDER BY re.created_at DESC`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roomEntries []*models.RoomEntry
+	for rows.Next() {
+		var re models.RoomEntry
+		err := rows.Scan(&re.ID, &re.EntryID, &re.ThockNumber, &re.RoomNo, &re.Floor,
+			&re.GateNo, &re.Remark, &re.Quantity, &re.QuantityBreakdown, &re.CreatedByUserID, &re.CreatedAt, &re.UpdatedAt, &re.Variety)
+		if err != nil {
+			return nil, err
+		}
+		roomEntries = append(roomEntries, &re)
+	}
+	return roomEntries, nil
+}
+
 func (r *RoomEntryRepository) GetByEntryID(ctx context.Context, entryID int) (*models.RoomEntry, error) {
 	row := r.DB.QueryRow(ctx,
 		`SELECT re.id, re.entry_id, re.thock_number, re.room_no, re.floor, re.gate_no, re.remark, re.quantity,

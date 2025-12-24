@@ -326,8 +326,11 @@ func main() {
 		// Initialize account handler (optimized single-call endpoint for Account Management)
 		accountHandler := handlers.NewAccountHandler(pool, entryRepo, roomEntryRepo, rentPaymentRepo, gatePassRepo, systemSettingRepo)
 
+		// Initialize entry room handler (optimized single-call endpoint for Entry Room page)
+		entryRoomHandler := handlers.NewEntryRoomHandler(pool, entryRepo, roomEntryRepo, customerRepo, guardEntryRepo)
+
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {
