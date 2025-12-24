@@ -15,6 +15,7 @@ import (
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 )
 
 // PodState tracks the state of a PostgreSQL pod for recovery detection
@@ -164,7 +165,7 @@ func (c *MetricsCollector) collectAll() {
 // collectNodeMetrics collects metrics for a single node (K3s or standalone)
 func (c *MetricsCollector) collectNodeMetrics(ctx context.Context, node NodeConfig) {
 	metrics := &models.NodeMetrics{
-		Time:       time.Now(),
+		Time:       timeutil.Now(),
 		NodeName:   node.Name,
 		NodeIP:     node.IP,
 		NodeRole:   node.Role,
@@ -574,7 +575,7 @@ func (c *MetricsCollector) fetchNodeExporterMetrics(nodeIP string) string {
 
 	result := string(body)
 	nodeExporterCache[nodeIP] = result
-	nodeExporterCacheTime[nodeIP] = time.Now()
+	nodeExporterCacheTime[nodeIP] = timeutil.Now()
 	return result
 }
 
@@ -609,7 +610,7 @@ func (c *MetricsCollector) calculateNetworkRates(nodeName string, metrics *model
 	// Store current values for next calculation
 	c.prevNetworkRx[nodeName] = metrics.NetworkRxBytes
 	c.prevNetworkTx[nodeName] = metrics.NetworkTxBytes
-	c.prevTime[nodeName] = time.Now()
+	c.prevTime[nodeName] = timeutil.Now()
 }
 
 // collectPostgresMetrics collects metrics from PostgreSQL pods
@@ -648,7 +649,7 @@ func (c *MetricsCollector) collectPostgresMetrics(ctx context.Context) {
 		}
 
 		metrics := &models.PostgresMetrics{
-			Time:     time.Now(),
+			Time:     timeutil.Now(),
 			PodName:  pod.Metadata.Name,
 			NodeName: pod.Spec.NodeName,
 			Status:   pod.Status.Phase,
@@ -747,11 +748,11 @@ func (c *MetricsCollector) getPostgresDatabaseMetrics(podName string, metrics *m
 func (c *MetricsCollector) collectVIPStatus(ctx context.Context) {
 	vip := "192.168.15.200"
 	status := &models.VIPStatus{
-		Time:       time.Now(),
+		Time:       timeutil.Now(),
 		VIPAddress: vip,
 	}
 
-	start := time.Now()
+	start := timeutil.Now()
 	resp, err := c.httpClient.Get(fmt.Sprintf("http://%s:8080/health", vip))
 	elapsed := time.Since(start)
 
@@ -859,7 +860,7 @@ func (c *MetricsCollector) checkAndRecoverStuckPods(ctx context.Context) {
 	// Count healthy pods and find primary
 	var healthyCount int
 	var primaryPod string
-	now := time.Now()
+	now := timeutil.Now()
 
 	c.podTracker.mu.Lock()
 	defer c.podTracker.mu.Unlock()

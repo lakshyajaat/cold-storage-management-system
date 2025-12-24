@@ -10,6 +10,7 @@ import (
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
 	"cold-backend/internal/sms"
+	"cold-backend/internal/timeutil"
 )
 
 const (
@@ -173,7 +174,7 @@ func (s *OTPService) SendOTP(ctx context.Context, phone, ipAddress string) error
 	otpCode := s.GenerateOTP()
 
 	// Store in database
-	expiresAt := time.Now().Add(OTPExpiryMinutes * time.Minute)
+	expiresAt := timeutil.Now().Add(OTPExpiryMinutes * time.Minute)
 	otp := &models.CustomerOTP{
 		Phone:     phone,
 		OTPCode:   otpCode,
@@ -207,7 +208,7 @@ func (s *OTPService) VerifyOTP(ctx context.Context, phone, otpCode string) (*mod
 	}
 
 	// Check if expired
-	if time.Now().After(otp.ExpiresAt) {
+	if timeutil.Now().After(otp.ExpiresAt) {
 		return nil, fmt.Errorf("OTP has expired. Please request a new one")
 	}
 

@@ -10,6 +10,7 @@ import (
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 )
 
 type TokenColorHandler struct {
@@ -28,7 +29,7 @@ func (h *TokenColorHandler) GetTodayColor(w http.ResponseWriter, r *http.Request
 		// Default to RED if no color set
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.TokenColorResponse{
-			Date:  time.Now().Format("2006-01-02"),
+			Date:  timeutil.Now().Format("2006-01-02"),
 			Color: "RED",
 		})
 		return
@@ -46,7 +47,7 @@ func (h *TokenColorHandler) GetTodayColor(w http.ResponseWriter, r *http.Request
 func (h *TokenColorHandler) GetColorByDate(w http.ResponseWriter, r *http.Request) {
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
-		dateStr = time.Now().Format("2006-01-02")
+		dateStr = timeutil.Now().Format("2006-01-02")
 	}
 
 	date, err := time.Parse("2006-01-02", dateStr)
@@ -96,7 +97,7 @@ func (h *TokenColorHandler) SetColor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if date is today or future (cannot set past dates)
-	today := time.Now().Truncate(24 * time.Hour)
+	today := timeutil.StartOfDay(timeutil.Now())
 	if date.Before(today) {
 		http.Error(w, "Cannot set color for past dates", http.StatusBadRequest)
 		return

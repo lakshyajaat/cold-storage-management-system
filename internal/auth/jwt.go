@@ -6,6 +6,7 @@ import (
 
 	"cold-backend/internal/config"
 	"cold-backend/internal/models"
+	"cold-backend/internal/timeutil"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -29,7 +30,8 @@ func NewJWTManager(cfg *config.Config) *JWTManager {
 
 // GenerateToken creates a new JWT token for a user
 func (j *JWTManager) GenerateToken(user *models.User) (string, error) {
-	expirationTime := time.Now().Add(time.Duration(j.cfg.JWT.ExpirationHours) * time.Hour)
+	now := timeutil.Now()
+	expirationTime := now.Add(time.Duration(j.cfg.JWT.ExpirationHours) * time.Hour)
 
 	claims := &Claims{
 		UserID:              user.ID,
@@ -39,7 +41,7 @@ func (j *JWTManager) GenerateToken(user *models.User) (string, error) {
 		IsActive:            user.IsActive,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(now),
 			Issuer:    j.cfg.JWT.Issuer,
 		},
 	}

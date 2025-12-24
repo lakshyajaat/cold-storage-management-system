@@ -10,6 +10,7 @@ import (
 	"cold-backend/internal/auth"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -326,7 +327,7 @@ func (s *SeasonService) RejectRequest(ctx context.Context, requestID int, reject
 func (s *SeasonService) executeSeasonReset(requestID int, seasonName string) {
 	ctx := context.Background()
 	summary := &models.RecordsArchivedSummary{}
-	archiveTime := time.Now().Format("2006-01-02_15-04-05")
+	archiveTime := timeutil.Now().Format("2006-01-02_15-04-05")
 	archiveLocation := fmt.Sprintf("local:archived_tables/%s_%s", seasonName, archiveTime)
 
 	log.Printf("[Season] Starting season reset for request %d", requestID)

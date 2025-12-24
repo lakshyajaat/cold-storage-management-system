@@ -11,6 +11,7 @@ import (
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 )
 
 // APILoggingMiddleware logs API requests to TimescaleDB
@@ -72,7 +73,7 @@ func (m *APILoggingMiddleware) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		start := time.Now()
+		start := timeutil.Now()
 
 		// Capture request size
 		var requestSize int
@@ -109,7 +110,7 @@ func (m *APILoggingMiddleware) Handler(next http.Handler) http.Handler {
 
 		// Create log entry
 		logEntry := &models.APIRequestLog{
-			Time:         time.Now(),
+			Time:         timeutil.Now(),
 			Method:       r.Method,
 			Path:         sanitizePath(r.URL.Path),
 			StatusCode:   wrapped.statusCode,

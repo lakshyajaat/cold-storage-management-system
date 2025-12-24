@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cold-backend/internal/models"
+	"cold-backend/internal/timeutil"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -20,14 +21,15 @@ type CustomerClaims struct {
 
 // GenerateCustomerToken creates a new JWT token for a customer
 func (j *JWTManager) GenerateCustomerToken(customer *models.Customer, rememberMe bool) (string, error) {
+	now := timeutil.Now()
 	var expirationTime time.Time
 
 	if rememberMe {
 		// 30 days for "Remember Me"
-		expirationTime = time.Now().Add(30 * 24 * time.Hour)
+		expirationTime = now.Add(30 * 24 * time.Hour)
 	} else {
 		// 24 hours for regular session
-		expirationTime = time.Now().Add(24 * time.Hour)
+		expirationTime = now.Add(24 * time.Hour)
 	}
 
 	claims := &CustomerClaims{
@@ -37,7 +39,7 @@ func (j *JWTManager) GenerateCustomerToken(customer *models.Customer, rememberMe
 		IsCustomer: true,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(now),
 			Issuer:    j.cfg.JWT.Issuer,
 		},
 	}

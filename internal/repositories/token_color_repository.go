@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cold-backend/internal/models"
+	"cold-backend/internal/timeutil"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -40,7 +41,7 @@ func (r *TokenColorRepository) GetByDate(ctx context.Context, date time.Time) (*
 
 // GetToday gets today's token color
 func (r *TokenColorRepository) GetToday(ctx context.Context) (*models.TokenColor, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	today := timeutil.StartOfDay(timeutil.Now())
 	return r.GetByDate(ctx, today)
 }
 
@@ -52,7 +53,7 @@ func (r *TokenColorRepository) SetColor(ctx context.Context, date time.Time, col
 		ON CONFLICT (color_date)
 		DO UPDATE SET color = $2, set_by_user_id = $3, updated_at = $4
 	`
-	_, err := r.DB.Exec(ctx, query, date, color, userID, time.Now())
+	_, err := r.DB.Exec(ctx, query, date, color, userID, timeutil.Now())
 	return err
 }
 
@@ -82,7 +83,7 @@ func (r *TokenColorRepository) GetColorForNextDay(ctx context.Context, date time
 
 // GetUpcoming gets token colors for the next N days (including today)
 func (r *TokenColorRepository) GetUpcoming(ctx context.Context, days int) ([]*models.TokenColor, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	today := timeutil.StartOfDay(timeutil.Now())
 	endDate := today.AddDate(0, 0, days)
 
 	query := `

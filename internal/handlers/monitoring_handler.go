@@ -18,6 +18,7 @@ import (
 	"cold-backend/internal/config"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -118,8 +119,7 @@ func runR2Backup() {
 	}
 
 	// Generate backup filename with IST timestamp
-	ist, _ := time.LoadLocation("Asia/Kolkata")
-	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().In(ist).Format("20060102_150405"))
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", timeutil.Now().Format("20060102_150405"))
 
 	// Upload to R2
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
@@ -158,7 +158,7 @@ func runR2Backup() {
 // cleanupOldBackups deletes backups older than 3 days and failed backups (< 1KB)
 func cleanupOldBackups(ctx context.Context, client *s3.Client) {
 	maxAge := 3 * 24 * time.Hour
-	cutoff := time.Now().Add(-maxAge)
+	cutoff := timeutil.Now().Add(-maxAge)
 	minValidSize := int64(1024) // 1KB minimum for valid backup
 
 	// List all backups
@@ -221,7 +221,7 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 
 	var buffer bytes.Buffer
 	buffer.WriteString("-- Cold Storage Database Backup\n")
-	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", timeutil.Now().Format(time.RFC3339)))
 
 	tables := []string{
 		"users", "customers", "entries", "entry_events", "room_entries",
@@ -358,7 +358,7 @@ func (h *MonitoringHandler) GetDashboardData(w http.ResponseWriter, r *http.Requ
 		"recent_alerts":     recentAlerts,
 		"nodes":             nodes,
 		"postgres_pods":     postgresPods,
-		"last_updated":      time.Now(),
+		"last_updated":      timeutil.Now(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -501,7 +501,7 @@ func (h *MonitoringHandler) GetLatestNodeMetrics(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"nodes":        nodes,
-		"last_updated": time.Now(),
+		"last_updated": timeutil.Now(),
 	})
 }
 
@@ -591,7 +591,7 @@ func (h *MonitoringHandler) GetLatestPostgresMetrics(w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"pods":         pods,
-		"last_updated": time.Now(),
+		"last_updated": timeutil.Now(),
 	})
 }
 
@@ -612,7 +612,7 @@ func (h *MonitoringHandler) getMetricsDBMetrics() *models.PostgresMetrics {
 	defer db.Close()
 
 	metrics := &models.PostgresMetrics{
-		Time:           time.Now(),
+		Time:           timeutil.Now(),
 		PodName:        "backup-server (192.168.15.195)",
 		NodeName:       host,
 		Role:           "Unknown",
@@ -1113,7 +1113,6 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 	var latestTime time.Time
 	var latestKey string
 	backups := []map[string]interface{}{}
-	ist, _ := time.LoadLocation("Asia/Kolkata")
 
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
@@ -1138,7 +1137,7 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 				"key":           *obj.Key,
 				"size":          formatBytes(*obj.Size),
 				"size_bytes":    *obj.Size,
-				"last_modified": obj.LastModified.In(ist).Format("2006-01-02 15:04:05"),
+				"last_modified": timeutil.ToIST(*obj.LastModified).Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -1149,9 +1148,7 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 	result["backups"] = backups
 
 	if !latestTime.IsZero() {
-		// Convert to IST (Indian Standard Time = UTC+5:30)
-		ist, _ := time.LoadLocation("Asia/Kolkata")
-		result["last_backup"] = latestTime.In(ist).Format("2006-01-02 15:04:05")
+		result["last_backup"] = timeutil.ToIST(latestTime).Format("2006-01-02 15:04:05")
 		result["last_backup_key"] = latestKey
 		result["last_backup_age"] = time.Since(latestTime).Round(time.Minute).String()
 	} else {
@@ -1201,8 +1198,7 @@ func (h *MonitoringHandler) BackupToR2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate backup filename with IST timestamp
-	ist, _ := time.LoadLocation("Asia/Kolkata")
-	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().In(ist).Format("20060102_150405"))
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", timeutil.Now().Format("20060102_150405"))
 
 	// Upload to R2
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
@@ -1243,7 +1239,7 @@ func (h *MonitoringHandler) createDatabaseBackup(ctx context.Context) ([]byte, e
 
 	var buffer bytes.Buffer
 	buffer.WriteString("-- Cold Storage Database Backup\n")
-	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", timeutil.Now().Format(time.RFC3339)))
 
 	// Get all tables
 	tables := []string{

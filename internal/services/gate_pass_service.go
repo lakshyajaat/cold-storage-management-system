@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"time"
+
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/timeutil"
 )
 
 type GatePassService struct {
@@ -122,7 +123,7 @@ func (s *GatePassService) ApproveGatePass(ctx context.Context, id int, req *mode
 	}
 
 	// Check if gate pass has expired (30 hours from issue time)
-	if gatePass.ExpiresAt != nil && time.Now().After(*gatePass.ExpiresAt) {
+	if gatePass.ExpiresAt != nil && timeutil.Now().After(*gatePass.ExpiresAt) {
 		// Auto-expire the gate pass
 		s.GatePassRepo.UpdateGatePass(ctx, id, 0, "", "expired", "Auto-expired: Not approved within 30 hours", userID)
 		return errors.New("gate pass has expired - not approved within 30 hours")
@@ -245,7 +246,7 @@ func (s *GatePassService) RecordPickup(ctx context.Context, req *models.RecordPi
 	}
 
 	// Check if expired
-	if gatePass.ApprovalExpiresAt != nil && time.Now().After(*gatePass.ApprovalExpiresAt) {
+	if gatePass.ApprovalExpiresAt != nil && timeutil.Now().After(*gatePass.ApprovalExpiresAt) {
 		return errors.New("gate pass has expired - pickup window closed")
 	}
 
