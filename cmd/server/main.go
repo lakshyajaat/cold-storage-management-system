@@ -136,20 +136,9 @@ func main() {
 		// Employee mode uses config.yaml port (8080)
 	}
 
-	// Try to connect to database with fallback
-	pool, connectedDB := db.TryConnectWithFallback()
-
-	// If no database connection, start in setup mode
-	if pool == nil {
-		log.Println("========================================")
-		log.Println("  NO DATABASE CONNECTION AVAILABLE")
-		log.Println("  Starting in SETUP MODE")
-		log.Println("========================================")
-		startSetupMode(cfg)
-		return
-	}
-
-	log.Printf("Connected to: %s", connectedDB)
+	// Connect to database directly (simple mode - no fallback chain)
+	pool := db.Connect(cfg)
+	log.Printf("Connected to database: %s:%d/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.Name)
 	defer pool.Close()
 
 	// Initialize Redis cache (optional - graceful fallback if unavailable)

@@ -1,6 +1,6 @@
-# K3s Infrastructure Documentation - Cold Storage Backend POC
+# Infrastructure Documentation - Cold Storage Backend
 
-**Date:** December 18, 2025
+**Date:** December 24, 2025
 **Testing Domain:** ailakshya.in
 **Production Domain:** gurukripacoldstore.in
 
@@ -11,12 +11,11 @@
 1. [Infrastructure Overview](#infrastructure-overview)
 2. [Proxmox Virtual Machines](#proxmox-virtual-machines)
 3. [K3s Kubernetes Cluster](#k3s-kubernetes-cluster)
-4. [Longhorn Distributed Storage](#longhorn-distributed-storage)
-5. [CloudNativePG PostgreSQL Cluster](#cloudnativepg-postgresql-cluster)
-6. [TrueNAS NFS Mount](#truenas-nfs-mount)
-7. [Access Information](#access-information)
-8. [Maintenance Commands](#maintenance-commands)
-9. [Next Steps](#next-steps)
+4. [Bare Metal PostgreSQL Cluster](#bare-metal-postgresql-cluster)
+5. [Cloudflare Tunnel HA](#cloudflare-tunnel-ha)
+6. [Access Information](#access-information)
+7. [Maintenance Commands](#maintenance-commands)
+8. [Disaster Recovery](#disaster-recovery)
 
 ---
 
@@ -25,48 +24,58 @@
 ### Physical Server
 - **Host:** Proxmox VE at 192.168.15.96
 - **CPU:** 2× Intel Xeon Gold 6138 @ 2.00GHz (80 cores total)
-- **RAM:** 125.50 GB (36 GB free before VM creation)
+- **RAM:** 125.50 GB
 - **Storage:** 4 TB HDD (local storage pool: "hdd")
 - **Network:** Bridge vmbr0, Gateway 192.168.15.1
 
-### TrueNAS Server
-- **Address:** 192.168.15.52
-- **Share Path:** smb://192.168.15.52/coman/
-- **Mount Point (planned):** /mnt/data/coman
-- **Storage:** 24 TB ZFS share
-- **Note:** NFS needs to be enabled on TrueNAS for Kubernetes integration
+### Architecture (Updated December 2025)
 
-### Architecture
+The infrastructure uses a **split architecture** with:
+- **3 K3s VMs** for running the application (stateless)
+- **3 Bare Metal VMs** for PostgreSQL databases (stateful)
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Proxmox Server (192.168.15.96)                             │
-│                                                               │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  K3s Cluster (5 VMs)                                   │  │
-│  │                                                         │  │
-│  │  Control Plane Nodes:                                  │  │
-│  │  ├─ k3s-node1 (192.168.15.110) - Primary control plane│  │
-│  │  ├─ k3s-node2 (192.168.15.111) - Control plane        │  │
-│  │  └─ k3s-node3 (192.168.15.112) - Control plane        │  │
-│  │                                                         │  │
-│  │  Worker Nodes:                                         │  │
-│  │  ├─ k3s-node4 (192.168.15.113) - Worker               │  │
-│  │  └─ k3s-node5 (192.168.15.114) - Worker               │  │
-│  │                                                         │  │
-│  │  Storage Layer:                                        │  │
-│  │  ├─ Longhorn (distributed storage across all nodes)   │  │
-│  │  └─ TrueNAS NFS (24TB external storage) [pending]     │  │
-│  │                                                         │  │
-│  │  Database Layer:                                       │  │
-│  │  └─ CloudNativePG PostgreSQL (5 replicas)             │  │
-│  │     ├─ cold-postgres-1 (primary)                      │  │
-│  │     ├─ cold-postgres-2 (replica)                      │  │
-│  │     ├─ cold-postgres-3 (replica)                      │  │
-│  │     ├─ cold-postgres-4 (replica)                      │  │
-│  │     └─ cold-postgres-5 (replica)                      │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    KUBERNETES CLUSTER (App Only)                 │
+├─────────────────┬─────────────────┬─────────────────────────────┤
+│   k3s-node1     │   k3s-node2     │   k3s-node3                 │
+│  192.168.15.110 │  192.168.15.111 │  192.168.15.112             │
+│   control+worker│   control+worker│   control+worker            │
+│     12GB RAM    │     12GB RAM    │     12GB RAM                │
+│   cloudflared   │   cloudflared   │   cloudflared               │
+│   backend pods  │   backend pods  │   backend pods              │
+└────────┬────────┴────────┬────────┴────────┬────────────────────┘
+         │                 │                 │
+         └────────────────VIP-APP: 192.168.15.200──────────────────┐
+                                                                    │
+                                                          Cloudflare Tunnel
+                                                          (HA - 3 replicas)
+                                                                    │
+┌─────────────────────────────────────────────────────────────────┐
+│                 BARE METAL DATABASES                             │
+├─────────────────┬─────────────────┬─────────────────────────────┤
+│    db-node1     │    db-node2     │    db-node3                 │
+│  192.168.15.120 │  192.168.15.121 │  192.168.15.122             │
+│                 │                 │                              │
+│  PostgreSQL 17  │  PostgreSQL 17  │  PostgreSQL 17              │
+│  (Primary)      │  (Replica)      │  (Replica)                  │
+│                 │                 │                              │
+│  keepalived     │  keepalived     │  keepalived                 │
+│  (priority 100) │  (priority 90)  │  (priority 80)              │
+│     8GB RAM     │     8GB RAM     │     8GB RAM                 │
+└────────┬────────┴────────┬────────┴────────┬────────────────────┘
+         │                 │                 │
+         └────────────────VIP-DB: 192.168.15.210───────────────────┘
 ```
+
+### Benefits of This Architecture
+| Aspect | Previous (CNPG in K8s) | Current (Bare Metal DB) |
+|--------|------------------------|-------------------------|
+| **Database Reliability** | Longhorn PVC issues | Direct disk, no storage layer |
+| **Backup/Recovery** | Complex CNPG snapshots | Simple pg_dump, rsync |
+| **Performance** | Container/CSI overhead | Native performance |
+| **Debugging** | kubectl exec, complex | Direct SSH access |
+| **Failover** | CNPG automatic | Keepalived VIP + streaming replication |
 
 ---
 
@@ -74,18 +83,24 @@
 
 ### VM Configuration
 
-| VM ID | Hostname   | IP Address      | CPU Cores | RAM  | Disk | Role          |
-|-------|------------|-----------------|-----------|------|------|---------------|
-| 210   | k3s-node1  | 192.168.15.110  | 16        | 8GB  | 100GB| Control Plane |
-| 211   | k3s-node2  | 192.168.15.111  | 12        | 6GB  | 80GB | Control Plane |
-| 212   | k3s-node3  | 192.168.15.112  | 12        | 6GB  | 80GB | Control Plane |
-| 213   | k3s-node4  | 192.168.15.113  | 10        | 8GB  | 60GB | Worker        |
-| 214   | k3s-node5  | 192.168.15.114  | 10        | 8GB  | 60GB | Worker        |
+#### Kubernetes Cluster VMs
+| VM ID | Hostname   | IP Address      | CPU | RAM  | Disk  | Role                    |
+|-------|------------|-----------------|-----|------|-------|-------------------------|
+| 210   | k3s-node1  | 192.168.15.110  | 4   | 12GB | 100GB | Control Plane + Worker  |
+| 211   | k3s-node2  | 192.168.15.111  | 4   | 12GB | 80GB  | Control Plane + Worker  |
+| 212   | k3s-node3  | 192.168.15.112  | 4   | 12GB | 80GB  | Control Plane + Worker  |
+
+#### Database VMs (Bare Metal PostgreSQL)
+| VM ID | Hostname   | IP Address      | CPU | RAM  | Disk | Role               |
+|-------|------------|-----------------|-----|------|------|--------------------|
+| 220   | db-node1   | 192.168.15.120  | 4   | 8GB  | 50GB | PostgreSQL Primary |
+| 221   | db-node2   | 192.168.15.121  | 2   | 8GB  | 50GB | PostgreSQL Replica |
+| 222   | db-node3   | 192.168.15.122  | 2   | 8GB  | 50GB | PostgreSQL Replica |
 
 **Total Resources Allocated:**
-- CPU: 60 cores
-- RAM: 36 GB
-- Disk: 420 GB
+- CPU: 20 cores
+- RAM: 60 GB (36GB K8s + 24GB Databases)
+- Disk: 410 GB
 
 ### VM Creation Commands
 
@@ -207,239 +222,139 @@ kubectl get nodes
 
 ---
 
-## Longhorn Distributed Storage
+## Cloudflare Tunnel HA
 
 ### Overview
-Longhorn provides distributed block storage for Kubernetes persistent volumes.
+Cloudflare Tunnel provides secure, zero-trust access to the application without exposing ports to the internet. The tunnel runs as a highly available deployment across all 3 K8s nodes.
 
-### Installation
-```bash
-kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/deploy/longhorn.yaml
+### Configuration
+
+| Setting | Value |
+|---------|-------|
+| Deployment | cloudflared (3 replicas) |
+| Target | VIP-APP (192.168.15.200:8080) |
+| Testing Domain | ailakshya.in |
+| Production Domain | gurukripacoldstore.in |
+
+### Tunnel Architecture
+```
+Internet → Cloudflare Edge → cloudflared pods (x3) → VIP-APP (192.168.15.200)
+                                    ↓
+                            Backend Pods (K8s)
+                                    ↓
+                            VIP-DB (192.168.15.210)
 ```
 
-### Storage Classes
-- **longhorn** (default): Distributed storage with 3 replicas
-- **longhorn-static**: Static provisioning
-- **local-path** (K3s default): Local storage on single node
-
-### Longhorn Components
-- **Namespace:** longhorn-system
-- **UI Service:** longhorn-frontend (access via NodePort or kubectl port-forward)
-- **Manager DaemonSet:** Runs on all nodes (5 instances)
-- **Engine Images:** Deployed on all nodes
-- **Instance Managers:** Handle volume replicas
-
-### Access Longhorn UI
+### Check Tunnel Status
 ```bash
-# Port-forward to access UI
-kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
+# Check cloudflared pods
+kubectl get pods -l app=cloudflared
 
-# Access at: http://localhost:8080
+# Check logs
+kubectl logs -l app=cloudflared --tail=50
+
+# Verify pods are distributed across nodes
+kubectl get pods -l app=cloudflared -o wide
 ```
 
-### Verify Installation
-```bash
-# Check pods
-kubectl get pods -n longhorn-system
-
-# Check storage classes
-kubectl get storageclass
-
-# Check volumes
-kubectl get pvc --all-namespaces
-```
+### Tunnel Failover
+- Cloudflare automatically load-balances between healthy cloudflared instances
+- If one node dies, traffic routes to remaining nodes
+- No single point of failure
 
 ---
 
-## CloudNativePG PostgreSQL Cluster
+## Bare Metal PostgreSQL Cluster
 
 ### Overview
-CloudNativePG operator manages PostgreSQL clusters with high availability.
+PostgreSQL 17 with streaming replication across 3 bare metal VMs, using keepalived for VIP failover.
 
-### Operator Installation
-```bash
-kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.6.yaml
-```
+### Cluster Configuration
 
-### PostgreSQL Cluster Configuration
-
-**File:** `/tmp/postgres-cluster.yaml`
-
-```yaml
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: cold-postgres
-  namespace: default
-spec:
-  instances: 5
-  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
-
-  postgresql:
-    parameters:
-      max_connections: "200"
-      shared_buffers: "256MB"
-      effective_cache_size: "1GB"
-      work_mem: "16MB"
-
-  storage:
-    storageClass: longhorn
-    size: 20Gi
-
-  walStorage:
-    storageClass: longhorn
-    size: 5Gi
-
-  resources:
-    requests:
-      memory: "1Gi"
-      cpu: "500m"
-    limits:
-      memory: "2Gi"
-      cpu: "2000m"
-
-  bootstrap:
-    initdb:
-      database: cold_db
-      owner: cold_user
-      secret:
-        name: cold-postgres-superuser
-
-  monitoring:
-    enablePodMonitor: false
-```
-
-### Create Superuser Secret
-```bash
-kubectl create secret generic cold-postgres-superuser \
-  --from-literal=username=postgres \
-  --from-literal=password=SecurePostgresPassword123
-```
-
-### Deploy Cluster
-```bash
-kubectl apply -f /tmp/postgres-cluster.yaml
-```
-
-### Cluster Details
-- **Name:** cold-postgres
-- **Database:** cold_db
-- **Owner:** cold_user
-- **Instances:** 5 (1 primary + 4 replicas)
-- **PostgreSQL Version:** 17.2
-- **Storage:** 20Gi data + 5Gi WAL per instance (Longhorn)
-- **Total Storage:** 125Gi (25Gi × 5 instances)
+| Node | IP Address | Role | Keepalived Priority |
+|------|------------|------|---------------------|
+| db-node1 | 192.168.15.120 | Primary | 100 |
+| db-node2 | 192.168.15.121 | Streaming Replica | 90 |
+| db-node3 | 192.168.15.122 | Streaming Replica | 80 |
+| **VIP-DB** | **192.168.15.210** | Virtual IP | - |
 
 ### Connection Information
 
-#### Primary Connection (read-write)
+#### Application Connection (via VIP)
 ```bash
-# Service: cold-postgres-rw (read-write)
-kubectl get service cold-postgres-rw
+# Connection string (always use VIP)
+postgresql://cold_user:SecurePostgresPassword123@192.168.15.210:5432/cold_db
 
-# Connection string
-postgresql://cold_user:<password>@cold-postgres-rw.default.svc.cluster.local:5432/cold_db
+# Test connection
+psql -h 192.168.15.210 -U cold_user -d cold_db
 ```
 
-#### Replica Connection (read-only)
+#### Direct Node Connections (for maintenance)
 ```bash
-# Service: cold-postgres-ro (read-only)
-kubectl get service cold-postgres-ro
+# Primary
+ssh root@192.168.15.120
+sudo -u postgres psql -d cold_db
 
-# Connection string
-postgresql://cold_user:<password>@cold-postgres-ro.default.svc.cluster.local:5432/cold_db
+# Replicas
+ssh root@192.168.15.121
+ssh root@192.168.15.122
 ```
 
-#### Get Superuser Password
+### Check Replication Status
 ```bash
-kubectl get secret cold-postgres-superuser -o jsonpath='{.data.password}' | base64 -d
+# On primary (db-node1)
+ssh root@192.168.15.120 'sudo -u postgres psql -c "SELECT client_addr, state, sent_lsn, replay_lsn FROM pg_stat_replication;"'
+
+# Check if node is primary or replica
+ssh root@192.168.15.120 'sudo -u postgres psql -c "SELECT pg_is_in_recovery();"'
+# Returns: f (false) = Primary, t (true) = Replica
 ```
 
-### Monitoring
+### Keepalived VIP Management
 ```bash
-# Check cluster status
-kubectl get cluster cold-postgres
+# Check which node has VIP
+ssh root@192.168.15.120 'ip addr show eth0 | grep 192.168.15.210'
+ssh root@192.168.15.121 'ip addr show eth0 | grep 192.168.15.210'
+ssh root@192.168.15.122 'ip addr show eth0 | grep 192.168.15.210'
 
-# Check pods
-kubectl get pods -l cnpg.io/cluster=cold-postgres
-
-# Check primary instance
-kubectl get cluster cold-postgres -o jsonpath='{.status.currentPrimary}'
-
-# View logs
-kubectl logs -l cnpg.io/cluster=cold-postgres --tail=100
+# Restart keepalived
+ssh root@192.168.15.120 'systemctl restart keepalived'
 ```
+
+### PostgreSQL Service Management
+```bash
+# Status
+ssh root@192.168.15.120 'systemctl status postgresql@17-main'
+
+# Restart
+ssh root@192.168.15.120 'systemctl restart postgresql'
+
+# Logs
+ssh root@192.168.15.120 'journalctl -u postgresql@17-main --tail=50'
+```
+
+### Key Configuration Files
+- `/etc/postgresql/17/main/postgresql.conf` - Main config
+- `/etc/postgresql/17/main/pg_hba.conf` - Access control
+- `/var/lib/postgresql/17/main/postgresql.auto.conf` - Replica connection info
+- `/etc/keepalived/keepalived.conf` - VIP failover config
 
 ---
 
-## TrueNAS NFS Mount
+## TrueNAS NFS (Optional)
 
-### Configuration (Pending)
+Available for future use if large file storage is needed:
 
-**TrueNAS Server:** 192.168.15.52
-**Share Name:** coman
-**SMB Path:** smb://192.168.15.52/coman/
-**Planned Mount Point:** /mnt/data/coman
-**Storage Capacity:** 24 TB
+| Setting | Value |
+|---------|-------|
+| Server | 192.168.15.52 |
+| Share | coman |
+| Capacity | 24 TB |
+| Mount Point | /mnt/data/coman |
 
-### Setup Required on TrueNAS
-
-1. **Enable NFS Service**
-   - Navigate to Services → NFS
-   - Start NFS service
-   - Enable "Start Automatically"
-
-2. **Configure NFS Export**
-   - Navigate to Sharing → Unix (NFS) Shares
-   - Edit the "coman" dataset
-   - Add NFS share with:
-     - Path: /mnt/pool/coman
-     - Networks: 192.168.15.0/24 (or specific IPs)
-     - Maproot User: root
-     - Maproot Group: wheel
-
-3. **Apply Changes**
-   - Click Save
-   - Restart NFS service
-
-### Verify NFS Export (from K3s node)
 ```bash
-# Check available exports
-showmount -e 192.168.15.52
-
-# Expected output:
-# Export list for 192.168.15.52:
-# /mnt/pool/coman 192.168.15.0/24
-```
-
-### Mount on K3s Nodes
-```bash
-# Create mount point on all nodes
-mkdir -p /mnt/data/coman
-
-# Test mount
+# Mount on any node
 mount -t nfs 192.168.15.52:/mnt/pool/coman /mnt/data/coman
-
-# Verify
-df -h | grep coman
-
-# Make permanent (add to /etc/fstab)
-echo "192.168.15.52:/mnt/pool/coman /mnt/data/coman nfs defaults 0 0" >> /etc/fstab
-```
-
-### Kubernetes NFS StorageClass (after NFS is configured)
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: truenas-nfs
-provisioner: nfs.csi.k8s.io
-parameters:
-  server: 192.168.15.52
-  share: /mnt/pool/coman
-  mountPermissions: "0755"
-volumeBindingMode: Immediate
 ```
 
 ---
@@ -453,13 +368,18 @@ volumeBindingMode: Immediate
 ssh root@192.168.15.96
 ```
 
-#### K3s Nodes
+#### K3s Nodes (Application Cluster)
 ```bash
 ssh root@192.168.15.110  # k3s-node1
 ssh root@192.168.15.111  # k3s-node2
 ssh root@192.168.15.112  # k3s-node3
-ssh root@192.168.15.113  # k3s-node4
-ssh root@192.168.15.114  # k3s-node5
+```
+
+#### Database Nodes (Bare Metal PostgreSQL)
+```bash
+ssh root@192.168.15.120  # db-node1 (Primary)
+ssh root@192.168.15.121  # db-node2 (Replica)
+ssh root@192.168.15.122  # db-node3 (Replica)
 ```
 
 ### Kubernetes Access
@@ -478,19 +398,23 @@ sed -i 's/127.0.0.1/192.168.15.110/g' ~/.kube/config
 
 ### Database Access
 
-#### Connect to PostgreSQL Primary
+#### Via VIP (Recommended)
 ```bash
-# Port-forward to local machine
-kubectl port-forward svc/cold-postgres-rw 5432:5432
-
-# Connect with psql
-psql -h localhost -U cold_user -d cold_db
+# Connect via VIP - always points to primary
+psql -h 192.168.15.210 -U cold_user -d cold_db
+# Password: SecurePostgresPassword123
 ```
 
-#### Connect from within cluster
+#### Direct to Primary
 ```bash
-# Exec into postgres pod
-kubectl exec -it cold-postgres-1 -- psql -U postgres cold_db
+ssh root@192.168.15.120
+sudo -u postgres psql -d cold_db
+```
+
+#### From Backend Pod
+```bash
+# The backend connects to VIP-DB automatically
+kubectl exec -it deploy/cold-backend-employee -- env | grep DB
 ```
 
 ---
@@ -524,41 +448,48 @@ systemctl restart k3s-agent
 /usr/local/bin/k3s-agent-uninstall.sh
 ```
 
-### Longhorn Management
+### PostgreSQL Management (Bare Metal)
 
-#### Check Storage Usage
+#### Check Cluster Status
 ```bash
-kubectl get pv
-kubectl get pvc -A
-```
-
-#### Uninstall Longhorn
-```bash
-kubectl delete -f https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/deploy/longhorn.yaml
-```
-
-### PostgreSQL Management
-
-#### Scale Cluster (change replica count)
-```bash
-kubectl patch cluster cold-postgres --type='json' \
-  -p='[{"op": "replace", "path": "/spec/instances", "value": 3}]'
-```
-
-#### Trigger Manual Failover
-```bash
-kubectl cnpg promote cold-postgres cold-postgres-2
-```
-
-#### Backup Database
-```bash
-kubectl cnpg backup cold-postgres
+# Check which node is primary
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  echo "=== $node ==="
+  ssh root@$node 'sudo -u postgres psql -c "SELECT pg_is_in_recovery();"'
+done
 ```
 
 #### Check Replication Status
 ```bash
-kubectl exec cold-postgres-1 -- psql -U postgres -c \
-  "SELECT * FROM pg_stat_replication;"
+ssh root@192.168.15.120 'sudo -u postgres psql -c "SELECT client_addr, state, sent_lsn, replay_lsn FROM pg_stat_replication;"'
+```
+
+#### Check VIP Location
+```bash
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  echo "=== $node ==="
+  ssh root@$node 'ip addr show eth0 | grep 192.168.15.210 || echo "VIP not here"'
+done
+```
+
+#### Backup Database
+```bash
+# Full backup from primary
+ssh root@192.168.15.120 'sudo -u postgres pg_dump cold_db > /var/backups/cold_db_$(date +%Y%m%d).sql'
+
+# Backup to Cloudflare R2 (automatic via backend)
+curl -X POST http://192.168.15.200:8080/api/infrastructure/backup-now -H "Authorization: Bearer $TOKEN"
+```
+
+#### Restart PostgreSQL
+```bash
+ssh root@192.168.15.120 'systemctl restart postgresql'
+```
+
+#### Restart Keepalived (force VIP failover)
+```bash
+ssh root@192.168.15.120 'systemctl stop keepalived'
+# VIP will move to next priority node
 ```
 
 ### Proxmox VM Management
@@ -586,80 +517,41 @@ qm rollback 210 snapshot1  # Restore snapshot
 
 ---
 
-## Next Steps
+## Completed Milestones
 
-### 1. Enable NFS on TrueNAS
-- Configure NFS export for "coman" share
-- Mount NFS share on K3s nodes
-- Create Kubernetes NFS StorageClass
+### ✓ Infrastructure Migration (December 2025)
+- Migrated from CNPG (K8s-based PostgreSQL) to bare metal PostgreSQL
+- Set up 3-node PostgreSQL cluster with streaming replication
+- Configured keepalived VIP for automatic failover
+- Deleted old k3s-node4 and k3s-node5
 
-### 2. Deploy MinIO (S3-compatible storage)
-- Install MinIO operator
-- Create MinIO tenant
-- Configure PostgreSQL backups to MinIO
+### ✓ Cloudflare Tunnel HA
+- Deployed cloudflared as 3-replica deployment
+- Tunnel distributed across all K8s nodes
+- Zero-trust access configured for ailakshya.in
 
-### 3. Build and Deploy cold-backend Application
-- Build Go application as container
-- Create Kubernetes Deployment
-- Create Kubernetes Service
-- Connect to PostgreSQL cluster
+### ✓ Backend Deployment
+- cold-backend running on K8s (employee + customer portals)
+- Automatic database fallback (VIP-DB → Backup → Localhost)
+- Cloudflare R2 backup integration
 
-### 4. Configure Cloudflare Tunnel
-- Install cloudflared
-- Create tunnel for ailakshya.in
-- Configure DNS records
-- Set up ingress rules
+### ✓ Monitoring System (v1.5.0)
+- TimescaleDB for metrics storage
+- Node and PostgreSQL metrics collection
+- Infrastructure dashboard at `/infrastructure`
 
-### 5. Testing and Validation
-- Test high availability failover
-- Test PostgreSQL replication
-- Test backup and restore
-- Load testing
-- Disaster recovery testing
+---
 
-### 6. Monitoring and Observability ✓ COMPLETED (v1.5.0)
-**TimescaleDB Monitoring System** has been deployed with:
+## Future Improvements
 
-#### Components
-- **TimescaleDB Pod**: Time-series database for metrics storage
-  - Service: `timescaledb.default.svc.cluster.local:5432`
-  - Database: `metrics_db`, User: `metrics`
-  - Storage: 10Gi on Longhorn
+### Optional: NFS Storage
+- Configure TrueNAS NFS export for "coman" share
+- Use for large file storage if needed
 
-- **Metrics Collector**: Collects every 30 seconds
-  - K3s node metrics (CPU, memory, disk, network, pods)
-  - PostgreSQL pod metrics (connections, replication lag)
-
-- **API Request Logging**: Tracks all API requests
-  - Duration, status codes, user info
-  - Error rates and response sizes
-
-- **Monitoring Dashboard**: `/monitoring` page
-  - Real-time cluster overview
-  - Historical charts (5m to 7d range)
-  - API analytics and performance
-  - Alert management
-
-#### API Endpoints (Admin only)
-```
-GET /api/monitoring/dashboard     - Full dashboard data
-GET /api/monitoring/nodes         - Node metrics
-GET /api/monitoring/postgres      - PostgreSQL metrics
-GET /api/monitoring/api/analytics - API performance stats
-GET /api/monitoring/alerts        - System alerts
-```
-
-#### TimescaleDB Features
-- Hypertables with automatic partitioning
-- Data compression (after 7 days)
-- Automatic retention policies (30-90 days)
-- Continuous aggregates for fast queries
-
-### 7. Production Deployment
+### Production Deployment
 - Switch to gurukripacoldstore.in domain
-- Configure SSL certificates
-- Set up automated backups
-- Document runbooks
+- Final security audit
+- Performance testing under load
 
 ---
 
@@ -693,60 +585,133 @@ kubectl describe pvc <pvc-name>
 kubectl logs -n longhorn-system -l app=longhorn-manager
 ```
 
-### PostgreSQL Issues
+### PostgreSQL Issues (Bare Metal)
 
-#### Cluster Not Starting
+#### Cannot Connect to VIP
 ```bash
-kubectl describe cluster cold-postgres
-kubectl logs -n cnpg-system deployment/cnpg-controller-manager
-kubectl logs -l cnpg.io/cluster=cold-postgres
+# Check which node has VIP
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  ssh root@$node 'ip addr show eth0 | grep 192.168.15.210' 2>/dev/null && echo "VIP is on $node"
+done
+
+# Check keepalived status
+ssh root@192.168.15.120 'systemctl status keepalived'
+
+# Restart keepalived on all nodes
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  ssh root@$node 'systemctl restart keepalived'
+done
 ```
 
-#### Connection Issues
+#### Replication Not Working
 ```bash
-# Check services
-kubectl get svc | grep cold-postgres
+# Check replication status on primary
+ssh root@192.168.15.120 'sudo -u postgres psql -c "SELECT * FROM pg_stat_replication;"'
 
-# Check endpoints
-kubectl get endpoints cold-postgres-rw
+# Check if replica is receiving WAL
+ssh root@192.168.15.121 'sudo -u postgres psql -c "SELECT pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn();"'
 
-# Test connection from pod
-kubectl run -it --rm psql-test --image=postgres:17 -- \
-  psql postgresql://cold_user:SecurePostgresPassword123@cold-postgres-rw/cold_db
+# Check PostgreSQL logs
+ssh root@192.168.15.121 'journalctl -u postgresql@17-main --tail=100'
 ```
+
+#### Connection from Backend Failing
+```bash
+# Check backend pod logs
+kubectl logs -l app=cold-backend --tail=100
+
+# Test connection from K8s node
+psql -h 192.168.15.210 -U cold_user -d cold_db -c "SELECT 1;"
+
+# Check backend database config
+kubectl exec deploy/cold-backend-employee -- env | grep -i db
+```
+
+---
+
+## Disaster Recovery
+
+### Database Recovery Scenarios
+
+#### Scenario 1: Single Replica Failure
+```bash
+# 1. Check which node failed
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  ssh root@$node 'hostname' 2>/dev/null || echo "$node is DOWN"
+done
+
+# 2. If it's a replica, just restart it - replication will catch up
+ssh root@192.168.15.121 'systemctl restart postgresql'
+```
+
+#### Scenario 2: Primary Failure (VIP Failover)
+```bash
+# 1. Keepalived automatically moves VIP to next priority replica
+# 2. Application continues working (read-only until promotion)
+
+# 3. To promote replica to primary:
+ssh root@192.168.15.121 'sudo -u postgres pg_ctl promote -D /var/lib/postgresql/17/main'
+
+# 4. Update other replicas to follow new primary
+# Edit /var/lib/postgresql/17/main/postgresql.auto.conf
+```
+
+#### Scenario 3: Complete Database Loss
+```bash
+# 1. Backend falls back to backup server (192.168.15.195)
+# 2. If that fails, falls back to localhost
+
+# 3. Restore from Cloudflare R2:
+# Backend has automatic recovery - will download latest backup
+# Or manually:
+aws s3 cp s3://cold-db-backups/latest.sql.gz - | gunzip | psql cold_db
+```
+
+### Backend Recovery
+```bash
+# Backend pods auto-restart on failure
+kubectl get pods -l app=cold-backend
+
+# Force restart all backend pods
+kubectl rollout restart deployment/cold-backend-employee
+kubectl rollout restart deployment/cold-backend-customer
+```
+
+### Full Cluster Recovery
+1. **Proxmox VMs**: Restore from Proxmox Backup Server (if configured)
+2. **PostgreSQL**: Restore from Cloudflare R2 backup
+3. **K8s Deployments**: Apply manifests from `/home/lakshya/jupyter-/cold/cold-backend/k8s/`
 
 ---
 
 ## Important Notes
 
-1. **Security:** All passwords shown here are examples. Change them in production.
+1. **Database Connection**: Application always connects to VIP (192.168.15.210), never directly to nodes.
 
-2. **Backups:** Currently, PostgreSQL backups are not configured. Add MinIO for automated backups.
+2. **Backups**: Automatic backups to Cloudflare R2 (cold-db-backups bucket).
 
-3. **High Availability:** The cluster is configured for HA but requires proper testing.
+3. **High Availability**:
+   - K8s: 3 control plane nodes, backend replicas spread across nodes
+   - Database: 3-node PostgreSQL with streaming replication + keepalived VIP
 
-4. **Resource Monitoring:** Install monitoring tools to track CPU/memory/disk usage.
+4. **Monitoring**: Check `/infrastructure` dashboard for cluster health.
 
-5. **Networking:** Ensure firewall rules allow traffic between nodes.
-
-6. **Storage:** Monitor Longhorn storage usage and plan capacity accordingly.
-
-7. **Updates:** Keep K3s, Longhorn, and PostgreSQL versions updated.
-
-8. **Documentation:** Keep this document updated as infrastructure changes.
+5. **Updates**:
+   - K3s: `curl -sfL https://get.k3s.io | sh -` on each node
+   - PostgreSQL: `apt update && apt upgrade postgresql-17`
 
 ---
 
 ## References
 
 - K3s Documentation: https://docs.k3s.io/
-- Longhorn Documentation: https://longhorn.io/docs/
-- CloudNativePG Documentation: https://cloudnative-pg.io/documentation/
+- PostgreSQL Streaming Replication: https://www.postgresql.org/docs/17/warm-standby.html
+- Keepalived: https://keepalived.readthedocs.io/
 - Proxmox VE Documentation: https://pve.proxmox.com/wiki/
-- TrueNAS Scale Documentation: https://www.truenas.com/docs/scale/
+- Cloudflare Tunnel: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
 
 ---
 
-**Last Updated:** December 18, 2025
-**Version:** v1.5.0 (with TimescaleDB Monitoring)
+**Last Updated:** December 24, 2025
+**Version:** v1.5.155 (Bare Metal PostgreSQL Migration)
 **Maintained By:** Lakshya (M.Tech CSE AI&ML)

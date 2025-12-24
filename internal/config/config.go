@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -77,6 +78,25 @@ func Load() *Config {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		log.Fatalf("config unmarshal error: %v", err)
+	}
+
+	// Override database settings from DB_* environment variables
+	if host := os.Getenv("DB_HOST"); host != "" {
+		cfg.Database.Host = host
+	}
+	if port := os.Getenv("DB_PORT"); port != "" {
+		if n, err := strconv.Atoi(port); err == nil && n > 0 {
+			cfg.Database.Port = n
+		}
+	}
+	if user := os.Getenv("DB_USER"); user != "" {
+		cfg.Database.User = user
+	}
+	if pass := os.Getenv("DB_PASSWORD"); pass != "" {
+		cfg.Database.Password = pass
+	}
+	if name := os.Getenv("DB_NAME"); name != "" {
+		cfg.Database.Name = name
 	}
 
 	// Override JWT secret from environment if not set
