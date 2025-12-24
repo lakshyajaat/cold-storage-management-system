@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -32,13 +33,16 @@ var (
 	r2BackupStopChan  chan bool
 	r2BackupMutex     sync.Mutex
 	r2BackupInterval  = 1 * time.Minute // Backup every 1 minute for near-zero data loss
+	r2BackupDBPool    *pgxpool.Pool     // Shared database pool from main app
 	lastBackupTime    time.Time
 	pendingChanges    int
 	pendingChangesMux sync.Mutex
 )
 
 // StartR2BackupScheduler starts the automatic R2 backup scheduler
-func StartR2BackupScheduler() {
+// Uses the provided database pool for backups (same connection as main app)
+func StartR2BackupScheduler(pool *pgxpool.Pool) {
+	r2BackupDBPool = pool
 	r2BackupMutex.Lock()
 	defer r2BackupMutex.Unlock()
 
@@ -168,34 +172,12 @@ func cleanupOldBackups(ctx context.Context, client *s3.Client) {
 	}
 }
 
-// createR2DatabaseBackup creates a SQL backup (standalone function for scheduler)
+// createR2DatabaseBackup creates a SQL backup using the shared database pool
 func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
-	// Try connecting with different passwords
-	var db *sql.DB
-	var err error
-	passwords := []string{"SecurePostgresPassword123", "postgres"}
-
-	for _, password := range passwords {
-		connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable connect_timeout=10",
-			"192.168.15.200", 5432, "postgres", password, "cold_db")
-
-		db, err = sql.Open("pgx", connStr)
-		if err != nil {
-			continue
-		}
-
-		// Test connection
-		if err = db.PingContext(ctx); err != nil {
-			db.Close()
-			continue
-		}
-		break // Connected successfully
+	// Use the shared database pool (same connection as main app)
+	if r2BackupDBPool == nil {
+		return nil, fmt.Errorf("database pool not initialized")
 	}
-
-	if db == nil || err != nil {
-		return nil, fmt.Errorf("failed to connect to db (tried all passwords): %w", err)
-	}
-	defer db.Close()
 
 	var buffer bytes.Buffer
 	buffer.WriteString("-- Cold Storage Database Backup\n")
@@ -209,7 +191,7 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 
 	tablesProcessed := 0
 	for _, table := range tables {
-		rows, err := db.QueryContext(ctx, fmt.Sprintf(`
+		rows, err := r2BackupDBPool.Query(ctx, fmt.Sprintf(`
 			SELECT column_name FROM information_schema.columns
 			WHERE table_name = '%s' ORDER BY ordinal_position`, table))
 		if err != nil {
@@ -220,23 +202,26 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 		buffer.WriteString(fmt.Sprintf("\n-- Table: %s\n", table))
 		tablesProcessed++
 
-		dataRows, err := db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", table))
+		dataRows, err := r2BackupDBPool.Query(ctx, fmt.Sprintf("SELECT * FROM %s", table))
 		if err != nil {
 			log.Printf("[R2 Backup] Warning: failed to query %s: %v", table, err)
 			rows.Close()
 			continue
 		}
 
-		cols, _ := dataRows.Columns()
-		if len(cols) > 0 {
-			values := make([]interface{}, len(cols))
-			valuePtrs := make([]interface{}, len(cols))
-			for i := range values {
-				valuePtrs[i] = &values[i]
-			}
+		// Get column names from field descriptions (pgx v5 API)
+		fields := dataRows.FieldDescriptions()
+		cols := make([]string, len(fields))
+		for i, f := range fields {
+			cols[i] = string(f.Name)
+		}
 
+		if len(cols) > 0 {
 			for dataRows.Next() {
-				dataRows.Scan(valuePtrs...)
+				values, err := dataRows.Values()
+				if err != nil {
+					continue
+				}
 				buffer.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES (", table, strings.Join(cols, ", ")))
 				for i, v := range values {
 					if i > 0 {
