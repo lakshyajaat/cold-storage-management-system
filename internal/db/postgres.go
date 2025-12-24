@@ -257,13 +257,12 @@ func TryConnectWithFallback() (*pgxpool.Pool, string) {
 		log.Printf("[DB] Trying to connect to %s (%s:%d)...", dbConfig.Name, dbConfig.Host, dbConfig.Port)
 
 		// Try each password for this host
-		for i, password := range config.CommonPasswords {
+		for _, password := range config.CommonPasswords {
 			dsn := dbConfig.ConnectionStringWithPassword(password)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			poolConfig, err := pgxpool.ParseConfig(dsn)
 			if err != nil {
-				log.Printf("[DB]   Password %d: parse error: %v", i+1, err)
 				cancel()
 				continue
 			}
@@ -278,14 +277,12 @@ func TryConnectWithFallback() (*pgxpool.Pool, string) {
 
 			pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 			if err != nil {
-				log.Printf("[DB]   Password %d: connect error: %v", i+1, err)
 				cancel()
 				continue
 			}
 
 			// Test the connection
 			if err := pool.Ping(ctx); err != nil {
-				log.Printf("[DB]   Password %d: ping error: %v", i+1, err)
 				cancel()
 				pool.Close()
 				continue
