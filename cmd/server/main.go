@@ -234,7 +234,7 @@ func main() {
 
 		// Initialize guard entry service and handler
 		guardEntryService := services.NewGuardEntryService(guardEntryRepo)
-		guardEntryHandler := handlers.NewGuardEntryHandler(guardEntryService)
+		guardEntryHandler := handlers.NewGuardEntryHandler(guardEntryService, adminActionLogRepo)
 
 		// Initialize token color handler
 		tokenColorHandler := handlers.NewTokenColorHandler(tokenColorRepo)

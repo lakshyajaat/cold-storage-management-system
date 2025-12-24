@@ -3,22 +3,28 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 
 	"github.com/gorilla/mux"
 )
 
 type GuardEntryHandler struct {
-	Service *services.GuardEntryService
+	Service         *services.GuardEntryService
+	AdminActionRepo *repositories.AdminActionLogRepository
 }
 
-func NewGuardEntryHandler(s *services.GuardEntryService) *GuardEntryHandler {
-	return &GuardEntryHandler{Service: s}
+func NewGuardEntryHandler(s *services.GuardEntryService, adminActionRepo *repositories.AdminActionLogRepository) *GuardEntryHandler {
+	return &GuardEntryHandler{
+		Service:         s,
+		AdminActionRepo: adminActionRepo,
+	}
 }
 
 // CreateGuardEntry handles POST /api/guard/entries
@@ -40,6 +46,21 @@ func (h *GuardEntryHandler) CreateGuardEntry(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Log guard entry creation
+	ipAddress := r.Header.Get("X-Forwarded-For")
+	if ipAddress == "" {
+		ipAddress = r.RemoteAddr
+	}
+	description := fmt.Sprintf("Guard recorded vehicle entry for %s - Seed: %d, Sell: %d bags", req.CustomerName, req.SeedQuantity, req.SellQuantity)
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: userID,
+		ActionType:  "CREATE",
+		TargetType:  "guard_entry",
+		TargetID:    &entry.ID,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -103,6 +124,21 @@ func (h *GuardEntryHandler) ProcessGuardEntry(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Log guard entry processing
+	ipAddress := r.Header.Get("X-Forwarded-For")
+	if ipAddress == "" {
+		ipAddress = r.RemoteAddr
+	}
+	description := fmt.Sprintf("Guard entry #%d marked as processed", id)
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: userID,
+		ActionType:  "UPDATE",
+		TargetType:  "guard_entry",
+		TargetID:    &id,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Guard entry marked as processed"})
@@ -170,6 +206,22 @@ func (h *GuardEntryHandler) DeleteGuardEntry(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Log guard entry deletion
+	userID, _ := middleware.GetUserIDFromContext(r.Context())
+	ipAddress := r.Header.Get("X-Forwarded-For")
+	if ipAddress == "" {
+		ipAddress = r.RemoteAddr
+	}
+	description := fmt.Sprintf("Admin deleted guard entry #%d", id)
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: userID,
+		ActionType:  "DELETE",
+		TargetType:  "guard_entry",
+		TargetID:    &id,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Guard entry deleted"})
 }
@@ -197,6 +249,21 @@ func (h *GuardEntryHandler) ProcessPortion(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Log portion processing
+	ipAddress := r.Header.Get("X-Forwarded-For")
+	if ipAddress == "" {
+		ipAddress = r.RemoteAddr
+	}
+	description := fmt.Sprintf("Guard entry #%d: %s portion marked as processed", id, portion)
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: userID,
+		ActionType:  "UPDATE",
+		TargetType:  "guard_entry",
+		TargetID:    &id,
+		Description: description,
+		IPAddress:   &ipAddress,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": portion + " portion marked as processed"})
