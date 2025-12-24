@@ -601,7 +601,7 @@ func (h *MonitoringHandler) getMetricsDBMetrics() *models.PostgresMetrics {
 	port := "5432" // Backup database server
 
 	// Use proper credentials
-	connStr := fmt.Sprintf("host=%s port=%s user=postgres password=SecurePostgresPassword123 dbname=cold_db sslmode=disable connect_timeout=5", host, port)
+	connStr := fmt.Sprintf("host=%s port=%s user=cold_user password=SecurePostgresPassword123 dbname=cold_db sslmode=disable connect_timeout=5", host, port)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
