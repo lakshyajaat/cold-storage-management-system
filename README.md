@@ -2,7 +2,7 @@
 
 Web-based management system for cold storage facilities with role-based access, inventory tracking, payment processing, and multi-language support.
 
-**Version:** 1.5.47
+**Version:** 1.5.48
 **Last Updated:** December 24, 2025
 
 ## Features

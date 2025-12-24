@@ -56,36 +56,71 @@ func validateNamespace(ns string) error {
 	return nil
 }
 
-type InfrastructureHandler struct{}
-
-func NewInfrastructureHandler() *InfrastructureHandler {
-	return &InfrastructureHandler{}
+type InfrastructureHandler struct {
+	backupStatusCache     []byte
+	backupStatusCacheTime time.Time
+	backupStatusCacheTTL  time.Duration
 }
 
-// GetBackupStatus returns system metrics from the backup server
+func NewInfrastructureHandler() *InfrastructureHandler {
+	return &InfrastructureHandler{
+		backupStatusCacheTTL: 30 * time.Second, // Cache for 30 seconds
+	}
+}
+
+// GetBackupStatus returns system metrics from the backup server (cached)
 func (h *InfrastructureHandler) GetBackupStatus(w http.ResponseWriter, r *http.Request) {
-	// Fetch metrics from backup server (192.168.15.195:9100)
-	client := &http.Client{Timeout: 10 * time.Second}
+	// Return cached response if fresh
+	if h.backupStatusCache != nil && time.Since(h.backupStatusCacheTime) < h.backupStatusCacheTTL {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(h.backupStatusCache)
+		return
+	}
+
+	// Fetch metrics from backup server with shorter timeout
+	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get("http://192.168.15.195:9100/metrics")
 	if err != nil {
-		http.Error(w, "Failed to connect to backup server", http.StatusInternalServerError)
+		// Return cached data if available, even if stale
+		if h.backupStatusCache != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Cache", "STALE")
+			w.Write(h.backupStatusCache)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to connect to backup server",
+		})
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Failed to get metrics from backup server", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Backup server returned error",
+		})
 		return
 	}
 
-	// Read and forward the response
+	// Read and cache the response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		http.Error(w, "Failed to read metrics", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to read metrics",
+		})
 		return
 	}
 
+	// Update cache
+	h.backupStatusCache = body
+	h.backupStatusCacheTime = time.Now()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	w.Write(body)
 }
 
