@@ -56,12 +56,12 @@ type DatabaseConfig struct {
 }
 
 func (d DatabaseConfig) ConnectionString() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		d.User, d.Password, d.Host, d.Port, d.Database)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		d.Host, d.Port, d.User, d.Password, d.Database)
 }
 
 // ConnectionStringWithPassword returns connection string with specific password
 func (d DatabaseConfig) ConnectionStringWithPassword(password string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		d.User, password, d.Host, d.Port, d.Database)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		d.Host, d.Port, d.User, password, d.Database)
 }
