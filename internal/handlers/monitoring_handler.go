@@ -116,8 +116,9 @@ func runR2Backup() {
 		return
 	}
 
-	// Generate backup filename
-	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().Format("20060102_150405"))
+	// Generate backup filename with IST timestamp
+	ist, _ := time.LoadLocation("Asia/Kolkata")
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().In(ist).Format("20060102_150405"))
 
 	// Upload to R2
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
@@ -1020,11 +1021,13 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 				latestKey = *obj.Key
 			}
 		}
+		// Convert to IST for display
+		ist, _ := time.LoadLocation("Asia/Kolkata")
 		backups = append(backups, map[string]interface{}{
 			"key":           *obj.Key,
 			"size":          formatBytes(*obj.Size),
 			"size_bytes":    *obj.Size,
-			"last_modified": obj.LastModified.Format(time.RFC3339),
+			"last_modified": obj.LastModified.In(ist).Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -1034,7 +1037,9 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 	result["backups"] = backups
 
 	if !latestTime.IsZero() {
-		result["last_backup"] = latestTime.Format("2006-01-02 15:04:05")
+		// Convert to IST (Indian Standard Time = UTC+5:30)
+		ist, _ := time.LoadLocation("Asia/Kolkata")
+		result["last_backup"] = latestTime.In(ist).Format("2006-01-02 15:04:05")
 		result["last_backup_key"] = latestKey
 		result["last_backup_age"] = time.Since(latestTime).Round(time.Minute).String()
 	} else {
@@ -1083,8 +1088,9 @@ func (h *MonitoringHandler) BackupToR2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate backup filename
-	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().Format("20060102_150405"))
+	// Generate backup filename with IST timestamp
+	ist, _ := time.LoadLocation("Asia/Kolkata")
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().In(ist).Format("20060102_150405"))
 
 	// Upload to R2
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
