@@ -249,48 +249,50 @@ func ConnectG(cfg *config.Config) *pgxpool.Pool {
 }
 
 // TryConnectWithFallback attempts to connect to databases in order of fallback priority.
+// Tries all common passwords for each host to handle password sync issues.
 // Returns the pool if successful, or nil if all connections fail.
 func TryConnectWithFallback() (*pgxpool.Pool, string) {
 	// Try each fallback database
 	for _, dbConfig := range config.DatabaseFallbacks {
 		log.Printf("[DB] Trying to connect to %s (%s:%d)...", dbConfig.Name, dbConfig.Host, dbConfig.Port)
 
-		dsn := dbConfig.ConnectionString()
+		// Try each password for this host
+		for _, password := range config.CommonPasswords {
+			dsn := dbConfig.ConnectionStringWithPassword(password)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		poolConfig, err := pgxpool.ParseConfig(dsn)
-		if err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			poolConfig, err := pgxpool.ParseConfig(dsn)
+			if err != nil {
+				cancel()
+				continue
+			}
+
+			// Configure pool settings
+			poolConfig.MaxConns = 25
+			poolConfig.MinConns = 5
+			poolConfig.MaxConnLifetime = time.Hour
+			poolConfig.MaxConnIdleTime = 30 * time.Minute
+			poolConfig.HealthCheckPeriod = time.Minute
+			poolConfig.ConnConfig.ConnectTimeout = 5 * time.Second
+
+			pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+			if err != nil {
+				cancel()
+				continue
+			}
+
+			// Test the connection
+			if err := pool.Ping(ctx); err != nil {
+				cancel()
+				pool.Close()
+				continue
+			}
+
 			cancel()
-			log.Printf("[DB] Failed to parse config for %s: %v", dbConfig.Name, err)
-			continue
+			log.Printf("[DB] Successfully connected to %s", dbConfig.Name)
+			return pool, dbConfig.Name
 		}
-
-		// Configure pool settings
-		poolConfig.MaxConns = 25
-		poolConfig.MinConns = 5
-		poolConfig.MaxConnLifetime = time.Hour
-		poolConfig.MaxConnIdleTime = 30 * time.Minute
-		poolConfig.HealthCheckPeriod = time.Minute
-		poolConfig.ConnConfig.ConnectTimeout = 5 * time.Second
-
-		pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
-		if err != nil {
-			cancel()
-			log.Printf("[DB] Failed to connect to %s: %v", dbConfig.Name, err)
-			continue
-		}
-
-		// Test the connection
-		if err := pool.Ping(ctx); err != nil {
-			cancel()
-			pool.Close()
-			log.Printf("[DB] Failed to ping %s: %v", dbConfig.Name, err)
-			continue
-		}
-
-		cancel()
-		log.Printf("[DB] Successfully connected to %s", dbConfig.Name)
-		return pool, dbConfig.Name
+		log.Printf("[DB] Failed to connect to %s (tried all passwords)", dbConfig.Name)
 	}
 
 	log.Println("[DB] All database connections failed - entering setup mode")

@@ -170,19 +170,32 @@ func cleanupOldBackups(ctx context.Context, client *s3.Client) {
 
 // createR2DatabaseBackup creates a SQL backup (standalone function for scheduler)
 func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable connect_timeout=10",
-		"192.168.15.200", 5432, "postgres", "SecurePostgresPassword123", "cold_db")
+	// Try connecting with different passwords
+	var db *sql.DB
+	var err error
+	passwords := []string{"SecurePostgresPassword123", "postgres"}
 
-	db, err := sql.Open("pgx", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open db: %w", err)
+	for _, password := range passwords {
+		connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable connect_timeout=10",
+			"192.168.15.200", 5432, "postgres", password, "cold_db")
+
+		db, err = sql.Open("pgx", connStr)
+		if err != nil {
+			continue
+		}
+
+		// Test connection
+		if err = db.PingContext(ctx); err != nil {
+			db.Close()
+			continue
+		}
+		break // Connected successfully
+	}
+
+	if db == nil || err != nil {
+		return nil, fmt.Errorf("failed to connect to db (tried all passwords): %w", err)
 	}
 	defer db.Close()
-
-	// Test connection
-	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("failed to ping db: %w", err)
-	}
 
 	var buffer bytes.Buffer
 	buffer.WriteString("-- Cold Storage Database Backup\n")

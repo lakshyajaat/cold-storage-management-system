@@ -12,14 +12,19 @@ const (
 	R2Region     = "auto"
 )
 
-// Database fallback configuration
+// Common passwords to try (CNPG may reset password from secret)
+var CommonPasswords = []string{
+	"SecurePostgresPassword123",
+	"postgres",
+}
+
+// Database fallback configuration - will try all passwords for each host
 var DatabaseFallbacks = []DatabaseConfig{
 	{
 		Name:     "K8s Cluster (Primary)",
 		Host:     "192.168.15.200",
 		Port:     5432,
 		User:     "postgres",
-		Password: "SecurePostgresPassword123",
 		Database: "cold_db",
 	},
 	{
@@ -27,7 +32,6 @@ var DatabaseFallbacks = []DatabaseConfig{
 		Host:     "192.168.15.195",
 		Port:     5434,
 		User:     "postgres",
-		Password: "postgres",
 		Database: "cold_db",
 	},
 }
@@ -37,11 +41,17 @@ type DatabaseConfig struct {
 	Host     string
 	Port     int
 	User     string
-	Password string
+	Password string // Will be set dynamically
 	Database string
 }
 
 func (d DatabaseConfig) ConnectionString() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		d.User, d.Password, d.Host, d.Port, d.Database)
+}
+
+// ConnectionStringWithPassword returns connection string with specific password
+func (d DatabaseConfig) ConnectionStringWithPassword(password string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		d.User, password, d.Host, d.Port, d.Database)
 }
