@@ -6,8 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"cold-backend/internal/config"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func Connect(cfg *config.Config) *pgxpool.Pool {
@@ -245,4 +246,53 @@ func ConnectG(cfg *config.Config) *pgxpool.Pool {
 	}
 
 	return pool
+}
+
+// TryConnectWithFallback attempts to connect to databases in order of fallback priority.
+// Returns the pool if successful, or nil if all connections fail.
+func TryConnectWithFallback() (*pgxpool.Pool, string) {
+	// Try each fallback database
+	for _, dbConfig := range config.DatabaseFallbacks {
+		log.Printf("[DB] Trying to connect to %s (%s:%d)...", dbConfig.Name, dbConfig.Host, dbConfig.Port)
+
+		dsn := dbConfig.ConnectionString()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		poolConfig, err := pgxpool.ParseConfig(dsn)
+		if err != nil {
+			cancel()
+			log.Printf("[DB] Failed to parse config for %s: %v", dbConfig.Name, err)
+			continue
+		}
+
+		// Configure pool settings
+		poolConfig.MaxConns = 25
+		poolConfig.MinConns = 5
+		poolConfig.MaxConnLifetime = time.Hour
+		poolConfig.MaxConnIdleTime = 30 * time.Minute
+		poolConfig.HealthCheckPeriod = time.Minute
+		poolConfig.ConnConfig.ConnectTimeout = 5 * time.Second
+
+		pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+		if err != nil {
+			cancel()
+			log.Printf("[DB] Failed to connect to %s: %v", dbConfig.Name, err)
+			continue
+		}
+
+		// Test the connection
+		if err := pool.Ping(ctx); err != nil {
+			cancel()
+			pool.Close()
+			log.Printf("[DB] Failed to ping %s: %v", dbConfig.Name, err)
+			continue
+		}
+
+		cancel()
+		log.Printf("[DB] Successfully connected to %s", dbConfig.Name)
+		return pool, dbConfig.Name
+	}
+
+	log.Println("[DB] All database connections failed - entering setup mode")
+	return nil, ""
 }

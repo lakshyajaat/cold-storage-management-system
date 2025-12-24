@@ -2,8 +2,8 @@
 
 Web-based management system for cold storage facilities with role-based access, inventory tracking, payment processing, and multi-language support.
 
-**Version:** 1.4.75
-**Last Updated:** December 18, 2025
+**Version:** 1.5.43
+**Last Updated:** December 24, 2025
 
 ## Features
 
@@ -14,6 +14,8 @@ Web-based management system for cold storage facilities with role-based access, 
 - **Payment Processing:** Rent calculations and payment tracking
 - **Offline Mode:** Works on local network without internet
 - **Customer Portal:** Self-service for customers to request gate passes
+- **Auto-Recovery:** Automatic database fallback and setup wizard for disaster recovery
+- **Cloud Backup:** Cloudflare R2 integration for offsite backups
 
 ## Tech Stack
 
@@ -178,6 +180,55 @@ DB_NAME=cold_db
 # Server
 PORT=8080
 JWT_SECRET=your-secret-key
+```
+
+## Disaster Recovery
+
+The application includes built-in disaster recovery features:
+
+### Automatic Database Fallback
+
+When the app starts, it tries to connect to databases in order:
+1. **K8s Cluster (Primary):** 192.168.15.200:5432
+2. **Backup Server:** 192.168.15.195:5434
+
+If both fail, the app enters **Setup Mode**.
+
+### Setup Mode
+
+When no database is available, the app shows a setup wizard:
+- Configure database connection manually
+- Restore from Cloudflare R2 backup
+
+Access the setup screen at `http://localhost:8080/setup`
+
+### Recovery Package
+
+A standalone recovery package is available at `/home/lakshya/backups/cold-backend/`:
+- `server` - Linux binary (31 MB)
+- `templates/` - HTML templates
+- `static/` - CSS, JS, fonts
+- `RECOVERY.md` - Step-by-step recovery guide
+
+### Quick Recovery
+
+```bash
+# 1. Extract recovery package
+tar xzf cold-backend.tar.gz
+cd cold-backend
+
+# 2. Configure database (or use setup wizard)
+cat > .env << 'EOF'
+DB_HOST=192.168.15.195
+DB_PORT=5434
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=cold_db
+JWT_SECRET=cold-backend-jwt-secret-2025
+EOF
+
+# 3. Run
+./server
 ```
 
 ## License

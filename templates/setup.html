@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Storage - Initial Setup</title>
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="card rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
+        <div class="text-center mb-8">
+            <div class="text-5xl mb-4">❄️</div>
+            <h1 class="text-3xl font-bold text-gray-800">Cold Storage Management</h1>
+            <p class="text-gray-600 mt-2">Initial Setup - Database Configuration</p>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden mb-6 p-4 rounded-lg"></div>
+
+        <!-- Tabs -->
+        <div class="flex mb-6 border-b">
+            <button onclick="showTab('manual')" id="tabManual" class="px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600">
+                Manual Setup
+            </button>
+            <button onclick="showTab('restore')" id="tabRestore" class="px-6 py-3 font-semibold text-gray-500 hover:text-blue-600">
+                Restore from Backup
+            </button>
+        </div>
+
+        <!-- Manual Setup Tab -->
+        <div id="manualTab">
+            <form id="dbForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Host</label>
+                        <input type="text" id="host" name="host" value="localhost"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                        <input type="number" id="port" name="port" value="5432"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="user" name="user" value="postgres"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" name="password"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Database Name</label>
+                    <input type="text" id="database" name="database" value="cold_db"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="testConnection()"
+                            class="flex-1 btn-primary text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+                        <span id="testSpinner" class="spinner hidden"></span>
+                        Test Connection
+                    </button>
+                    <button type="button" onclick="saveConfig()" id="saveBtn" disabled
+                            class="flex-1 btn-success text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <span id="saveSpinner" class="spinner hidden"></span>
+                        Save & Start
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Restore Tab -->
+        <div id="restoreTab" class="hidden">
+            <div class="text-center py-8">
+                <div class="text-6xl mb-4">☁️</div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">Restore from Cloud Backup</h2>
+                <p class="text-gray-600 mb-6">Restore your database from Cloudflare R2 backup</p>
+
+                <!-- R2 Status -->
+                <div id="r2Status" class="mb-6 p-4 bg-gray-100 rounded-lg">
+                    <span class="text-gray-600">Checking R2 connection...</span>
+                </div>
+
+                <!-- Restore Form -->
+                <div class="text-left space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Target Host</label>
+                            <input type="text" id="restoreHost" value="localhost"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                            <input type="number" id="restorePort" value="5432"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="restoreUser" value="postgres"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="restorePassword"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Database Name</label>
+                        <input type="text" id="restoreDatabase" value="cold_db"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Available Backups -->
+                <div id="backupsList" class="mt-6 text-left hidden">
+                    <h3 class="font-semibold text-gray-700 mb-2">Available Backups:</h3>
+                    <div id="backupsContainer" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                </div>
+
+                <button onclick="restoreFromR2()" id="restoreBtn"
+                        class="w-full mt-6 btn-success text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+                    <span id="restoreSpinner" class="spinner hidden"></span>
+                    Restore Latest Backup
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 pt-6 border-t text-center text-sm text-gray-500">
+            <p>Cold Storage Management System v1.5</p>
+            <p class="mt-1">If you need help, contact your administrator.</p>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            document.getElementById('manualTab').classList.toggle('hidden', tab !== 'manual');
+            document.getElementById('restoreTab').classList.toggle('hidden', tab !== 'restore');
+            document.getElementById('tabManual').classList.toggle('text-blue-600', tab === 'manual');
+            document.getElementById('tabManual').classList.toggle('border-blue-600', tab === 'manual');
+            document.getElementById('tabManual').classList.toggle('border-b-2', tab === 'manual');
+            document.getElementById('tabManual').classList.toggle('text-gray-500', tab !== 'manual');
+            document.getElementById('tabRestore').classList.toggle('text-blue-600', tab === 'restore');
+            document.getElementById('tabRestore').classList.toggle('border-blue-600', tab === 'restore');
+            document.getElementById('tabRestore').classList.toggle('border-b-2', tab === 'restore');
+            document.getElementById('tabRestore').classList.toggle('text-gray-500', tab !== 'restore');
+
+            if (tab === 'restore') {
+                checkR2Connection();
+            }
+        }
+
+        function showStatus(message, isError = false) {
+            const el = document.getElementById('statusMessage');
+            el.textContent = message;
+            el.className = `mb-6 p-4 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            el.classList.remove('hidden');
+        }
+
+        async function testConnection() {
+            const spinner = document.getElementById('testSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/setup/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        host: document.getElementById('host').value,
+                        port: parseInt(document.getElementById('port').value),
+                        user: document.getElementById('user').value,
+                        password: document.getElementById('password').value,
+                        database: document.getElementById('database').value
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Connection successful! You can now save the configuration.');
+                    document.getElementById('saveBtn').disabled = false;
+                } else {
+                    showStatus('Connection failed: ' + data.error, true);
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, true);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function saveConfig() {
+            const spinner = document.getElementById('saveSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/setup/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        host: document.getElementById('host').value,
+                        port: parseInt(document.getElementById('port').value),
+                        user: document.getElementById('user').value,
+                        password: document.getElementById('password').value,
+                        database: document.getElementById('database').value
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Configuration saved! Server will restart in 2 seconds...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                } else {
+                    showStatus('Error: ' + data.error, true);
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, true);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function checkR2Connection() {
+            const statusEl = document.getElementById('r2Status');
+
+            try {
+                const response = await fetch('/setup/r2-check');
+                const data = await response.json();
+
+                if (data.success) {
+                    statusEl.innerHTML = '<span class="text-green-600">✓ Connected to Cloudflare R2</span>';
+                    loadBackups();
+                } else {
+                    statusEl.innerHTML = '<span class="text-red-600">✗ R2 connection failed: ' + data.error + '</span>';
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="text-red-600">✗ Error: ' + error.message + '</span>';
+            }
+        }
+
+        async function loadBackups() {
+            try {
+                const response = await fetch('/setup/backups');
+                const data = await response.json();
+
+                if (data.success && data.backups && data.backups.length > 0) {
+                    const container = document.getElementById('backupsContainer');
+                    container.innerHTML = data.backups.map(b => `
+                        <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                            <span class="text-sm">${b.key}</span>
+                            <span class="text-xs text-gray-500">${new Date(b.lastModified).toLocaleString()}</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('backupsList').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Failed to load backups:', error);
+            }
+        }
+
+        async function restoreFromR2() {
+            const spinner = document.getElementById('restoreSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/setup/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        host: document.getElementById('restoreHost').value,
+                        port: parseInt(document.getElementById('restorePort').value),
+                        user: document.getElementById('restoreUser').value,
+                        password: document.getElementById('restorePassword').value,
+                        database: document.getElementById('restoreDatabase').value,
+                        backup_key: ''  // Empty = latest
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Restore successful! Server will restart in 2 seconds...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                } else {
+                    showStatus('Restore failed: ' + data.error, true);
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, true);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        // Check R2 on page load if on restore tab
+        document.addEventListener('DOMContentLoaded', function() {
+            // Default to manual tab
+        });
+    </script>
+</body>
+</html>

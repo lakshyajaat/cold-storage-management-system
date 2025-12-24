@@ -27,6 +27,34 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// startSetupMode starts the server in setup mode when no database is available
+func startSetupMode(cfg *config.Config) {
+	setupHandler := handlers.NewSetupHandler()
+
+	mux := http.NewServeMux()
+
+	// Setup routes
+	mux.HandleFunc("/", setupHandler.SetupPage)
+	mux.HandleFunc("/setup", setupHandler.SetupPage)
+	mux.HandleFunc("/setup/test", setupHandler.TestConnection)
+	mux.HandleFunc("/setup/save", setupHandler.SaveConfig)
+	mux.HandleFunc("/setup/r2-check", setupHandler.CheckR2Connection)
+	mux.HandleFunc("/setup/backups", setupHandler.ListBackups)
+	mux.HandleFunc("/setup/restore", setupHandler.RestoreFromR2)
+
+	// Serve static files
+	fs := http.FileServer(http.Dir("static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	log.Printf("Setup mode running on %s", addr)
+	log.Println("Open your browser to configure database connection")
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatalf("Setup server failed: %v", err)
+	}
+}
+
 // connectTimescaleDB connects to the TimescaleDB metrics database
 func connectTimescaleDB() *pgxpool.Pool {
 	// TimescaleDB connection string from environment or default
@@ -108,8 +136,20 @@ func main() {
 		// Employee mode uses config.yaml port (8080)
 	}
 
-	// Connect to database
-	pool := db.Connect(cfg)
+	// Try to connect to database with fallback
+	pool, connectedDB := db.TryConnectWithFallback()
+
+	// If no database connection, start in setup mode
+	if pool == nil {
+		log.Println("========================================")
+		log.Println("  NO DATABASE CONNECTION AVAILABLE")
+		log.Println("  Starting in SETUP MODE")
+		log.Println("========================================")
+		startSetupMode(cfg)
+		return
+	}
+
+	log.Printf("Connected to: %s", connectedDB)
 	defer pool.Close()
 
 	// Initialize Redis cache (optional - graceful fallback if unavailable)
