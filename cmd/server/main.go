@@ -323,8 +323,11 @@ func main() {
 		reportService := services.NewReportService(pool, customerRepo, entryRepo, roomEntryRepo, rentPaymentRepo, systemSettingRepo)
 		reportHandler := handlers.NewReportHandler(reportService)
 
+		// Initialize account handler (optimized single-call endpoint for Account Management)
+		accountHandler := handlers.NewAccountHandler(pool, entryRepo, roomEntryRepo, rentPaymentRepo, gatePassRepo, systemSettingRepo)
+
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

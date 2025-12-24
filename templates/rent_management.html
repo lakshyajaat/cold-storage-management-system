@@ -346,27 +346,9 @@
             }
         }
 
-        // Load rent per item setting
-        async function loadRentSetting() {
-            try {
-                const response = await fetch('/api/settings/rent_per_item', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-                }
-
-                const setting = await response.json();
-                rentPerItem = parseFloat(setting.setting_value);
-            } catch (error) {
-                console.error('Error loading rent setting:', error);
-                // API failed - rentPerItem stays at 0
-            }
-        }
-
-        // Load all customer accounts with their entries
+        // Load all customer accounts - OPTIMIZED: Single API call instead of 5+
         async function loadCustomerAccounts() {
+            const startTime = performance.now();
             try {
                 // Check authentication
                 if (!token) {
@@ -374,194 +356,65 @@
                     return;
                 }
 
-                // Load rent setting first
-                await loadRentSetting();
-
-                // Fetch all entries and room entries (with cache-busting to prevent stale data)
-                const [entriesResponse, roomEntriesResponse] = await Promise.all([
-                    fetch('/api/entries?_=' + Date.now(), {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Cache-Control': 'no-cache, no-store, must-revalidate'
-                        }
-                    }),
-                    fetch('/api/room-entries?_=' + Date.now(), {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Cache-Control': 'no-cache, no-store, must-revalidate'
-                        }
-                    })
-                ]);
-
-                if (!entriesResponse.ok) {
-                    if (entriesResponse.status === 401 || entriesResponse.status === 403) {
-                        window.location.href = '/login';
-                        return;
-                    }
-                    throw new Error(`Failed to load entries: ${await entriesResponse.text()}`);
-                }
-
-                const entries = await entriesResponse.json() || [];
-                const roomEntries = roomEntriesResponse.ok ? await roomEntriesResponse.json() || [] : [];
-
-                // Build map of thock_number -> stored quantity from room_entries
-                const thockStoredQty = {};
-                roomEntries.forEach(re => {
-                    if (!thockStoredQty[re.thock_number]) {
-                        thockStoredQty[re.thock_number] = 0;
-                    }
-                    thockStoredQty[re.thock_number] += re.quantity || 0;
-                });
-
-                // Fetch all rent payments (with cache-busting to prevent stale data)
-                const paymentsResponse = await fetch('/api/rent-payments?_=' + Date.now(), {
+                // OPTIMIZED: Single API call that fetches everything in parallel on the server
+                const response = await fetch('/api/accounts/summary?_=' + Date.now(), {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Cache-Control': 'no-cache, no-store, must-revalidate'
                     }
                 });
 
-                let allPayments = [];
-                if (!paymentsResponse.ok) {
-                    if (paymentsResponse.status === 403) {
-                        console.error('Permission denied: User does not have accountant access');
-                        alert('You do not have permission to view payment data. Please contact an administrator to grant you accountant access.');
-                        // Continue with empty payments array
-                    } else if (paymentsResponse.status === 401) {
+                if (!response.ok) {
+                    if (response.status === 401) {
                         window.location.href = '/login';
                         return;
-                    } else {
-                        throw new Error(`Failed to load payments: ${await paymentsResponse.text()}`);
                     }
-                } else {
-                    allPayments = await paymentsResponse.json() || [];
-                    console.log('Total payments loaded:', allPayments.length);
-                    console.log('All payments:', allPayments);
-
-                    // Log summary of all payments
-                    console.log('Payment summary:');
-                    allPayments.forEach(p => {
-                        console.log(`  ${p.receipt_number}: phone="${p.customer_phone}", name="${p.customer_name}", amount=${p.amount_paid}`);
-                    });
+                    if (response.status === 403) {
+                        alert('You do not have permission to view account data. Please contact an administrator.');
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                    throw new Error(`Failed to load accounts: ${await response.text()}`);
                 }
 
-                // Fetch all completed gate passes (outgoing entries)
-                const gatePassesResponse = await fetch('/api/gate-passes?_=' + Date.now(), {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Cache-Control': 'no-cache, no-store, must-revalidate'
-                    }
-                });
+                const summary = await response.json();
+                console.log(`Loaded ${summary.total_customers} customers in ${(performance.now() - startTime).toFixed(0)}ms`);
 
-                let allGatePasses = [];
-                if (gatePassesResponse.ok) {
-                    const gatePasses = await gatePassesResponse.json() || [];
-                    // Filter only completed gate passes
-                    allGatePasses = gatePasses.filter(gp => gp.status === 'completed');
-                    console.log('Completed gate passes loaded:', allGatePasses.length);
-                }
+                // Store rent per item from server
+                rentPerItem = summary.rent_per_item || 0;
 
-                // Group entries by phone number (customer)
-                const customerMap = new Map();
-
-                // Add incoming entries
-                entries.forEach(entry => {
-                    const phone = entry.phone;
-                    if (!customerMap.has(phone)) {
-                        customerMap.set(phone, {
-                            name: entry.name,
-                            phone: entry.phone,
-                            village: entry.village || 'N/A',
-                            thocks: [],
-                            payments: [],
-                            totalQuantity: 0,
-                            totalRent: 0,
-                            totalPaid: 0,
-                            totalOutgoing: 0,
-                            outgoingRent: 0
-                        });
-                    }
-
-                    const customer = customerMap.get(phone);
-                    // Use stored quantity from room_entries for rent calculation
-                    // Only charge for items actually stored in rooms
-                    const storedQty = thockStoredQty[entry.thock_number] || 0;
-                    const expectedQty = entry.expected_quantity || 0;
-                    const rent = storedQty * rentPerItem;
-                    // Display: "300 → 250" showing expected vs stored
-                    const qtyDisplay = expectedQty !== storedQty
-                        ? `${expectedQty} → ${storedQty}`
-                        : storedQty;
-
-                    customer.thocks.push({
-                        id: entry.id,
-                        thock_number: entry.thock_number,
-                        quantity: storedQty,
-                        qtyDisplay: qtyDisplay, // For UI display
-                        rent: rent,
-                        date: new Date(entry.created_at).toLocaleDateString('en-IN'),
-                        type: 'incoming'  // Mark as incoming entry
-                    });
-
-                    customer.totalQuantity += storedQty;
-                    customer.totalRent += rent;
-                });
-
-                // Add outgoing entries (completed gate passes)
-                allGatePasses.forEach(gatePass => {
-                    const phone = gatePass.customer_phone;
-                    const customer = customerMap.get(phone);
-
-                    if (customer) {
-                        const quantity = gatePass.total_picked_up || gatePass.requested_quantity || 0;
-                        const rent = quantity * rentPerItem;
-
-                        customer.thocks.push({
-                            id: gatePass.id,
-                            thock_number: gatePass.thock_number,
-                            quantity: -quantity,  // Negative for outgoing
-                            rent: -rent,          // Negative for outgoing
-                            date: new Date(gatePass.completed_at || gatePass.updated_at).toLocaleDateString('en-IN'),
-                            type: 'outgoing'      // Mark as outgoing entry
-                        });
-
-                        customer.totalOutgoing += quantity;
-                        customer.outgoingRent += rent;
-                    }
-                });
-
-                // Calculate total paid per customer and add payment history
-                allPayments.forEach(payment => {
-                    const customer = Array.from(customerMap.values()).find(c => c.phone === payment.customer_phone);
-                    if (customer) {
-                        customer.totalPaid += payment.amount_paid;
-                        customer.payments.push(payment);
-                    } else {
-                        console.warn('Payment not matched to any customer:', payment);
-                        console.warn('Customer phone from payment:', payment.customer_phone);
-                        console.warn('Available customer phones:', Array.from(customerMap.values()).map(c => c.phone));
-                    }
-                });
-
-                // Sort payments by date (newest first) for each customer
-                Array.from(customerMap.values()).forEach(customer => {
-                    customer.payments.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
-                });
-
-                // Convert map to array and calculate balance
-                allCustomerAccounts = Array.from(customerMap.values()).map(customer => ({
-                    ...customer,
-                    balance: customer.totalRent - customer.totalPaid
+                // Map server response to frontend format
+                allCustomerAccounts = summary.customers.map(customer => ({
+                    name: customer.name,
+                    phone: customer.phone,
+                    village: customer.village || 'N/A',
+                    thocks: customer.thocks.map(t => ({
+                        id: t.id,
+                        thock_number: t.thock_number,
+                        quantity: t.quantity,
+                        qtyDisplay: t.qty_display || t.quantity,
+                        rent: t.rent,
+                        date: t.date,
+                        type: t.type
+                    })),
+                    payments: customer.payments || [],
+                    totalQuantity: customer.total_quantity,
+                    totalRent: customer.total_rent,
+                    totalPaid: customer.total_paid,
+                    totalOutgoing: customer.total_outgoing,
+                    outgoingRent: customer.outgoing_rent,
+                    balance: customer.balance
                 }));
 
-                // Sort by balance (highest first)
-                allCustomerAccounts.sort((a, b) => b.balance - a.balance);
+                // Sort payments by date (newest first) for each customer
+                allCustomerAccounts.forEach(customer => {
+                    if (customer.payments) {
+                        customer.payments.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+                    }
+                });
 
                 displayCustomerAccounts(allCustomerAccounts);
-                updateSummary();
-
-                // Fetch employee names for payment history
-                await loadEmployeeNames();
+                updateSummaryFromServer(summary);
 
             } catch (error) {
                 console.error('Error loading customer accounts:', error);
@@ -576,6 +429,15 @@
                     </div>
                 `;
             }
+        }
+
+        // Update summary from server response (faster than recalculating)
+        function updateSummaryFromServer(summary) {
+            document.getElementById('totalCustomers').textContent = summary.total_customers;
+            document.getElementById('totalThocks').textContent = summary.total_thocks;
+            document.getElementById('totalQuantity').textContent = summary.total_quantity.toLocaleString('en-IN');
+            document.getElementById('totalOutstanding').textContent = '₹' + summary.total_outstanding.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('totalCollected').textContent = '₹' + summary.total_collected.toLocaleString('en-IN', {minimumFractionDigits: 2});
         }
 
         function displayCustomerAccounts(accounts) {
@@ -835,7 +697,7 @@
                                                         <p class="text-xs text-gray-600">${new Date(payment.payment_date).toLocaleDateString('en-IN')} ${new Date(payment.payment_date).toLocaleTimeString('en-IN')}</p>
                                                         <p class="text-xs text-blue-600 mt-1 flex items-center gap-1">
                                                             <i class="bi bi-person-badge"></i>
-                                                            <span id="employee_${payment.id}" data-user-id="${payment.processed_by_user_id}">Loading...</span>
+                                                            <span>${capitalizeText(payment.processed_by_name || 'Unknown')}</span>
                                                         </p>
                                                     </div>
                                                     <button onclick="viewReceipt('${payment.receipt_number}')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;">
@@ -911,46 +773,6 @@
             document.getElementById('totalQuantity').textContent = totalQty.toLocaleString('en-IN');
             document.getElementById('totalOutstanding').textContent = '₹' + totalOutstanding.toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('totalCollected').textContent = '₹' + totalCollected.toLocaleString('en-IN', {minimumFractionDigits: 2});
-        }
-
-        async function loadEmployeeNames() {
-            // Find all employee elements in payment history
-            const employeeElements = document.querySelectorAll('[id^="employee_"]');
-
-            // Get unique user IDs
-            const userIds = new Set();
-            employeeElements.forEach(el => {
-                const userId = el.getAttribute('data-user-id');
-                if (userId) userIds.add(userId);
-            });
-
-            // Fetch employee details for each unique user ID
-            const employeeCache = {};
-            for (const userId of userIds) {
-                try {
-                    const response = await fetch(`/api/users/${userId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    if (response.ok) {
-                        const user = await response.json();
-                        employeeCache[userId] = capitalizeText(user.name);
-                    } else {
-                        employeeCache[userId] = `Employee #${userId}`;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching employee ${userId}:`, error);
-                    employeeCache[userId] = `Employee #${userId}`;
-                }
-            }
-
-            // Update all employee elements
-            employeeElements.forEach(el => {
-                const userId = el.getAttribute('data-user-id');
-                if (userId && employeeCache[userId]) {
-                    el.textContent = employeeCache[userId];
-                }
-            });
         }
 
         function openPaymentModal(phone) {

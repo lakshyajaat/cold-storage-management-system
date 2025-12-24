@@ -35,6 +35,7 @@ func NewRouter(
 	nodeProvisioningHandler *handlers.NodeProvisioningHandler,
 	deploymentHandler *handlers.DeploymentHandler,
 	reportHandler *handlers.ReportHandler,
+	accountHandler *handlers.AccountHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -449,6 +450,13 @@ func NewRouter(
 
 		// Report stats (for UI)
 		reportAPI.HandleFunc("/stats", reportHandler.GetReportStats).Methods("GET")
+	}
+
+	// Protected API routes - Account Summary (optimized single-call endpoint)
+	if accountHandler != nil {
+		accountAPI := r.PathPrefix("/api/accounts").Subrouter()
+		accountAPI.Use(authMiddleware.Authenticate)
+		accountAPI.HandleFunc("/summary", authMiddleware.RequireAccountantAccess(http.HandlerFunc(accountHandler.GetAccountSummary)).ServeHTTP).Methods("GET")
 	}
 
 	// Health endpoints (basic health for K8s probes, detailed requires auth)

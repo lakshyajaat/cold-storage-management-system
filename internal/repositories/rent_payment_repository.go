@@ -169,11 +169,15 @@ func (r *RentPaymentRepository) GetByPhone(ctx context.Context, phone string) ([
 }
 
 func (r *RentPaymentRepository) List(ctx context.Context) ([]*models.RentPayment, error) {
+	// JOIN with users table to get employee name - eliminates N+1 queries
 	query := `
-		SELECT id, receipt_number, entry_id, customer_name, customer_phone, total_rent, amount_paid, balance,
-		       payment_date, COALESCE(processed_by_user_id, 0), COALESCE(notes, ''), created_at
-		FROM rent_payments
-		ORDER BY payment_date DESC
+		SELECT rp.id, rp.receipt_number, rp.entry_id, rp.customer_name, rp.customer_phone,
+		       rp.total_rent, rp.amount_paid, rp.balance, rp.payment_date,
+		       COALESCE(rp.processed_by_user_id, 0), COALESCE(u.name, 'Unknown'),
+		       COALESCE(rp.notes, ''), rp.created_at
+		FROM rent_payments rp
+		LEFT JOIN users u ON rp.processed_by_user_id = u.id
+		ORDER BY rp.payment_date DESC
 	`
 
 	rows, err := r.DB.Query(ctx, query)
@@ -196,6 +200,7 @@ func (r *RentPaymentRepository) List(ctx context.Context) ([]*models.RentPayment
 			&payment.Balance,
 			&payment.PaymentDate,
 			&payment.ProcessedByUserID,
+			&payment.ProcessedByName,
 			&payment.Notes,
 			&payment.CreatedAt,
 		)

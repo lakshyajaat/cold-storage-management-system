@@ -13,6 +13,7 @@ type RentPayment struct {
 	Balance            float64   `json:"balance"`
 	PaymentDate        time.Time `json:"payment_date"`
 	ProcessedByUserID  int       `json:"processed_by_user_id"`
+	ProcessedByName    string    `json:"processed_by_name,omitempty"` // Joined from users table
 	Notes              string    `json:"notes"`
 	CreatedAt          time.Time `json:"created_at"`
 }
