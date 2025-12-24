@@ -408,6 +408,7 @@ func NewRouter(
 
 		// R2 Cloud Storage Status
 		monitoringAPI.HandleFunc("/r2-status", monitoringHandler.GetR2Status).Methods("GET")
+		monitoringAPI.HandleFunc("/backup-r2", monitoringHandler.BackupToR2).Methods("POST")
 	}
 
 	// Protected API routes - Deployments (admin only)

@@ -302,6 +302,10 @@ func main() {
 			// Initialize monitoring handler
 			monitoringHandler = handlers.NewMonitoringHandler(metricsRepo)
 
+			// Start R2 automatic backup scheduler (for near-zero data loss)
+			handlers.StartR2BackupScheduler()
+			defer handlers.StopR2BackupScheduler()
+
 			// Initialize and start metrics collector
 			metricsCollector = services.NewMetricsCollector(metricsRepo)
 			metricsCollector.Start()

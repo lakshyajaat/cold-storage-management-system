@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"cold-backend/internal/config"
@@ -21,6 +25,188 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
+// R2BackupScheduler handles automatic backups to R2
+var (
+	r2BackupTicker    *time.Ticker
+	r2BackupStopChan  chan bool
+	r2BackupMutex     sync.Mutex
+	r2BackupInterval  = 1 * time.Minute // Backup every 1 minute for near-zero data loss
+	lastBackupTime    time.Time
+	pendingChanges    int
+	pendingChangesMux sync.Mutex
+)
+
+// StartR2BackupScheduler starts the automatic R2 backup scheduler
+func StartR2BackupScheduler() {
+	r2BackupMutex.Lock()
+	defer r2BackupMutex.Unlock()
+
+	if r2BackupTicker != nil {
+		return // Already running
+	}
+
+	r2BackupTicker = time.NewTicker(r2BackupInterval)
+	r2BackupStopChan = make(chan bool)
+
+	go func() {
+		// Run first backup immediately
+		log.Println("[R2 Backup] Starting automatic backup scheduler")
+		runR2Backup()
+
+		for {
+			select {
+			case <-r2BackupTicker.C:
+				runR2Backup()
+			case <-r2BackupStopChan:
+				log.Println("[R2 Backup] Scheduler stopped")
+				return
+			}
+		}
+	}()
+
+	log.Printf("[R2 Backup] Scheduler started (interval: %v)", r2BackupInterval)
+}
+
+// StopR2BackupScheduler stops the automatic backup scheduler
+func StopR2BackupScheduler() {
+	r2BackupMutex.Lock()
+	defer r2BackupMutex.Unlock()
+
+	if r2BackupTicker != nil {
+		r2BackupTicker.Stop()
+		r2BackupStopChan <- true
+		r2BackupTicker = nil
+	}
+}
+
+// runR2Backup performs a single backup to R2
+func runR2Backup() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	log.Println("[R2 Backup] Starting backup...")
+
+	// Create S3 client for R2
+	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			config.R2AccessKey,
+			config.R2SecretKey,
+			"",
+		)),
+		awsconfig.WithRegion(config.R2Region),
+	)
+	if err != nil {
+		log.Printf("[R2 Backup] Failed to configure R2 client: %v", err)
+		return
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(config.R2Endpoint)
+	})
+
+	// Create database backup
+	backupData, err := createR2DatabaseBackup(ctx)
+	if err != nil {
+		log.Printf("[R2 Backup] Failed to create backup: %v", err)
+		return
+	}
+
+	// Generate backup filename
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().Format("20060102_150405"))
+
+	// Upload to R2
+	_, err = client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(config.R2BucketName),
+		Key:         aws.String(backupKey),
+		Body:        bytes.NewReader(backupData),
+		ContentType: aws.String("application/sql"),
+	})
+	if err != nil {
+		log.Printf("[R2 Backup] Failed to upload: %v", err)
+		return
+	}
+
+	log.Printf("[R2 Backup] Success: %s (%s)", backupKey, formatBytes(int64(len(backupData))))
+}
+
+// createR2DatabaseBackup creates a SQL backup (standalone function for scheduler)
+func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		"192.168.15.200", 5432, "postgres", "SecurePostgresPassword123", "cold_db")
+
+	db, err := sql.Open("pgx", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %w", err)
+	}
+	defer db.Close()
+
+	var buffer bytes.Buffer
+	buffer.WriteString("-- Cold Storage Database Backup\n")
+	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+
+	tables := []string{
+		"users", "customers", "entries", "entry_events", "room_entries",
+		"system_settings", "rent_payments", "invoices", "gate_passes",
+		"gate_pass_pickups", "guard_entries", "token_colors", "season_requests",
+	}
+
+	for _, table := range tables {
+		rows, err := db.QueryContext(ctx, fmt.Sprintf(`
+			SELECT column_name FROM information_schema.columns
+			WHERE table_name = '%s' ORDER BY ordinal_position`, table))
+		if err != nil {
+			continue
+		}
+
+		buffer.WriteString(fmt.Sprintf("\n-- Table: %s\n", table))
+
+		dataRows, err := db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", table))
+		if err != nil {
+			rows.Close()
+			continue
+		}
+
+		cols, _ := dataRows.Columns()
+		if len(cols) > 0 {
+			values := make([]interface{}, len(cols))
+			valuePtrs := make([]interface{}, len(cols))
+			for i := range values {
+				valuePtrs[i] = &values[i]
+			}
+
+			for dataRows.Next() {
+				dataRows.Scan(valuePtrs...)
+				buffer.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES (", table, strings.Join(cols, ", ")))
+				for i, v := range values {
+					if i > 0 {
+						buffer.WriteString(", ")
+					}
+					if v == nil {
+						buffer.WriteString("NULL")
+					} else {
+						switch val := v.(type) {
+						case []byte:
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(string(val), "'", "''")))
+						case string:
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(val, "'", "''")))
+						case time.Time:
+							buffer.WriteString(fmt.Sprintf("'%s'", val.Format("2006-01-02 15:04:05")))
+						default:
+							buffer.WriteString(fmt.Sprintf("%v", val))
+						}
+					}
+				}
+				buffer.WriteString(");\n")
+			}
+		}
+
+		rows.Close()
+		dataRows.Close()
+	}
+
+	return buffer.Bytes(), nil
+}
 
 // MonitoringHandler handles monitoring API endpoints
 type MonitoringHandler struct {
@@ -812,6 +998,155 @@ func getR2StorageStatus(ctx context.Context) map[string]interface{} {
 	}
 
 	return result
+}
+
+// BackupToR2 triggers an immediate backup to Cloudflare R2
+func (h *MonitoringHandler) BackupToR2(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Create S3 client for R2
+	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			config.R2AccessKey,
+			config.R2SecretKey,
+			"",
+		)),
+		awsconfig.WithRegion(config.R2Region),
+	)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to configure R2 client: " + err.Error(),
+		})
+		return
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(config.R2Endpoint)
+	})
+
+	// Get database backup using pg_dump equivalent
+	backupData, err := h.createDatabaseBackup(ctx)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to create backup: " + err.Error(),
+		})
+		return
+	}
+
+	// Generate backup filename
+	backupKey := fmt.Sprintf("base/cold_db_%s.sql", time.Now().Format("20060102_150405"))
+
+	// Upload to R2
+	_, err = client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(config.R2BucketName),
+		Key:         aws.String(backupKey),
+		Body:        bytes.NewReader(backupData),
+		ContentType: aws.String("application/sql"),
+	})
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to upload to R2: " + err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":     true,
+		"message":     "Backup uploaded to R2 successfully",
+		"backup_key":  backupKey,
+		"backup_size": formatBytes(int64(len(backupData))),
+	})
+}
+
+// createDatabaseBackup creates a SQL backup of the database
+func (h *MonitoringHandler) createDatabaseBackup(ctx context.Context) ([]byte, error) {
+	// Connect to the database
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		"192.168.15.200", 5432, "postgres", "SecurePostgresPassword123", "cold_db")
+
+	db, err := sql.Open("pgx", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %w", err)
+	}
+	defer db.Close()
+
+	var buffer bytes.Buffer
+	buffer.WriteString("-- Cold Storage Database Backup\n")
+	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+
+	// Get all tables
+	tables := []string{
+		"users", "customers", "entries", "entry_events", "room_entries",
+		"system_settings", "rent_payments", "invoices", "gate_passes",
+		"gate_pass_pickups", "guard_entries", "token_colors", "season_requests",
+	}
+
+	for _, table := range tables {
+		// Get table schema
+		rows, err := db.QueryContext(ctx, fmt.Sprintf(`
+			SELECT column_name, data_type, is_nullable, column_default
+			FROM information_schema.columns
+			WHERE table_name = '%s'
+			ORDER BY ordinal_position`, table))
+		if err != nil {
+			continue
+		}
+
+		buffer.WriteString(fmt.Sprintf("\n-- Table: %s\n", table))
+
+		// Get data
+		dataRows, err := db.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %s", table))
+		if err != nil {
+			rows.Close()
+			continue
+		}
+
+		cols, _ := dataRows.Columns()
+		if len(cols) > 0 {
+			values := make([]interface{}, len(cols))
+			valuePtrs := make([]interface{}, len(cols))
+			for i := range values {
+				valuePtrs[i] = &values[i]
+			}
+
+			for dataRows.Next() {
+				dataRows.Scan(valuePtrs...)
+				buffer.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES (", table, strings.Join(cols, ", ")))
+				for i, v := range values {
+					if i > 0 {
+						buffer.WriteString(", ")
+					}
+					if v == nil {
+						buffer.WriteString("NULL")
+					} else {
+						switch val := v.(type) {
+						case []byte:
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(string(val), "'", "''")))
+						case string:
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(val, "'", "''")))
+						case time.Time:
+							buffer.WriteString(fmt.Sprintf("'%s'", val.Format("2006-01-02 15:04:05")))
+						default:
+							buffer.WriteString(fmt.Sprintf("%v", val))
+						}
+					}
+				}
+				buffer.WriteString(");\n")
+			}
+		}
+
+		rows.Close()
+		dataRows.Close()
+	}
+
+	return buffer.Bytes(), nil
 }
 
 // formatBytes formats bytes to human readable string
