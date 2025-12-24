@@ -273,14 +273,13 @@ func main() {
 
 		// Initialize TimescaleDB connection for metrics (optional - degrades gracefully)
 		var metricsRepo *repositories.MetricsRepository
-		var monitoringHandler *handlers.MonitoringHandler
 		var apiLoggingMiddleware *middleware.APILoggingMiddleware
 		var metricsCollector *services.MetricsCollector
 
 		tsdbPool := connectTimescaleDB()
 		if tsdbPool != nil {
 			defer tsdbPool.Close()
-			log.Println("[Monitoring] Initializing monitoring components...")
+			log.Println("[Monitoring] Initializing TimescaleDB monitoring components...")
 
 			// Initialize metrics repository
 			metricsRepo = repositories.NewMetricsRepository(tsdbPool)
@@ -288,22 +287,24 @@ func main() {
 			// Initialize API logging middleware
 			apiLoggingMiddleware = middleware.NewAPILoggingMiddleware(metricsRepo)
 
-			// Initialize monitoring handler
-			monitoringHandler = handlers.NewMonitoringHandler(metricsRepo)
-
-			// Start R2 automatic backup scheduler (for near-zero data loss)
-			handlers.StartR2BackupScheduler(pool)
-			defer handlers.StopR2BackupScheduler()
-
 			// Initialize and start metrics collector
 			metricsCollector = services.NewMetricsCollector(metricsRepo)
 			metricsCollector.Start()
 			defer metricsCollector.Stop()
 
-			log.Println("[Monitoring] Monitoring components initialized successfully")
+			log.Println("[Monitoring] TimescaleDB monitoring components initialized")
 		} else {
-			log.Println("[Monitoring] TimescaleDB not available, monitoring features disabled")
+			log.Println("[Monitoring] TimescaleDB not available, time-series metrics disabled")
 		}
+
+		// Always initialize monitoring handler (R2 backup/restore works without TimescaleDB)
+		monitoringHandler := handlers.NewMonitoringHandler(metricsRepo)
+
+		// Start R2 automatic backup scheduler (for near-zero data loss)
+		handlers.StartR2BackupScheduler(pool)
+		defer handlers.StopR2BackupScheduler()
+
+		log.Println("[Monitoring] Core monitoring features enabled (R2 backups active)")
 
 		// Initialize season service and handler (needs tsdbPool for archiving timeseries data)
 		seasonService := services.NewSeasonService(seasonRequestRepo, userRepo, pool, tsdbPool, jwtManager)

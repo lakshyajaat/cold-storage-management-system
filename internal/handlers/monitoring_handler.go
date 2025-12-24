@@ -304,12 +304,29 @@ func NewMonitoringHandler(repo *repositories.MetricsRepository) *MonitoringHandl
 	return &MonitoringHandler{repo: repo}
 }
 
+// metricsUnavailable returns a JSON error response when TimescaleDB metrics are not available
+func (h *MonitoringHandler) metricsUnavailable(w http.ResponseWriter) bool {
+	if h.repo == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "TimescaleDB metrics not available",
+			"message": "Time-series metrics require TimescaleDB. Core features (R2 backups, PostgreSQL status) are still available.",
+		})
+		return true
+	}
+	return false
+}
+
 // ======================================
 // Dashboard Overview
 // ======================================
 
 // GetDashboardData returns all data for the monitoring dashboard
 func (h *MonitoringHandler) GetDashboardData(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	// Get cluster overview
@@ -354,6 +371,9 @@ func (h *MonitoringHandler) GetDashboardData(w http.ResponseWriter, r *http.Requ
 
 // GetAPIAnalytics returns API usage statistics
 func (h *MonitoringHandler) GetAPIAnalytics(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	// Parse time range from query params
@@ -372,6 +392,9 @@ func (h *MonitoringHandler) GetAPIAnalytics(w http.ResponseWriter, r *http.Reque
 
 // GetTopEndpoints returns top endpoints by request count
 func (h *MonitoringHandler) GetTopEndpoints(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	rangeParam := r.URL.Query().Get("range")
@@ -398,6 +421,9 @@ func (h *MonitoringHandler) GetTopEndpoints(w http.ResponseWriter, r *http.Reque
 
 // GetSlowestEndpoints returns slowest endpoints by average duration
 func (h *MonitoringHandler) GetSlowestEndpoints(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	rangeParam := r.URL.Query().Get("range")
@@ -424,6 +450,9 @@ func (h *MonitoringHandler) GetSlowestEndpoints(w http.ResponseWriter, r *http.R
 
 // GetRecentAPILogs returns recent API request logs
 func (h *MonitoringHandler) GetRecentAPILogs(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	limitParam := r.URL.Query().Get("limit")
@@ -458,6 +487,9 @@ func (h *MonitoringHandler) GetRecentAPILogs(w http.ResponseWriter, r *http.Requ
 
 // GetLatestNodeMetrics returns the latest metrics for all nodes
 func (h *MonitoringHandler) GetLatestNodeMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	nodes, err := h.repo.GetLatestNodeMetrics(ctx)
@@ -475,6 +507,9 @@ func (h *MonitoringHandler) GetLatestNodeMetrics(w http.ResponseWriter, r *http.
 
 // GetNodeMetricsHistory returns historical metrics for a node
 func (h *MonitoringHandler) GetNodeMetricsHistory(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	nodeName := vars["name"]
@@ -516,6 +551,9 @@ func (h *MonitoringHandler) GetNodeMetricsHistory(w http.ResponseWriter, r *http
 
 // GetClusterOverview returns aggregated cluster statistics
 func (h *MonitoringHandler) GetClusterOverview(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	overview, err := h.repo.GetClusterOverview(ctx)
@@ -534,6 +572,9 @@ func (h *MonitoringHandler) GetClusterOverview(w http.ResponseWriter, r *http.Re
 
 // GetLatestPostgresMetrics returns the latest metrics for all PostgreSQL pods
 func (h *MonitoringHandler) GetLatestPostgresMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	pods, err := h.repo.GetLatestPostgresMetrics(ctx)
@@ -645,6 +686,9 @@ func (h *MonitoringHandler) getMetricsDBMetrics() *models.PostgresMetrics {
 
 // GetPostgresOverview returns aggregated PostgreSQL cluster statistics
 func (h *MonitoringHandler) GetPostgresOverview(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	overview, err := h.repo.GetPostgresOverview(ctx)
@@ -663,6 +707,9 @@ func (h *MonitoringHandler) GetPostgresOverview(w http.ResponseWriter, r *http.R
 
 // GetActiveAlerts returns unresolved alerts
 func (h *MonitoringHandler) GetActiveAlerts(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	alerts, err := h.repo.GetActiveAlerts(ctx)
@@ -680,6 +727,9 @@ func (h *MonitoringHandler) GetActiveAlerts(w http.ResponseWriter, r *http.Reque
 
 // GetRecentAlerts returns recent alerts
 func (h *MonitoringHandler) GetRecentAlerts(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	limitParam := r.URL.Query().Get("limit")
@@ -703,6 +753,9 @@ func (h *MonitoringHandler) GetRecentAlerts(w http.ResponseWriter, r *http.Reque
 
 // AcknowledgeAlert marks an alert as acknowledged
 func (h *MonitoringHandler) AcknowledgeAlert(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 	vars := mux.Vars(r)
 
@@ -734,6 +787,9 @@ func (h *MonitoringHandler) AcknowledgeAlert(w http.ResponseWriter, r *http.Requ
 
 // ResolveAlert marks an alert as resolved
 func (h *MonitoringHandler) ResolveAlert(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 	vars := mux.Vars(r)
 
@@ -757,6 +813,9 @@ func (h *MonitoringHandler) ResolveAlert(w http.ResponseWriter, r *http.Request)
 
 // GetAlertSummary returns alert statistics
 func (h *MonitoringHandler) GetAlertSummary(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	summary, err := h.repo.GetAlertSummary(ctx)
@@ -771,6 +830,9 @@ func (h *MonitoringHandler) GetAlertSummary(w http.ResponseWriter, r *http.Reque
 
 // GetAlertThresholds returns all alert thresholds
 func (h *MonitoringHandler) GetAlertThresholds(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	thresholds, err := h.repo.GetAlertThresholds(ctx)
@@ -787,6 +849,9 @@ func (h *MonitoringHandler) GetAlertThresholds(w http.ResponseWriter, r *http.Re
 
 // UpdateAlertThreshold updates an alert threshold
 func (h *MonitoringHandler) UpdateAlertThreshold(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 	vars := mux.Vars(r)
 
@@ -834,6 +899,9 @@ func (h *MonitoringHandler) UpdateAlertThreshold(w http.ResponseWriter, r *http.
 
 // GetRecentBackups returns recent backup history
 func (h *MonitoringHandler) GetRecentBackups(w http.ResponseWriter, r *http.Request) {
+	if h.metricsUnavailable(w) {
+		return
+	}
 	ctx := r.Context()
 
 	limitParam := r.URL.Query().Get("limit")
