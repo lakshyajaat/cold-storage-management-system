@@ -41,6 +41,9 @@ func Init() error {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
+		// Close the failed client and set to nil for graceful degradation
+		client.Close()
+		client = nil
 		return err
 	}
 	return nil
