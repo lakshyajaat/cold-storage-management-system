@@ -1251,7 +1251,7 @@
                     phone: c.phone || '',
                     name: c.name || '',
                     village: c.village || '',
-                    so: '' // Not included in summary for performance
+                    so: c.so || ''
                 }));
                 console.log(`Loaded ${customerPhones.length} customers for autocomplete`);
 

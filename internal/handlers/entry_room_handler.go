@@ -26,6 +26,7 @@ type CustomerPhone struct {
 	Phone   string `json:"phone"`
 	Name    string `json:"name"`
 	Village string `json:"village"`
+	SO      string `json:"so"`
 }
 
 // EntryRoomSummary is the combined response for the entry room page
@@ -140,6 +141,7 @@ func (h *EntryRoomHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 			Phone:   c.Phone,
 			Name:    c.Name,
 			Village: c.Village,
+			SO:      c.SO,
 		})
 	}
 
