@@ -207,14 +207,14 @@ func InvalidateKeys(ctx context.Context, keys ...string) {
 // Called when: CreateCustomer, UpdateCustomer, DeleteCustomer
 func InvalidateCustomerCaches(ctx context.Context) {
 	InvalidatePattern(ctx, "customers:*")
-	InvalidateKeys(ctx, "account:summary")
+	InvalidateKeys(ctx, "account:summary", "entry_room:summary")
 }
 
 // InvalidateEntryCaches clears all entry-related caches
 // Called when: CreateEntry, UpdateEntry, DeleteEntry
 func InvalidateEntryCaches(ctx context.Context) {
 	InvalidatePattern(ctx, "entries:*")
-	InvalidateKeys(ctx, "account:summary", "entry:room:summary")
+	InvalidateKeys(ctx, "account:summary", "entry_room:summary")
 	// Also invalidate room cache since entries affect room occupancy
 	InvalidateRoomCache(ctx)
 }
@@ -223,7 +223,7 @@ func InvalidateEntryCaches(ctx context.Context) {
 // Called when: CreateRoomEntry, UpdateRoomEntry, DeleteRoomEntry
 func InvalidateRoomEntryCaches(ctx context.Context) {
 	InvalidatePattern(ctx, "room:*")
-	InvalidateKeys(ctx, "account:summary", "entry:room:summary")
+	InvalidateKeys(ctx, "account:summary", "entry_room:summary")
 }
 
 // InvalidateGatePassCaches clears all gate pass-related caches
@@ -237,7 +237,7 @@ func InvalidateGatePassCaches(ctx context.Context) {
 // Called when: CreateGuardEntry, ProcessGuardEntry, DeleteGuardEntry
 func InvalidateGuardEntryCaches(ctx context.Context) {
 	InvalidatePattern(ctx, "guard:*")
-	InvalidateKeys(ctx, "entry:room:summary")
+	InvalidateKeys(ctx, "entry_room:summary")
 }
 
 // InvalidateUserCaches clears all user-related caches
@@ -266,7 +266,7 @@ func InvalidatePaymentCaches(ctx context.Context) {
 func InvalidateAllBusinessCaches(ctx context.Context) {
 	patterns := []string{
 		"customers:*", "entries:*", "room:*", "gate_pass:*",
-		"guard:*", "payments:*", "account:*", "entry:room:*",
+		"guard:*", "payments:*", "account:*", "entry_room:*",
 		"settings:*", "reports:*",
 	}
 	for _, p := range patterns {
@@ -331,4 +331,31 @@ func IsHealthy() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return client.Ping(ctx).Err() == nil
+}
+
+// ============================================
+// Background Pre-warm After Invalidation
+// ============================================
+
+// PreWarmKey pre-warms a specific cache key in the background
+// Called after cache invalidation to ensure next request is fast
+// fetcher should return the data to cache, ttl specifies how long to cache
+// This is non-blocking - runs in a goroutine
+func PreWarmKey(key string, fetcher func(ctx context.Context) ([]byte, error), ttl time.Duration) {
+	if client == nil {
+		return
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		data, err := fetcher(ctx)
+		if err != nil {
+			// Log but don't panic - next request will just fetch from DB
+			return
+		}
+
+		SetCached(ctx, key, data, ttl)
+	}()
 }
