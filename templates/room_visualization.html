@@ -185,7 +185,7 @@
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div class="neu-border bg-blue-50 p-4">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-blue-200 flex items-center justify-center border-2 border-black">
@@ -230,6 +230,38 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Total Capacity Progress Bar -->
+        <div class="neu-border bg-white p-4 mb-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-building text-2xl text-orange-600"></i>
+                    <div>
+                        <h3 class="font-bold text-lg">Storage Capacity</h3>
+                        <p class="text-sm text-gray-600">Total Facility: <strong>1,40,000 bags</strong></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-3xl font-bold text-orange-600" id="capacityUsedPct">-</p>
+                    <p class="text-xs text-gray-500">capacity used</p>
+                </div>
+            </div>
+            <div class="h-6 bg-gray-200 border-2 border-black overflow-hidden">
+                <div id="capacityBar" class="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 transition-all" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs font-bold mt-2 text-gray-600">
+                <span>0</span>
+                <span>35,000</span>
+                <span>70,000</span>
+                <span>1,05,000</span>
+                <span>1,40,000</span>
+            </div>
+        </div>
+
+        <!-- Room Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6" id="roomSummaryCards">
+            <!-- Room cards will be populated by JavaScript -->
         </div>
 
         <!-- Main Content -->
@@ -353,6 +385,7 @@
         let occupiedGatars = new Set();
         let gatarQuantities = {}; // Store gatar -> total_qty mapping
         const GATAR_CAPACITY = 200; // Average capacity per gatar
+        const TOTAL_FACILITY_CAPACITY = 140000; // Total cold storage capacity in bags
 
         // Update language selector on load
         document.addEventListener('DOMContentLoaded', function() {
@@ -462,11 +495,65 @@
         }
 
         function updateSummary(summary) {
-            document.getElementById('totalQty').textContent = (summary.total_qty || 0).toLocaleString('en-IN');
+            const totalBags = summary.total_qty || 0;
+            document.getElementById('totalQty').textContent = totalBags.toLocaleString('en-IN');
             document.getElementById('occupiedGatars').textContent = (summary.occupied_gatars || 0).toLocaleString('en-IN');
             document.getElementById('emptyGatars').textContent = ((summary.total_gatars || 0) - (summary.occupied_gatars || 0)).toLocaleString('en-IN');
             const rate = summary.total_gatars ? ((summary.occupied_gatars / summary.total_gatars) * 100).toFixed(1) : '0';
             document.getElementById('occupancyRate').textContent = rate + '%';
+
+            // Update capacity bar (total bags vs 140,000 capacity)
+            const capacityPct = Math.min((totalBags / TOTAL_FACILITY_CAPACITY) * 100, 100);
+            document.getElementById('capacityUsedPct').textContent = capacityPct.toFixed(1) + '%';
+            document.getElementById('capacityBar').style.width = capacityPct + '%';
+
+            // Update room summary cards
+            updateRoomSummaryCards();
+        }
+
+        function updateRoomSummaryCards() {
+            if (!statsData || !statsData.rooms) return;
+
+            const roomColors = {
+                '1': { bg: 'bg-green-50', border: 'border-green-400', icon: 'text-green-600', label: 'Room 1', type: 'Seed' },
+                '2': { bg: 'bg-green-50', border: 'border-green-400', icon: 'text-green-600', label: 'Room 2', type: 'Seed' },
+                '3': { bg: 'bg-orange-50', border: 'border-orange-400', icon: 'text-orange-600', label: 'Room 3', type: 'Sell' },
+                '4': { bg: 'bg-orange-50', border: 'border-orange-400', icon: 'text-orange-600', label: 'Room 4', type: 'Sell' },
+                'G': { bg: 'bg-purple-50', border: 'border-purple-400', icon: 'text-purple-600', label: 'Gallery', type: 'Sell' }
+            };
+
+            let html = '';
+            statsData.rooms.forEach(room => {
+                const config = roomColors[room.room_no] || roomColors['1'];
+                let roomBags = 0;
+                let roomOccupied = 0;
+                let roomTotal = 0;
+                room.floors.forEach(f => {
+                    roomBags += f.total_qty || 0;
+                    roomOccupied += f.occupied_gatars || 0;
+                    roomTotal += f.total_gatars || 0;
+                });
+
+                const isActive = room.room_no === currentRoom;
+                html += `
+                    <div class="neu-border ${config.bg} p-3 cursor-pointer transition-all ${isActive ? 'ring-4 ring-yellow-400' : ''}"
+                         onclick="selectRoom('${room.room_no}')">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="bi bi-box-seam ${config.icon}"></i>
+                            <span class="font-bold">${config.label}</span>
+                            <span class="text-xs text-gray-500">(${config.type})</span>
+                        </div>
+                        <p class="text-2xl font-bold ${config.icon}">${roomBags.toLocaleString('en-IN')}</p>
+                        <p class="text-xs text-gray-600">bags stored</p>
+                        <div class="mt-2 h-2 bg-gray-200 border border-black">
+                            <div class="h-full ${config.border.replace('border-', 'bg-')}" style="width: ${roomTotal ? (roomOccupied/roomTotal*100) : 0}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${roomOccupied}/${roomTotal} gatars</p>
+                    </div>
+                `;
+            });
+
+            document.getElementById('roomSummaryCards').innerHTML = html;
         }
 
         function updateRoomSummary() {
@@ -531,6 +618,7 @@
             currentFloor = '0';
             updateFloorTabs();
             updateRoomSummary();
+            updateRoomSummaryCards(); // Update cards to show active state
             loadFloorPlan();
             resetDetailPanel();
         }
