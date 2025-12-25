@@ -123,8 +123,12 @@
             z-index: 10;
             box-shadow: 3px 3px 0 #000;
         }
-        .gatar-cell.occupied {
+        .gatar-cell.full {
             background: #fbbf24;
+            color: #000;
+        }
+        .gatar-cell.partial {
+            background: #fb923c;
             color: #000;
         }
         .gatar-cell.empty {
@@ -262,12 +266,16 @@
                             <button onclick="selectFloor('3')" id="floor-tab-3" class="floor-tab">Floor 3</button>
                             <button onclick="selectFloor('4')" id="floor-tab-4" class="floor-tab">Floor 4</button>
                         </div>
-                        <div class="flex items-center gap-4 text-sm">
-                            <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-3 text-sm">
+                            <div class="flex items-center gap-1">
                                 <div class="w-5 h-5 bg-yellow-400 border-2 border-black"></div>
-                                <span class="font-bold" data-i18n="occupied">Occupied</span>
+                                <span class="font-bold">Full (200+)</span>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1">
+                                <div class="w-5 h-5 bg-orange-400 border-2 border-black"></div>
+                                <span class="font-bold">Partial (&lt;200)</span>
+                            </div>
+                            <div class="flex items-center gap-1">
                                 <div class="w-5 h-5 bg-white border-2 border-black"></div>
                                 <span class="font-bold" data-i18n="empty">Empty</span>
                             </div>
@@ -343,6 +351,8 @@
         let selectedGatar = null;
         let statsData = null;
         let occupiedGatars = new Set();
+        let gatarQuantities = {}; // Store gatar -> total_qty mapping
+        const GATAR_CAPACITY = 200; // Average capacity per gatar
 
         // Update language selector on load
         document.addEventListener('DOMContentLoaded', function() {
@@ -468,17 +478,39 @@
                 return;
             }
 
-            let html = '';
+            // Calculate room totals
+            let roomTotalQty = 0;
+            let roomOccupied = 0;
+            let roomTotal = 0;
+            roomData.floors.forEach(f => {
+                roomTotalQty += f.total_qty || 0;
+                roomOccupied += f.occupied_gatars || 0;
+                roomTotal += f.total_gatars || 0;
+            });
+
+            let html = `
+                <div class="mb-4 p-3 bg-blue-50 border-2 border-blue-300 rounded">
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-blue-700">${roomTotalQty.toLocaleString('en-IN')}</p>
+                        <p class="text-xs text-gray-600 font-bold">Total Bags in ${currentRoom === 'G' ? 'Gallery' : 'Room ' + currentRoom}</p>
+                    </div>
+                    <div class="flex justify-between mt-2 text-xs">
+                        <span><strong>${roomOccupied}</strong> occupied</span>
+                        <span><strong>${roomTotal - roomOccupied}</strong> empty</span>
+                    </div>
+                </div>
+            `;
+
             roomData.floors.forEach(floor => {
                 const pct = floor.total_gatars ? ((floor.occupied_gatars / floor.total_gatars) * 100).toFixed(0) : 0;
                 const isActive = floor.floor === currentFloor;
                 html += `
-                    <div class="flex items-center gap-3 ${isActive ? 'bg-yellow-100 -mx-2 px-2 py-2 border-2 border-yellow-400' : ''}" onclick="selectFloor('${floor.floor}')" style="cursor: pointer;">
-                        <span class="w-16 text-sm font-bold ${isActive ? 'text-yellow-700' : 'text-gray-600'}">Floor ${floor.floor}</span>
+                    <div class="flex items-center gap-2 ${isActive ? 'bg-yellow-100 -mx-2 px-2 py-2 border-2 border-yellow-400' : 'py-1'}" onclick="selectFloor('${floor.floor}')" style="cursor: pointer;">
+                        <span class="w-12 text-sm font-bold ${isActive ? 'text-yellow-700' : 'text-gray-600'}">F${floor.floor}</span>
                         <div class="flex-1 h-4 bg-gray-200 border border-black overflow-hidden">
                             <div class="h-full ${isActive ? 'bg-yellow-500' : 'bg-yellow-400'} transition-all" style="width: ${pct}%"></div>
                         </div>
-                        <span class="text-xs font-bold text-gray-600 w-16 text-right">${floor.occupied_gatars}/${floor.total_gatars}</span>
+                        <span class="text-xs font-bold text-gray-600 w-20 text-right">${floor.total_qty?.toLocaleString('en-IN') || 0} bags</span>
                     </div>
                 `;
             });
@@ -559,8 +591,10 @@
                 const data = await response.json();
 
                 occupiedGatars = new Set();
+                gatarQuantities = {};
                 let occupiedCount = 0;
                 data.gatars.forEach(g => {
+                    gatarQuantities[g.gatar] = g.total_qty || 0;
                     if (g.occupied) {
                         occupiedGatars.add(g.gatar);
                         occupiedCount++;
@@ -572,6 +606,7 @@
             } catch (error) {
                 console.error('Error loading floor plan:', error);
                 occupiedGatars = new Set();
+                gatarQuantities = {};
                 document.getElementById('floorOccupied').textContent = '0';
                 renderGatarGrid(floorData);
             }
@@ -603,13 +638,19 @@
 
                     const isOccupied = occupiedGatars.has(gatarNum.toString());
                     const isSelected = selectedGatar === gatarNum.toString();
-                    const cellClass = isOccupied ? 'occupied' : 'empty';
+                    const qty = gatarQuantities[gatarNum.toString()] || 0;
+
+                    // Determine cell class based on capacity
+                    let cellClass = 'empty';
+                    if (isOccupied) {
+                        cellClass = qty >= GATAR_CAPACITY ? 'full' : 'partial';
+                    }
                     const selectedClass = isSelected ? 'selected' : '';
 
                     html += `
                         <div class="gatar-cell ${cellClass} ${selectedClass}"
                              onclick="selectBlock('${gatarNum}')"
-                             title="Gatar ${gatarNum}">
+                             title="Gatar ${gatarNum}: ${qty} bags">
                             ${gatarNum}
                         </div>
                     `;
