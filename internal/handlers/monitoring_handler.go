@@ -293,8 +293,18 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(val, "'", "''")))
 						case time.Time:
 							buffer.WriteString(fmt.Sprintf("'%s'", val.Format("2006-01-02 15:04:05")))
-						default:
+						case bool:
+							buffer.WriteString(fmt.Sprintf("%t", val))
+						case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 							buffer.WriteString(fmt.Sprintf("%v", val))
+						case map[string]interface{}, []interface{}:
+							// JSON fields - marshal and quote
+							jsonBytes, _ := json.Marshal(val)
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(string(jsonBytes), "'", "''")))
+						default:
+							// Quote everything else as string (safer)
+							str := fmt.Sprintf("%v", val)
+							buffer.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(str, "'", "''")))
 						}
 					}
 				}
