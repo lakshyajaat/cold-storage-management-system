@@ -442,30 +442,46 @@ func AutoRestoreFromR2(connStr string) bool {
 		o.BaseEndpoint = aws.String(config.R2Endpoint)
 	})
 
-	// Get latest backup
-	result, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(config.R2BucketName),
-		Prefix: aws.String("base/"),
-	})
-	if err != nil {
-		log.Printf("[AutoRestore] Failed to list backups: %v", err)
-		return false
+	// Get latest backup using pagination (R2 may have 1000s of backups)
+	var latestKey string
+	var latestTime time.Time
+	var continuationToken *string
+	totalBackups := 0
+
+	for {
+		input := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(config.R2BucketName),
+			Prefix:            aws.String("base/"),
+			ContinuationToken: continuationToken,
+		}
+
+		result, err := client.ListObjectsV2(ctx, input)
+		if err != nil {
+			log.Printf("[AutoRestore] Failed to list backups: %v", err)
+			return false
+		}
+
+		for _, obj := range result.Contents {
+			totalBackups++
+			if obj.LastModified != nil && obj.LastModified.After(latestTime) {
+				latestTime = *obj.LastModified
+				latestKey = *obj.Key
+			}
+		}
+
+		if result.IsTruncated != nil && *result.IsTruncated {
+			continuationToken = result.NextContinuationToken
+		} else {
+			break
+		}
 	}
 
-	if len(result.Contents) == 0 {
+	if latestKey == "" {
 		log.Println("[AutoRestore] No backups found in R2")
 		return false
 	}
 
-	// Find most recent backup
-	var latestKey string
-	var latestTime time.Time
-	for _, obj := range result.Contents {
-		if obj.LastModified.After(latestTime) {
-			latestTime = *obj.LastModified
-			latestKey = *obj.Key
-		}
-	}
+	log.Printf("[AutoRestore] Scanned %d backups in R2", totalBackups)
 
 	log.Printf("[AutoRestore] Found latest backup: %s (%s)", latestKey, latestTime.Format(time.RFC3339))
 

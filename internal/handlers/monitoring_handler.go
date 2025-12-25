@@ -222,6 +222,8 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 	var buffer bytes.Buffer
 	buffer.WriteString("-- Cold Storage Database Backup (Full Database)\n")
 	buffer.WriteString(fmt.Sprintf("-- Generated: %s\n\n", timeutil.Now().Format(time.RFC3339)))
+	// Disable foreign key checks during restore (tables may be in any order)
+	buffer.WriteString("SET session_replication_role = 'replica';\n\n")
 
 	// Get ALL tables from database dynamically
 	tableRows, err := r2BackupDBPool.Query(ctx, `
@@ -303,6 +305,10 @@ func createR2DatabaseBackup(ctx context.Context) ([]byte, error) {
 		rows.Close()
 		dataRows.Close()
 	}
+
+	// Re-enable foreign key checks
+	buffer.WriteString("\n-- Re-enable foreign key checks\n")
+	buffer.WriteString("SET session_replication_role = 'origin';\n")
 
 	log.Printf("[R2 Backup] Processed %d/%d tables, backup size: %s", tablesProcessed, len(tables), formatBytes(int64(buffer.Len())))
 	return buffer.Bytes(), nil
