@@ -386,39 +386,100 @@ body.dark-mode[class*="bg-[#"] {
     background-color: var(--bg-card) !important;
 }
 
-/* Bright accent backgrounds -> deep muted dark versions */
+/* ===== BLACK AND WHITE MODE - All colored buttons become dark gray ===== */
+/* All bright/pastel button backgrounds -> uniform dark gray */
 .dark-mode .bg-\[\#7DEDFF\],
-.dark-mode .bg-\[\#A8D5FF\] {
-    background-color: rgba(25, 118, 210, 0.12) !important;
-}
-
+.dark-mode .bg-\[\#A8D5FF\],
 .dark-mode .bg-\[\#98EECC\],
 .dark-mode .bg-\[\#A8E6CF\],
 .dark-mode .bg-\[\#B4FF9F\],
-.dark-mode .bg-\[\#C9F4AA\] {
-    background-color: rgba(46, 125, 50, 0.12) !important;
-}
-
+.dark-mode .bg-\[\#C9F4AA\],
 .dark-mode .bg-\[\#FFB4B4\],
 .dark-mode .bg-\[\#FF6B6B\],
-.dark-mode .bg-\[\#FFCDD2\] {
-    background-color: rgba(198, 40, 40, 0.12) !important;
-}
-
+.dark-mode .bg-\[\#FFCDD2\],
+.dark-mode .bg-\[\#FFB3BA\],
 .dark-mode .bg-\[\#D4ADFC\],
 .dark-mode .bg-\[\#DFCCFB\],
-.dark-mode .bg-\[\#E1BEE7\] {
-    background-color: rgba(123, 31, 162, 0.12) !important;
-}
-
+.dark-mode .bg-\[\#E1BEE7\],
+.dark-mode .bg-\[\#E8B4F8\],
 .dark-mode .bg-\[\#FFE0B2\],
-.dark-mode .bg-\[\#FFCC80\] {
-    background-color: rgba(230, 81, 0, 0.12) !important;
+.dark-mode .bg-\[\#FFCC80\],
+.dark-mode .bg-\[\#FFE5CA\],
+.dark-mode .bg-\[\#FFDFBA\],
+.dark-mode .bg-\[\#FFD3B6\],
+.dark-mode .bg-\[\#FFF59D\],
+.dark-mode .bg-\[\#FFEB3B\],
+.dark-mode .bg-\[\#FFE082\],
+.dark-mode .bg-\[\#FF6B9D\] {
+    background-color: #1a1a1a !important;
+    color: var(--text-primary) !important;
 }
 
-.dark-mode .bg-\[\#FFF59D\],
-.dark-mode .bg-\[\#FFEB3B\] {
-    background-color: rgba(249, 168, 37, 0.12) !important;
+/* Page buttons in dark mode - dark with light text */
+.dark-mode .page-button {
+    background-color: #1a1a1a !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark-mode .page-button:hover {
+    background-color: #252525 !important;
+}
+
+.dark-mode .page-button i {
+    color: var(--text-primary) !important;
+}
+
+/* Admin badge - dark mode version */
+.dark-mode .admin-badge {
+    background: #1a1a1a !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Stats boxes - all same dark gray */
+.dark-mode .bg-blue-50,
+.dark-mode .bg-green-50,
+.dark-mode .bg-purple-50,
+.dark-mode .bg-red-50,
+.dark-mode .bg-orange-50,
+.dark-mode .bg-yellow-50,
+.dark-mode .bg-pink-50,
+.dark-mode .bg-indigo-50,
+.dark-mode .bg-teal-50,
+.dark-mode .bg-cyan-50 {
+    background-color: #141414 !important;
+}
+
+/* Yellow notice/warning boxes */
+.dark-mode .bg-yellow-100 {
+    background-color: #1a1a1a !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark-mode .bg-yellow-100 .text-yellow-600 {
+    color: var(--text-secondary) !important;
+}
+
+/* Section title colors - make them white/gray */
+.dark-mode .text-purple-600,
+.dark-mode .text-blue-600,
+.dark-mode .text-orange-600,
+.dark-mode .text-green-600,
+.dark-mode .text-red-600,
+.dark-mode .text-pink-600,
+.dark-mode .text-indigo-600,
+.dark-mode .text-teal-600 {
+    color: var(--text-primary) !important;
+}
+
+/* Version badge */
+.dark-mode .bg-blue-100 {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode .text-blue-800 {
+    color: var(--text-secondary) !important;
 }
 
 /* ===== Alerts & Notifications ===== */
