@@ -17,18 +17,18 @@
 }
 
 [data-theme="dark"] {
-    /* YouTube-like neutral grays */
-    --bg-primary: #0f0f0f;
-    --bg-card: #212121;
-    --bg-input: #2f2f2f;
-    --bg-hover: #3f3f3f;
-    --text-primary: #f1f1f1;
-    --text-secondary: #aaaaaa;
-    --text-muted: #717171;
-    --border-color: #3f3f3f;
-    --border-light: #2f2f2f;
-    --shadow-color: rgba(0, 0, 0, 0.6);
-    --shadow-neu: 3px 3px 0 #181818;
+    /* Deep dark mode - darker cards and elements */
+    --bg-primary: #0a0a0a;
+    --bg-card: #121212;
+    --bg-input: #1a1a1a;
+    --bg-hover: #222222;
+    --text-primary: #e8e8e8;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
+    --border-color: #2a2a2a;
+    --border-light: #1e1e1e;
+    --shadow-color: rgba(0, 0, 0, 0.8);
+    --shadow-neu: 2px 2px 0 #0a0a0a;
 }
 
 /* ===== Body & Background ===== */
@@ -130,7 +130,7 @@ body.dark-mode[class*="bg-[#"] {
 
 .dark-mode thead,
 .dark-mode th {
-    background-color: #181818 !important;
+    background-color: #0e0e0e !important;
     color: var(--text-primary) !important;
     border-color: var(--border-color) !important;
 }
@@ -141,7 +141,7 @@ body.dark-mode[class*="bg-[#"] {
 }
 
 .dark-mode tbody tr:nth-child(even) {
-    background-color: #1a1a1a !important;
+    background-color: #0f0f0f !important;
 }
 
 .dark-mode tbody tr:hover {
@@ -155,7 +155,7 @@ body.dark-mode[class*="bg-[#"] {
 
 /* Sticky table headers */
 .dark-mode .sticky {
-    background-color: #181818 !important;
+    background-color: #0e0e0e !important;
 }
 
 /* ===== Text Colors ===== */
@@ -246,77 +246,77 @@ body.dark-mode[class*="bg-[#"] {
     background-color: var(--bg-card) !important;
 }
 
-/* ===== Status Badges - Muted colors for dark mode ===== */
+/* ===== Status Badges - Deep muted colors for dark mode ===== */
 /* Green variants */
 .dark-mode .bg-green-100,
 .dark-mode .bg-green-50 {
-    background-color: rgba(46, 125, 50, 0.2) !important;
+    background-color: rgba(46, 125, 50, 0.15) !important;
 }
 .dark-mode .text-green-600,
 .dark-mode .text-green-700,
 .dark-mode .text-green-800 {
-    color: #81c784 !important;
+    color: #66bb6a !important;
 }
 
 /* Red variants */
 .dark-mode .bg-red-100,
 .dark-mode .bg-red-50 {
-    background-color: rgba(198, 40, 40, 0.2) !important;
+    background-color: rgba(198, 40, 40, 0.15) !important;
 }
 .dark-mode .text-red-600,
 .dark-mode .text-red-700,
 .dark-mode .text-red-800 {
-    color: #ef9a9a !important;
+    color: #e57373 !important;
 }
 
 /* Yellow variants */
 .dark-mode .bg-yellow-100,
 .dark-mode .bg-yellow-50 {
-    background-color: rgba(249, 168, 37, 0.2) !important;
+    background-color: rgba(249, 168, 37, 0.15) !important;
 }
 .dark-mode .text-yellow-600,
 .dark-mode .text-yellow-700,
 .dark-mode .text-yellow-800 {
-    color: #fff176 !important;
+    color: #ffd54f !important;
 }
 
 /* Blue variants */
 .dark-mode .bg-blue-100,
 .dark-mode .bg-blue-50 {
-    background-color: rgba(25, 118, 210, 0.2) !important;
+    background-color: rgba(25, 118, 210, 0.15) !important;
 }
 .dark-mode .text-blue-600,
 .dark-mode .text-blue-700,
 .dark-mode .text-blue-800 {
-    color: #64b5f6 !important;
+    color: #42a5f5 !important;
 }
 
 /* Purple variants */
 .dark-mode .bg-purple-100,
 .dark-mode .bg-purple-50 {
-    background-color: rgba(123, 31, 162, 0.2) !important;
+    background-color: rgba(123, 31, 162, 0.15) !important;
 }
 .dark-mode .text-purple-600,
 .dark-mode .text-purple-700,
 .dark-mode .text-purple-800 {
-    color: #ba68c8 !important;
+    color: #ab47bc !important;
 }
 
 /* Orange variants */
 .dark-mode .bg-orange-100,
 .dark-mode .bg-orange-50 {
-    background-color: rgba(230, 81, 0, 0.2) !important;
+    background-color: rgba(230, 81, 0, 0.15) !important;
 }
 .dark-mode .text-orange-600,
 .dark-mode .text-orange-700,
 .dark-mode .text-orange-800 {
-    color: #ffb74d !important;
+    color: #ff9800 !important;
 }
 
 /* Pink variants */
 .dark-mode .bg-pink-100,
 .dark-mode .bg-pink-50 {
-    background-color: rgba(173, 20, 87, 0.2) !important;
+    background-color: rgba(173, 20, 87, 0.15) !important;
 }
 
 /* ===== Links ===== */
@@ -344,17 +344,17 @@ body.dark-mode[class*="bg-[#"] {
 }
 
 .dark-mode ::-webkit-scrollbar-thumb {
-    background: #484848;
+    background: #333333;
     border-radius: 4px;
 }
 
 .dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: #606060;
+    background: #444444;
 }
 
 /* Firefox scrollbar */
 .dark-mode * {
-    scrollbar-color: #484848 var(--bg-primary);
+    scrollbar-color: #333333 var(--bg-primary);
     scrollbar-width: thin;
 }
 
@@ -386,39 +386,39 @@ body.dark-mode[class*="bg-[#"] {
     background-color: var(--bg-card) !important;
 }
 
-/* Bright accent backgrounds -> muted dark versions */
+/* Bright accent backgrounds -> deep muted dark versions */
 .dark-mode .bg-\[\#7DEDFF\],
 .dark-mode .bg-\[\#A8D5FF\] {
-    background-color: rgba(25, 118, 210, 0.25) !important;
+    background-color: rgba(25, 118, 210, 0.12) !important;
 }
 
 .dark-mode .bg-\[\#98EECC\],
 .dark-mode .bg-\[\#A8E6CF\],
 .dark-mode .bg-\[\#B4FF9F\],
 .dark-mode .bg-\[\#C9F4AA\] {
-    background-color: rgba(46, 125, 50, 0.25) !important;
+    background-color: rgba(46, 125, 50, 0.12) !important;
 }
 
 .dark-mode .bg-\[\#FFB4B4\],
 .dark-mode .bg-\[\#FF6B6B\],
 .dark-mode .bg-\[\#FFCDD2\] {
-    background-color: rgba(198, 40, 40, 0.25) !important;
+    background-color: rgba(198, 40, 40, 0.12) !important;
 }
 
 .dark-mode .bg-\[\#D4ADFC\],
 .dark-mode .bg-\[\#DFCCFB\],
 .dark-mode .bg-\[\#E1BEE7\] {
-    background-color: rgba(123, 31, 162, 0.25) !important;
+    background-color: rgba(123, 31, 162, 0.12) !important;
 }
 
 .dark-mode .bg-\[\#FFE0B2\],
 .dark-mode .bg-\[\#FFCC80\] {
-    background-color: rgba(230, 81, 0, 0.25) !important;
+    background-color: rgba(230, 81, 0, 0.12) !important;
 }
 
 .dark-mode .bg-\[\#FFF59D\],
 .dark-mode .bg-\[\#FFEB3B\] {
-    background-color: rgba(249, 168, 37, 0.25) !important;
+    background-color: rgba(249, 168, 37, 0.12) !important;
 }
 
 /* ===== Alerts & Notifications ===== */
@@ -436,7 +436,7 @@ body.dark-mode[class*="bg-[#"] {
 /* ===== Code/Pre blocks ===== */
 .dark-mode pre,
 .dark-mode code {
-    background-color: #181818 !important;
+    background-color: #0e0e0e !important;
     color: var(--text-primary) !important;
 }
 
