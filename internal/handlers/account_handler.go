@@ -9,11 +9,18 @@ import (
 	"sync"
 	"time"
 
+	"cold-backend/internal/cache"
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Cache configuration for account handler
+const (
+	accountCacheKey = "account:summary"
+	accountCacheTTL = 10 * time.Minute
 )
 
 // AccountHandler handles account management endpoints
@@ -82,7 +89,7 @@ func NewAccountHandler(
 	gatePassRepo *repositories.GatePassRepository,
 	settingsRepo *repositories.SystemSettingRepository,
 ) *AccountHandler {
-	return &AccountHandler{
+	h := &AccountHandler{
 		DB:              db,
 		EntryRepo:       entryRepo,
 		RoomEntryRepo:   roomEntryRepo,
@@ -90,10 +97,22 @@ func NewAccountHandler(
 		GatePassRepo:    gatePassRepo,
 		SettingsRepo:    settingsRepo,
 	}
+
+	// Register pre-warm callback for account summary
+	cache.RegisterPreWarm(accountCacheKey, func(ctx context.Context) ([]byte, error) {
+		summary, err := h.generateAccountSummary(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(summary)
+	})
+
+	return h
 }
 
 // GetAccountSummary returns all data needed for account management in ONE request
 // This eliminates 5+ sequential API calls from the frontend
+// Uses Redis cache with 10 minute TTL for fast responses
 func (h *AccountHandler) GetAccountSummary(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -110,6 +129,32 @@ func (h *AccountHandler) GetAccountSummary(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Try cache first
+	if data, ok := cache.GetCached(ctx, accountCacheKey); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(data)
+		return
+	}
+
+	// Cache miss - generate fresh data
+	summary, err := h.generateAccountSummary(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Cache the response
+	data, _ := json.Marshal(summary)
+	cache.SetCached(ctx, accountCacheKey, data, accountCacheTTL)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
+	w.Write(data)
+}
+
+// generateAccountSummary generates the account summary data (used by cache and pre-warm)
+func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSummary, error) {
 	// Parallel data fetching using goroutines
 	var (
 		entries             []*models.Entry
@@ -174,16 +219,13 @@ func (h *AccountHandler) GetAccountSummary(w http.ResponseWriter, r *http.Reques
 
 	// Check for errors
 	if entriesErr != nil {
-		http.Error(w, "Failed to load entries: "+entriesErr.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("failed to load entries: %w", entriesErr)
 	}
 	if roomErr != nil {
-		http.Error(w, "Failed to load room entries: "+roomErr.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("failed to load room entries: %w", roomErr)
 	}
 	if paymentsErr != nil {
-		http.Error(w, "Failed to load payments: "+paymentsErr.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("failed to load payments: %w", paymentsErr)
 	}
 	// Gate pass and settings errors are non-fatal
 	if settingsErr != nil {
@@ -293,7 +335,7 @@ func (h *AccountHandler) GetAccountSummary(w http.ResponseWriter, r *http.Reques
 		return customers[i].Balance > customers[j].Balance
 	})
 
-	summary := AccountSummary{
+	return &AccountSummary{
 		Customers:        customers,
 		TotalCustomers:   len(customers),
 		TotalThocks:      totalThocks,
@@ -302,10 +344,7 @@ func (h *AccountHandler) GetAccountSummary(w http.ResponseWriter, r *http.Reques
 		TotalCollected:   totalCollected,
 		RentPerItem:      rentPerItem,
 		GeneratedAt:      time.Now(),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(summary)
+	}, nil
 }
 
 // getCompletedGatePasses fetches completed gate passes with customer phone

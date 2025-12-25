@@ -369,6 +369,11 @@ func main() {
 
 		// Wrap with panic recovery and metrics middleware
 		handler = middleware.PanicRecovery(middleware.MetricsMiddleware(corsMiddleware(router)))
+
+		// Pre-warm cache in background (non-blocking)
+		// This runs after handlers are initialized since they register pre-warm callbacks
+		go cache.PreWarmCache()
+		log.Println("[Redis] Pre-warming cache in background...")
 	}
 
 	// Start server

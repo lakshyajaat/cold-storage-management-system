@@ -7,10 +7,17 @@ import (
 	"net/http"
 	"time"
 
+	"cold-backend/internal/cache"
 	"cold-backend/internal/services"
 	"cold-backend/internal/timeutil"
 
 	"github.com/gorilla/mux"
+)
+
+// Cache configuration for report handler
+const (
+	reportStatsCacheKey = "reports:stats"
+	reportStatsCacheTTL = 15 * time.Minute
 )
 
 type ReportHandler struct {
@@ -186,10 +193,20 @@ func (h *ReportHandler) GetDailySummaryPDF(w http.ResponseWriter, r *http.Reques
 
 // GetReportStats handles GET /api/reports/stats
 // Returns a summary of report data without generating files
+// Uses Redis cache with 15 minute TTL for fast responses
 func (h *ReportHandler) GetReportStats(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
+	// Try cache first
+	if data, ok := cache.GetCached(ctx, reportStatsCacheKey); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(data)
+		return
+	}
+
+	// Cache miss - generate fresh data
 	customers, err := h.Service.GetAllCustomerReportData(ctx, "all")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get data: %v", err), http.StatusInternalServerError)
@@ -223,6 +240,11 @@ func (h *ReportHandler) GetReportStats(w http.ResponseWriter, r *http.Request) {
 		"generated_at":          timeutil.Now().Format("2006-01-02 15:04:05"),
 	}
 
+	// Cache the response
+	data, _ := json.Marshal(stats)
+	cache.SetCached(ctx, reportStatsCacheKey, data, reportStatsCacheTTL)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	w.Header().Set("X-Cache", "MISS")
+	w.Write(data)
 }

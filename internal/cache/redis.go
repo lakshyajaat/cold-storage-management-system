@@ -267,9 +267,68 @@ func InvalidateAllBusinessCaches(ctx context.Context) {
 	patterns := []string{
 		"customers:*", "entries:*", "room:*", "gate_pass:*",
 		"guard:*", "payments:*", "account:*", "entry:room:*",
-		"settings:*",
+		"settings:*", "reports:*",
 	}
 	for _, p := range patterns {
 		InvalidatePattern(ctx, p)
 	}
+}
+
+// ============================================
+// Pre-warm Cache Functions
+// ============================================
+
+// PreWarmCallback is a function that populates a cache key
+type PreWarmCallback func(ctx context.Context) ([]byte, error)
+
+// preWarmCallbacks stores functions to pre-warm cache on startup
+var preWarmCallbacks = make(map[string]PreWarmCallback)
+
+// RegisterPreWarm registers a callback to pre-warm a cache key
+// This should be called during handler initialization
+func RegisterPreWarm(key string, callback PreWarmCallback) {
+	preWarmCallbacks[key] = callback
+}
+
+// PreWarmCache pre-warms registered cache keys on startup
+// Runs in background, non-blocking
+func PreWarmCache() {
+	if client == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	for key, callback := range preWarmCallbacks {
+		// Check if already cached (another pod may have done it)
+		if _, ok := GetCached(ctx, key); ok {
+			continue
+		}
+
+		// Call the pre-warm function
+		data, err := callback(ctx)
+		if err != nil {
+			continue
+		}
+
+		// Cache with appropriate TTL based on key prefix
+		ttl := 10 * time.Minute // default
+		if len(key) > 8 && key[:8] == "reports:" {
+			ttl = 15 * time.Minute
+		} else if len(key) > 9 && key[:9] == "settings:" {
+			ttl = 24 * time.Hour
+		}
+
+		SetCached(ctx, key, data, ttl)
+	}
+}
+
+// IsHealthy returns true if Redis connection is working
+func IsHealthy() bool {
+	if client == nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return client.Ping(ctx).Err() == nil
 }
