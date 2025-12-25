@@ -322,7 +322,7 @@
             <!-- Left: Floor Plan -->
             <div class="flex-1">
                 <!-- Room Tabs -->
-                <div class="flex gap-1 mb-0">
+                <div class="flex flex-wrap gap-1 mb-0">
                     <button onclick="selectRoom('1')" id="room-tab-1" class="room-tab active">
                         Room 1 <span class="text-xs">(Seed)</span>
                     </button>
@@ -331,6 +331,12 @@
                     </button>
                     <button onclick="selectRoom('3')" id="room-tab-3" class="room-tab">
                         Room 3 <span class="text-xs">(Sell)</span>
+                    </button>
+                    <button onclick="selectRoom('4')" id="room-tab-4" class="room-tab">
+                        Room 4 <span class="text-xs">(Sell)</span>
+                    </button>
+                    <button onclick="selectRoom('G')" id="room-tab-G" class="room-tab">
+                        Gallery <span class="text-xs">(Sell)</span>
                     </button>
                 </div>
 
@@ -439,12 +445,51 @@
                 '2': { start: 1641, end: 1780, cols: 14, rows: 10 },
                 '3': { start: 1781, end: 1920, cols: 14, rows: 10 },
                 '4': { start: 1921, end: 2040, cols: 12, rows: 10 }
+            },
+            '4': {
+                '0': { ranges: [{start: 2041, end: 2120, cols: 8}, {start: 2869, end: 2928, cols: 6}], cols: 14, rows: 10 },
+                '1': { start: 2121, end: 2260, cols: 14, rows: 10 },
+                '2': { start: 2261, end: 2400, cols: 14, rows: 10 },
+                '3': { start: 2401, end: 2540, cols: 14, rows: 10 },
+                '4': { start: 2601, end: 2720, cols: 12, rows: 10 }
+            },
+            'G': {
+                '0': { start: 2727, end: 2756, cols: 2, rows: 15 },
+                '1': { start: 2757, end: 2784, cols: 2, rows: 14 },
+                '2': { start: 2785, end: 2812, cols: 2, rows: 14 },
+                '3': { start: 2813, end: 2840, cols: 2, rows: 14 },
+                '4': { start: 2841, end: 2868, cols: 2, rows: 14 }
             }
         };
 
         // Function to get gatar number at grid position (same as room-config)
         function getGatarAtPosition(floorData, row, col) {
             const cols = floorData.cols || 14;
+
+            // Handle split ranges (Room 4 Floor 0)
+            if (floorData.ranges) {
+                let colOffset = 0;
+                for (const range of floorData.ranges) {
+                    const rangeCols = range.cols || 8;
+                    if (col < colOffset + rangeCols) {
+                        const localCol = col - colOffset;
+                        const pairIndex = Math.floor(localCol / 2);
+                        const isLeftCol = localCol % 2 === 0;
+                        const baseForPair = range.start + (pairIndex * 20);
+                        const gatarOffset = isLeftCol ? (row * 2 + 1) : (row * 2 + 2);
+                        return baseForPair + gatarOffset - 1;
+                    }
+                    colOffset += rangeCols;
+                }
+                return null;
+            }
+
+            // Handle Gallery (simple sequential in 2 columns)
+            if (cols === 2) {
+                return floorData.start + (row * 2) + col;
+            }
+
+            // Standard room layout: column pairs with 20 gatars each
             const pairIndex = Math.floor(col / 2);
             const isLeftCol = col % 2 === 0;
             const baseForPair = floorData.start + (pairIndex * 20);
@@ -564,10 +609,23 @@
                 return;
             }
 
-            // Update floor info
-            document.getElementById('floorTitle').textContent = `Room ${currentRoom} - Floor ${currentFloor}`;
-            document.getElementById('floorRange').textContent = `(Gatar ${floorData.start}-${floorData.end})`;
-            document.getElementById('floorTotal').textContent = floorData.end - floorData.start + 1;
+            // Update floor info - handle split ranges and Gallery
+            const roomLabel = currentRoom === 'G' ? 'Gallery' : `Room ${currentRoom}`;
+            document.getElementById('floorTitle').textContent = `${roomLabel} - Floor ${currentFloor}`;
+
+            // Calculate range text and total
+            let rangeText = '';
+            let totalGatars = 0;
+            if (floorData.ranges) {
+                // Split ranges (Room 4 Floor 0)
+                rangeText = floorData.ranges.map(r => `${r.start}-${r.end}`).join(' + ');
+                totalGatars = floorData.ranges.reduce((sum, r) => sum + (r.end - r.start + 1), 0);
+            } else {
+                rangeText = `${floorData.start}-${floorData.end}`;
+                totalGatars = floorData.end - floorData.start + 1;
+            }
+            document.getElementById('floorRange').textContent = `(Gatar ${rangeText})`;
+            document.getElementById('floorTotal').textContent = totalGatars;
 
             try {
                 // Load gatar occupancy data
@@ -607,6 +665,16 @@
             const cols = floorData.cols || 14;
             const rows = floorData.rows || 10;
 
+            // Helper function to check if gatar is in valid range
+            function isValidGatar(num) {
+                if (num === null) return false;
+                if (floorData.ranges) {
+                    // Check split ranges
+                    return floorData.ranges.some(r => num >= r.start && num <= r.end);
+                }
+                return num >= floorData.start && num <= floorData.end;
+            }
+
             let html = `<div class="gatar-grid" style="grid-template-columns: repeat(${cols}, 42px);">`;
 
             for (let row = 0; row < rows; row++) {
@@ -614,7 +682,7 @@
                     const gatarNum = getGatarAtPosition(floorData, row, col);
 
                     // Check if gatar is within valid range
-                    if (gatarNum < floorData.start || gatarNum > floorData.end) {
+                    if (!isValidGatar(gatarNum)) {
                         html += `<div class="gatar-cell" style="visibility: hidden;"></div>`;
                         continue;
                     }

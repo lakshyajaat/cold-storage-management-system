@@ -71,7 +71,7 @@ type GatarOccupancyResponse struct {
 	Gatars  []GatarInfo `json:"gatars"`
 }
 
-// Gatar ranges for each room/floor (from docs/ROOM_LAYOUT.md)
+// Gatar ranges for each room/floor (from room-config-1.html)
 var gatarRanges = map[string]map[string]struct{ Start, End, Total int }{
 	"1": {
 		"0": {1, 140, 140},
@@ -93,6 +93,20 @@ var gatarRanges = map[string]map[string]struct{ Start, End, Total int }{
 		"2": {1641, 1780, 140},
 		"3": {1781, 1920, 140},
 		"4": {1921, 2040, 120},
+	},
+	"4": {
+		"0": {2041, 2120, 140}, // Room 4 Floor 0: 80 + 60 split range = 140 total
+		"1": {2121, 2260, 140},
+		"2": {2261, 2400, 140},
+		"3": {2401, 2540, 140},
+		"4": {2601, 2720, 120},
+	},
+	"G": {
+		"0": {2727, 2756, 30},
+		"1": {2757, 2784, 28},
+		"2": {2785, 2812, 28},
+		"3": {2813, 2840, 28},
+		"4": {2841, 2868, 28},
 	},
 }
 
@@ -158,8 +172,8 @@ func (h *RoomVisualizationHandler) GetRoomStats(w http.ResponseWriter, r *http.R
 	var rooms []RoomStats
 	var totalQty, totalOccupied, totalGatars, totalEntries int
 
-	// Process rooms in order
-	for _, roomNo := range []string{"1", "2", "3"} {
+	// Process rooms in order (including Room 4 and Gallery)
+	for _, roomNo := range []string{"1", "2", "3", "4", "G"} {
 		var floors []FloorStats
 
 		// Process floors in order (0-4)
