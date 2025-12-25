@@ -341,6 +341,60 @@ ssh root@192.168.15.120 'journalctl -u postgresql@17-main --tail=50'
 
 ---
 
+## Redis Cache (HA)
+
+### Overview
+Redis is installed on all 3 database nodes for caching. The backend connects via the VIP (192.168.15.210) for HA.
+
+### Configuration
+
+| Node | IP Address | Port | Purpose |
+|------|------------|------|---------|
+| db-node1 | 192.168.15.120 | 6379 | Redis (via VIP) |
+| db-node2 | 192.168.15.121 | 6379 | Redis (standby) |
+| db-node3 | 192.168.15.122 | 6379 | Redis (standby) |
+| **VIP** | **192.168.15.210** | **6379** | **Connection endpoint** |
+
+### Backend Connection
+```yaml
+# Kubernetes deployment env
+REDIS_SERVICE_HOST: 192.168.15.210
+REDIS_SERVICE_PORT: 6379
+```
+
+### Check Redis Status
+```bash
+# Check Redis on each node
+for node in 192.168.15.120 192.168.15.121 192.168.15.122; do
+  echo "=== $node ==="
+  ssh root@$node 'redis-cli ping'
+done
+
+# Test via VIP
+nc -zv 192.168.15.210 6379
+```
+
+### Key Configuration
+- **Config file:** `/etc/redis/redis.conf`
+- **Max memory:** 128MB
+- **Eviction policy:** allkeys-lru
+- **Protected mode:** disabled (for remote access)
+
+### Cache TTLs
+| Cache | TTL | Purpose |
+|-------|-----|---------|
+| Room stats | 5 min | Room visualization summary |
+| Floor data | 5 min | Gatar occupancy per floor |
+| Auth | 15 min | Login credentials |
+
+### Performance Impact
+| Endpoint | Without Cache | With Cache |
+|----------|---------------|------------|
+| /api/room-visualization/stats | 4-6 seconds | 5-10ms |
+| /api/room-visualization/gatar | 4-6 seconds | 5-10ms |
+
+---
+
 ## TrueNAS NFS (Optional)
 
 Available for future use if large file storage is needed:
