@@ -175,7 +175,7 @@
                     <i class="bi bi-moon-fill theme-icon-moon"></i>
                     <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
                 </button>
-                <button onclick="loadData()" class="neu-button bg-blue-100">
+                <button onclick="loadData(true)" class="neu-button bg-blue-100">
                     <i class="bi bi-arrow-clockwise"></i> <span data-i18n="refresh">Refresh</span>
                 </button>
                 <button onclick="goBack()" class="neu-button bg-gray-200">
@@ -387,10 +387,25 @@
         const GATAR_CAPACITY = 200; // Average capacity per gatar
         const TOTAL_FACILITY_CAPACITY = 140000; // Total cold storage capacity in bags
 
+        // Browser-side cache for floor data (reduces API calls)
+        const localCache = {
+            gatars: {},  // keyed by "room-floor"
+            stats: null
+        };
+        const LOCAL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
         // Update language selector on load
         document.addEventListener('DOMContentLoaded', function() {
             const lang = localStorage.getItem('lang') || 'hi';
             document.getElementById('langSelector').value = lang;
+
+            // Event delegation for gatar grid clicks (single listener instead of 140)
+            document.getElementById('blockGrid').addEventListener('click', function(e) {
+                const cell = e.target.closest('.gatar-cell');
+                if (cell && cell.dataset.gatar) {
+                    selectBlock(cell.dataset.gatar);
+                }
+            });
         });
 
         // Gatar ranges (same as room-config-1.html)
@@ -476,7 +491,13 @@
             window.history.back();
         }
 
-        async function loadData() {
+        async function loadData(forceRefresh = false) {
+            // Clear browser cache on manual refresh
+            if (forceRefresh) {
+                localCache.gatars = {};
+                localCache.stats = null;
+            }
+
             try {
                 const statsResponse = await fetch('/api/room-visualization/stats', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -644,7 +665,8 @@
 
         async function loadFloorPlan() {
             const gridDiv = document.getElementById('blockGrid');
-            gridDiv.innerHTML = '<div class="text-center text-gray-500 loading-pulse py-8"><i class="bi bi-hourglass-split text-3xl"></i><p class="mt-2 font-bold">Loading floor plan...</p></div>';
+            const cacheKey = `${currentRoom}-${currentFloor}`;
+            const now = Date.now();
 
             const floorData = gatarRanges[currentRoom]?.[currentFloor];
             if (!floorData) {
@@ -669,6 +691,17 @@
             document.getElementById('floorRange').textContent = `(Gatar ${rangeText})`;
             document.getElementById('floorTotal').textContent = totalGatars;
 
+            // Check browser-side cache first (instant response)
+            if (localCache.gatars[cacheKey] && localCache.gatars[cacheKey].expires > now) {
+                processFloorData(localCache.gatars[cacheKey].data, floorData);
+                // Prefetch adjacent floors in background
+                prefetchAdjacentFloors();
+                return;
+            }
+
+            // Show loading only if not cached
+            gridDiv.innerHTML = '<div class="text-center text-gray-500 loading-pulse py-8"><i class="bi bi-hourglass-split text-3xl"></i><p class="mt-2 font-bold">Loading floor plan...</p></div>';
+
             try {
                 const response = await fetch(`/api/room-visualization/gatar?room=${currentRoom}&floor=${currentFloor}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -678,19 +711,13 @@
 
                 const data = await response.json();
 
-                occupiedGatars = new Set();
-                gatarQuantities = {};
-                let occupiedCount = 0;
-                data.gatars.forEach(g => {
-                    gatarQuantities[g.gatar] = g.total_qty || 0;
-                    if (g.occupied) {
-                        occupiedGatars.add(g.gatar);
-                        occupiedCount++;
-                    }
-                });
+                // Cache locally for instant future access
+                localCache.gatars[cacheKey] = { data, expires: now + LOCAL_CACHE_TTL };
 
-                document.getElementById('floorOccupied').textContent = occupiedCount;
-                renderGatarGrid(floorData);
+                processFloorData(data, floorData);
+
+                // Prefetch adjacent floors in background
+                prefetchAdjacentFloors();
             } catch (error) {
                 console.error('Error loading floor plan:', error);
                 occupiedGatars = new Set();
@@ -698,6 +725,46 @@
                 document.getElementById('floorOccupied').textContent = '0';
                 renderGatarGrid(floorData);
             }
+        }
+
+        // Process floor data and render grid
+        function processFloorData(data, floorData) {
+            occupiedGatars = new Set();
+            gatarQuantities = {};
+            let occupiedCount = 0;
+            data.gatars.forEach(g => {
+                gatarQuantities[g.gatar] = g.total_qty || 0;
+                if (g.occupied) {
+                    occupiedGatars.add(g.gatar);
+                    occupiedCount++;
+                }
+            });
+
+            document.getElementById('floorOccupied').textContent = occupiedCount;
+            renderGatarGrid(floorData);
+        }
+
+        // Prefetch adjacent floors for instant switching
+        function prefetchAdjacentFloors() {
+            const floors = ['0', '1', '2', '3', '4'];
+            const currentIdx = floors.indexOf(currentFloor);
+            const now = Date.now();
+
+            [currentIdx - 1, currentIdx + 1].forEach(idx => {
+                if (idx >= 0 && idx < 5) {
+                    const floor = floors[idx];
+                    const cacheKey = `${currentRoom}-${floor}`;
+
+                    // Only prefetch if not already cached
+                    if (!localCache.gatars[cacheKey] || localCache.gatars[cacheKey].expires <= now) {
+                        fetch(`/api/room-visualization/gatar?room=${currentRoom}&floor=${floor}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }).then(r => r.json()).then(data => {
+                            localCache.gatars[cacheKey] = { data, expires: Date.now() + LOCAL_CACHE_TTL };
+                        }).catch(() => {}); // Silent fail for prefetch
+                    }
+                }
+            });
         }
 
         function renderGatarGrid(floorData) {
@@ -737,7 +804,7 @@
 
                     html += `
                         <div class="gatar-cell ${cellClass} ${selectedClass}"
-                             onclick="selectBlock('${gatarNum}')"
+                             data-gatar="${gatarNum}"
                              title="Gatar ${gatarNum}: ${qty} bags">
                             ${gatarNum}
                         </div>

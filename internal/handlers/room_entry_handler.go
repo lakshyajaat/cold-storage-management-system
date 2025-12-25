@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"cold-backend/internal/cache"
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
@@ -45,6 +46,9 @@ func (h *RoomEntryHandler) CreateRoomEntry(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Invalidate room visualization cache
+	cache.InvalidateRoomCache(r.Context())
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(roomEntry)
@@ -167,6 +171,9 @@ func (h *RoomEntryHandler) UpdateRoomEntry(w http.ResponseWriter, r *http.Reques
 			// TODO: Add proper logging
 		}
 	}
+
+	// Invalidate room visualization cache
+	cache.InvalidateRoomCache(r.Context())
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(roomEntry)

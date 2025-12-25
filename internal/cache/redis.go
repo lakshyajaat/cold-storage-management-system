@@ -4,10 +4,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+)
+
+// Room Visualization Cache Keys
+const (
+	RoomStatsKey    = "room:stats"
+	FloorDataKeyFmt = "room:floor:%s:%s"
 )
 
 var client *redis.Client
@@ -80,4 +87,64 @@ func InvalidateAuth(ctx context.Context, email, password string) {
 	}
 	key := hashCredentials(email, password)
 	client.Del(ctx, key)
+}
+
+// ============================================
+// Room Visualization Cache Functions
+// ============================================
+
+// GetCachedRoomStats returns cached room stats if available
+func GetCachedRoomStats(ctx context.Context) ([]byte, bool) {
+	if client == nil {
+		return nil, false
+	}
+	data, err := client.Get(ctx, RoomStatsKey).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+// CacheRoomStats caches room stats for 5 minutes
+func CacheRoomStats(ctx context.Context, data []byte) {
+	if client == nil {
+		return
+	}
+	client.Set(ctx, RoomStatsKey, data, 5*time.Minute)
+}
+
+// GetCachedFloorData returns cached floor gatar data if available
+func GetCachedFloorData(ctx context.Context, roomNo, floor string) ([]byte, bool) {
+	if client == nil {
+		return nil, false
+	}
+	key := fmt.Sprintf(FloorDataKeyFmt, roomNo, floor)
+	data, err := client.Get(ctx, key).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+// CacheFloorData caches floor data for 5 minutes
+func CacheFloorData(ctx context.Context, roomNo, floor string, data []byte) {
+	if client == nil {
+		return
+	}
+	key := fmt.Sprintf(FloorDataKeyFmt, roomNo, floor)
+	client.Set(ctx, key, data, 5*time.Minute)
+}
+
+// InvalidateRoomCache clears all room visualization cache
+func InvalidateRoomCache(ctx context.Context) {
+	if client == nil {
+		return
+	}
+	// Delete stats cache
+	client.Del(ctx, RoomStatsKey)
+	// Delete all floor caches using pattern
+	keys, err := client.Keys(ctx, "room:floor:*").Result()
+	if err == nil && len(keys) > 0 {
+		client.Del(ctx, keys...)
+	}
 }

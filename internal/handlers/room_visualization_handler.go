@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cold-backend/internal/cache"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -113,6 +114,14 @@ var gatarRanges = map[string]map[string]struct{ Start, End, Total int }{
 // GetRoomStats returns aggregated statistics for all rooms and floors
 func (h *RoomVisualizationHandler) GetRoomStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	// Check Redis cache first
+	if cached, found := cache.GetCachedRoomStats(ctx); found {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(cached)
+		return
+	}
 
 	// Query to get stats grouped by room and floor
 	query := `
@@ -222,8 +231,13 @@ func (h *RoomVisualizationHandler) GetRoomStats(w http.ResponseWriter, r *http.R
 		},
 	}
 
+	// Cache the response in Redis
+	jsonData, _ := json.Marshal(response)
+	cache.CacheRoomStats(ctx, jsonData)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Header().Set("X-Cache", "MISS")
+	w.Write(jsonData)
 }
 
 // GetGatarOccupancy returns detailed gatar-level data for a specific room/floor
@@ -246,6 +260,14 @@ func (h *RoomVisualizationHandler) GetGatarOccupancy(w http.ResponseWriter, r *h
 	floorRange, ok := gatarRanges[roomNo][floor]
 	if !ok {
 		http.Error(w, "Invalid floor number", http.StatusBadRequest)
+		return
+	}
+
+	// Check Redis cache first
+	if cached, found := cache.GetCachedFloorData(ctx, roomNo, floor); found {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(cached)
 		return
 	}
 
@@ -349,8 +371,13 @@ func (h *RoomVisualizationHandler) GetGatarOccupancy(w http.ResponseWriter, r *h
 		Gatars: gatars,
 	}
 
+	// Cache the response in Redis
+	jsonData, _ := json.Marshal(response)
+	cache.CacheFloorData(ctx, roomNo, floor, jsonData)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Header().Set("X-Cache", "MISS")
+	w.Write(jsonData)
 }
 
 // GetGatarDetails returns details for a specific gatar
@@ -364,6 +391,7 @@ func (h *RoomVisualizationHandler) GetGatarDetails(w http.ResponseWriter, r *htt
 	}
 
 	// Query to get all items in this gatar (handle comma-separated gate_no)
+	// Uses array membership check instead of LIKE for better index usage
 	query := `
 		SELECT
 			re.id,
@@ -381,7 +409,7 @@ func (h *RoomVisualizationHandler) GetGatarDetails(w http.ResponseWriter, r *htt
 		FROM room_entries re
 		LEFT JOIN entries e ON re.entry_id = e.id
 		LEFT JOIN customers c ON e.customer_id = c.id
-		WHERE re.gate_no = $1 OR re.gate_no LIKE '%' || $1 || '%'
+		WHERE re.gate_no = $1 OR $1 = ANY(string_to_array(replace(re.gate_no, ' ', ''), ','))
 		ORDER BY re.created_at DESC
 	`
 
