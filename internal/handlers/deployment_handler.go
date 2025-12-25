@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"cold-backend/internal/services"
+
+	"github.com/gorilla/mux"
 )
 
 // DeploymentHandler handles deployment API endpoints
@@ -35,7 +37,7 @@ func (h *DeploymentHandler) ListDeployments(w http.ResponseWriter, r *http.Reque
 
 // GetDeployment returns a deployment configuration with history
 func (h *DeploymentHandler) GetDeployment(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
@@ -59,7 +61,7 @@ func (h *DeploymentHandler) GetDeployment(w http.ResponseWriter, r *http.Request
 
 // GetDeploymentHistory returns deployment history
 func (h *DeploymentHandler) GetDeploymentHistory(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
@@ -99,7 +101,7 @@ func (h *DeploymentHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
@@ -186,7 +188,7 @@ func (h *DeploymentHandler) DeploySync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
@@ -245,7 +247,7 @@ func (h *DeploymentHandler) Rollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
@@ -275,7 +277,7 @@ func (h *DeploymentHandler) Rollback(w http.ResponseWriter, r *http.Request) {
 
 // GetDeploymentStatus returns current deployment job status (SSE)
 func (h *DeploymentHandler) GetDeploymentStatus(w http.ResponseWriter, r *http.Request) {
-	historyIDStr := r.PathValue("historyId")
+	historyIDStr := mux.Vars(r)["historyId"]
 	historyID, err := strconv.Atoi(historyIDStr)
 	if err != nil {
 		http.Error(w, "Invalid history ID", http.StatusBadRequest)
