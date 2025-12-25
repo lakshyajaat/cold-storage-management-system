@@ -178,7 +178,7 @@
                         oninput="filterCustomers()"
                     >
                 </div>
-                <button onclick="loadCustomerAccounts()" class="neu-button bg-blue-500 text-white w-full md:w-auto">
+                <button onclick="loadCustomerAccounts(true)" class="neu-button bg-blue-500 text-white w-full md:w-auto">
                     <i class="bi bi-arrow-clockwise"></i> Refresh
                 </button>
             </div>
@@ -355,7 +355,7 @@
         }
 
         // Load all customer accounts - OPTIMIZED: Single API call instead of 5+
-        async function loadCustomerAccounts() {
+        async function loadCustomerAccounts(forceRefresh = false) {
             const startTime = performance.now();
             try {
                 // Check authentication
@@ -364,11 +364,15 @@
                     return;
                 }
 
-                // OPTIMIZED: Single API call that fetches everything in parallel on the server
-                const response = await fetch('/api/accounts/summary?_=' + Date.now(), {
+                // OPTIMIZED: Uses Redis cache (10 min TTL) unless force refresh
+                const url = forceRefresh
+                    ? '/api/accounts/summary?refresh=' + Date.now()  // Bust browser cache only
+                    : '/api/accounts/summary';
+
+                const response = await fetch(url, {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                        'Authorization': `Bearer ${token}`
+                        // Removed Cache-Control to allow Redis caching
                     }
                 });
 
@@ -386,7 +390,11 @@
                 }
 
                 const summary = await response.json();
-                console.log(`Loaded ${summary.total_customers} customers in ${(performance.now() - startTime).toFixed(0)}ms`);
+                const apiTime = (performance.now() - startTime).toFixed(0);
+                console.log(`API: ${apiTime}ms | Customers: ${summary.total_customers} | X-Cache: ${response.headers.get('X-Cache') || 'unknown'}`);
+
+                // Update summary cards immediately (fast feedback)
+                updateSummaryFromServer(summary);
 
                 // Store rent per item from server
                 rentPerItem = summary.rent_per_item || 0;
@@ -461,9 +469,41 @@
                 return;
             }
 
-            container.innerHTML = accounts.map((customer, index) => {
-                // Calculate SEED and SELL totals
-                const seedThocks = customer.thocks.filter(t => {
+            // Progressive rendering: show first 20 immediately, then batch render rest
+            const BATCH_SIZE = 20;
+            const renderStart = performance.now();
+
+            // Clear and render first batch immediately
+            container.innerHTML = '';
+            const firstBatch = accounts.slice(0, BATCH_SIZE);
+            container.innerHTML = firstBatch.map((customer, index) => renderCustomerCard(customer, index)).join('');
+
+            // Render remaining in background batches
+            if (accounts.length > BATCH_SIZE) {
+                let offset = BATCH_SIZE;
+                const renderBatch = () => {
+                    const batch = accounts.slice(offset, offset + BATCH_SIZE);
+                    if (batch.length === 0) {
+                        console.log(`Render complete: ${(performance.now() - renderStart).toFixed(0)}ms for ${accounts.length} customers`);
+                        return;
+                    }
+                    const fragment = document.createElement('div');
+                    fragment.innerHTML = batch.map((customer, idx) => renderCustomerCard(customer, offset + idx)).join('');
+                    while (fragment.firstChild) {
+                        container.appendChild(fragment.firstChild);
+                    }
+                    offset += BATCH_SIZE;
+                    requestAnimationFrame(renderBatch); // Non-blocking
+                };
+                requestAnimationFrame(renderBatch);
+            } else {
+                console.log(`Render complete: ${(performance.now() - renderStart).toFixed(0)}ms for ${accounts.length} customers`);
+            }
+        }
+
+        function renderCustomerCard(customer, index) {
+            // Calculate SEED and SELL totals
+            const seedThocks = customer.thocks.filter(t => {
                     const num = parseInt(t.thock_number);
                     return num >= 1 && num <= 1500;
                 });
@@ -722,7 +762,6 @@
                     </div>
                 </div>
             `;
-            }).join('');
         }
 
         function toggleThockList(phone) {
