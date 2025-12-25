@@ -102,19 +102,70 @@ body.dark-mode[class*="bg-[#"] {
     color: var(--text-primary) !important;
 }
 
-/* Accent buttons - dark gray in black/white mode */
+/* ALL colored buttons - dark gray in black/white mode */
+.dark-mode .bg-green-400,
 .dark-mode .bg-green-500,
 .dark-mode .bg-green-600,
+.dark-mode .bg-green-700,
+.dark-mode .bg-blue-400,
 .dark-mode .bg-blue-500,
 .dark-mode .bg-blue-600,
+.dark-mode .bg-blue-700,
+.dark-mode .bg-red-400,
 .dark-mode .bg-red-500,
 .dark-mode .bg-red-600,
+.dark-mode .bg-red-700,
+.dark-mode .bg-yellow-400,
 .dark-mode .bg-yellow-500,
+.dark-mode .bg-yellow-600,
+.dark-mode .bg-purple-400,
 .dark-mode .bg-purple-500,
 .dark-mode .bg-purple-600,
+.dark-mode .bg-purple-700,
+.dark-mode .bg-orange-400,
 .dark-mode .bg-orange-500,
-.dark-mode .bg-pink-500 {
+.dark-mode .bg-orange-600,
+.dark-mode .bg-pink-400,
+.dark-mode .bg-pink-500,
+.dark-mode .bg-pink-600,
+.dark-mode .bg-indigo-400,
+.dark-mode .bg-indigo-500,
+.dark-mode .bg-indigo-600,
+.dark-mode .bg-teal-400,
+.dark-mode .bg-teal-500,
+.dark-mode .bg-teal-600,
+.dark-mode .bg-cyan-400,
+.dark-mode .bg-cyan-500,
+.dark-mode .bg-cyan-600 {
     background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+/* Hover states for colored buttons */
+.dark-mode .bg-green-500:hover,
+.dark-mode .bg-blue-500:hover,
+.dark-mode .bg-red-500:hover,
+.dark-mode .bg-yellow-500:hover,
+.dark-mode .bg-purple-500:hover,
+.dark-mode .bg-orange-500:hover,
+.dark-mode .bg-pink-500:hover {
+    background-color: #3a3a3a !important;
+}
+
+/* All button elements */
+.dark-mode button[class*="bg-green"],
+.dark-mode button[class*="bg-blue"],
+.dark-mode button[class*="bg-red"],
+.dark-mode button[class*="bg-yellow"],
+.dark-mode button[class*="bg-purple"],
+.dark-mode button[class*="bg-orange"],
+.dark-mode button[class*="bg-pink"],
+.dark-mode button[class*="bg-indigo"],
+.dark-mode button[class*="bg-teal"],
+.dark-mode button[class*="bg-cyan"] {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+    border-color: #3a3a3a !important;
 }
 
 /* ===== Tables ===== */
