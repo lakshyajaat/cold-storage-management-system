@@ -419,6 +419,9 @@
                 return dateStr >= start && dateStr <= end;
             }
 
+            // Get entry IDs that have room entries (items actually stored)
+            const storedEntryIds = new Set(allRoomEntries.map(r => r.entry_id));
+
             // Aggregate Entries
             allEntries.forEach(entry => {
                 if (entry.created_at) {
@@ -426,7 +429,10 @@
                     if (isInRange(dateStr)) {
                         ensureDate(dateStr);
                         stats[dateStr].entries++;
-                        stats[dateStr].expectedQty += entry.expected_quantity || 0;
+                        // Only count expected qty if entry has room entries (stored in inventory)
+                        if (storedEntryIds.has(entry.id)) {
+                            stats[dateStr].expectedQty += entry.expected_quantity || 0;
+                        }
                     }
                 }
             });
