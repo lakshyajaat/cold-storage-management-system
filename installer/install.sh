@@ -363,6 +363,10 @@ if [ "$DISTRO" = "macos" ]; then
         <string>SecurePostgresPassword123</string>
         <key>DB_NAME</key>
         <string>cold_db</string>
+        <key>REDIS_SERVICE_HOST</key>
+        <string>192.168.15.210</string>
+        <key>REDIS_SERVICE_PORT</key>
+        <string>6379</string>
     </dict>
     <key>RunAtLoad</key>
     <true/>
@@ -453,6 +457,8 @@ Environment="DB_PORT=5432"
 Environment="DB_USER=cold_user"
 Environment="DB_PASSWORD=SecurePostgresPassword123"
 Environment="DB_NAME=cold_db"
+Environment="REDIS_SERVICE_HOST=192.168.15.210"
+Environment="REDIS_SERVICE_PORT=6379"
 
 [Install]
 WantedBy=multi-user.target
