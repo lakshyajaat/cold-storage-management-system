@@ -25,6 +25,7 @@ import (
 	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 	"cold-backend/internal/sms"
+	"cold-backend/installer"
 	"cold-backend/migrations"
 	"cold-backend/static"
 
@@ -236,132 +237,61 @@ func autoInstallPostgreSQL() {
 	log.Println("[AutoInstall] PostgreSQL ready, reconnecting...")
 }
 
-// runInstall sets up PostgreSQL and the database automatically
+// runInstall extracts and runs the embedded install.sh script
 func runInstall() {
-	log.Println("╔════════════════════════════════════════════════════════════╗")
-	log.Println("║     COLD STORAGE - AUTOMATIC SETUP                         ║")
-	log.Println("╚════════════════════════════════════════════════════════════╝")
-
 	// Check if running as root
 	if os.Geteuid() != 0 {
 		log.Fatal("Please run with sudo: sudo ./server --install")
 	}
 
-	// Step 1: Install PostgreSQL
-	log.Println("[1/4] Installing PostgreSQL...")
-	cmd := exec.Command("bash", "-c", `
-		if command -v psql &> /dev/null; then
-			echo "PostgreSQL already installed"
-		else
-			apt update -qq && apt install -y postgresql postgresql-contrib -qq
-			systemctl enable postgresql
-			systemctl start postgresql
-			echo "PostgreSQL installed"
-		fi
-	`)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Failed to install PostgreSQL: %v", err)
+	// Extract embedded install.sh to temp file
+	scriptData, err := installer.FS.ReadFile("install.sh")
+	if err != nil {
+		log.Fatalf("Failed to read embedded install script: %v", err)
 	}
 
-	// Step 2: Create database
-	log.Println("[2/4] Creating database...")
-	cmd = exec.Command("bash", "-c", `
-		if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw cold_db; then
-			echo "Database 'cold_db' already exists"
-		else
-			sudo -u postgres psql -c "CREATE DATABASE cold_db;"
-			echo "Database 'cold_db' created"
-		fi
-	`)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Failed to create database: %v", err)
-	}
-
-	// Step 3: Setup systemd service
-	log.Println("[3/4] Setting up systemd service...")
-
-	// Get current binary path
+	// Get current binary path to pass to script
 	execPath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("Failed to get executable path: %v", err)
 	}
 
-	// Copy to /opt
-	cmd = exec.Command("bash", "-c", fmt.Sprintf(`
-		mkdir -p /opt/cold-backend
-		cp "%s" /opt/cold-backend/server
-		chmod +x /opt/cold-backend/server
-	`, execPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
+	// Write script to temp location
+	tmpScript := "/tmp/cold_install.sh"
+	if err := os.WriteFile(tmpScript, scriptData, 0755); err != nil {
+		log.Fatalf("Failed to write install script: %v", err)
+	}
+	defer os.Remove(tmpScript)
 
-	// Create systemd service file
-	serviceContent := `[Unit]
-Description=Cold Storage Backend
-After=postgresql.service network.target
-Wants=postgresql.service
+	// Create a temp directory with the binary for the script to find
+	tmpDir := "/tmp/cold_install_tmp"
+	os.MkdirAll(tmpDir, 0755)
+	defer os.RemoveAll(tmpDir)
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/cold-backend
-ExecStart=/opt/cold-backend/server
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-`
-	if err := os.WriteFile("/etc/systemd/system/cold-backend.service", []byte(serviceContent), 0644); err != nil {
-		log.Printf("Warning: Failed to create service file: %v", err)
+	// Copy binary to temp dir so install.sh can find it
+	binData, err := os.ReadFile(execPath)
+	if err != nil {
+		log.Fatalf("Failed to read binary: %v", err)
+	}
+	if err := os.WriteFile(tmpDir+"/server", binData, 0755); err != nil {
+		log.Fatalf("Failed to copy binary: %v", err)
 	}
 
-	cmd = exec.Command("bash", "-c", "systemctl daemon-reload && systemctl enable cold-backend")
-	cmd.Run()
+	// Also copy install.sh to temp dir
+	if err := os.WriteFile(tmpDir+"/install.sh", scriptData, 0755); err != nil {
+		log.Fatalf("Failed to copy install script: %v", err)
+	}
 
-	// Step 4: Start the service
-	log.Println("[4/4] Starting server...")
-	cmd = exec.Command("systemctl", "start", "cold-backend")
-	cmd.Run()
+	// Run the install script from temp dir
+	cmd := exec.Command("bash", tmpDir+"/install.sh")
+	cmd.Dir = tmpDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
-	// Wait and check status
-	time.Sleep(10 * time.Second)
-
-	cmd = exec.Command("systemctl", "is-active", "cold-backend")
 	if err := cmd.Run(); err != nil {
-		log.Println("Server may have failed to start. Checking logs...")
-		cmd = exec.Command("journalctl", "-u", "cold-backend", "-n", "30", "--no-pager")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Run()
-		os.Exit(1)
+		log.Fatalf("Install script failed: %v", err)
 	}
-
-	log.Println("")
-	log.Println("╔════════════════════════════════════════════════════════════╗")
-	log.Println("║                 INSTALLATION COMPLETE!                     ║")
-	log.Println("╠════════════════════════════════════════════════════════════╣")
-	log.Println("║  Server running on :8080                                   ║")
-	log.Println("║                                                            ║")
-	log.Println("║  Commands:                                                 ║")
-	log.Println("║    View logs:  journalctl -u cold-backend -f               ║")
-	log.Println("║    Stop:       systemctl stop cold-backend                 ║")
-	log.Println("║    Restart:    systemctl restart cold-backend              ║")
-	log.Println("╚════════════════════════════════════════════════════════════╝")
-
-	// Show recent logs
-	log.Println("\nRecent logs:")
-	cmd = exec.Command("journalctl", "-u", "cold-backend", "-n", "20", "--no-pager")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
 
 	os.Exit(0)
 }
