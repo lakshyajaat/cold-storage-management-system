@@ -173,6 +173,14 @@ fi
 # SETUP SYSTEMD SERVICE
 # ============================================
 echo -e "${GREEN}[4/5]${NC} Setting up service..."
+
+# Stop existing service if running (to avoid "Text file busy" error)
+if systemctl is-active --quiet cold-backend 2>/dev/null; then
+    echo "  Stopping existing service..."
+    systemctl stop cold-backend
+    sleep 2
+fi
+
 # Copy binary to /opt
 mkdir -p /opt/cold-backend
 cp "$BINARY" /opt/cold-backend/server
