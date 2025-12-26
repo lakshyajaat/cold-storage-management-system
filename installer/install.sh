@@ -45,6 +45,12 @@ fi
 # DETECT PACKAGE MANAGER
 # ============================================
 detect_distro() {
+    # Check for macOS first
+    if [ "$(uname)" = "Darwin" ]; then
+        echo "macos"
+        return
+    fi
+
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         DISTRO=$ID
@@ -68,6 +74,23 @@ echo -e "${GREEN}Detected distro:${NC} $DISTRO"
 # ============================================
 install_postgresql() {
     case $DISTRO in
+        macos)
+            echo -e "${GREEN}[1/5]${NC} Checking Homebrew..."
+            if ! command -v brew &> /dev/null; then
+                echo -e "${RED}Homebrew not found. Install it first:${NC}"
+                echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+                exit 1
+            fi
+            echo -e "${GREEN}[2/5]${NC} Installing PostgreSQL..."
+            if command -v psql &> /dev/null; then
+                echo "  PostgreSQL already installed"
+                brew services start postgresql@16 2>/dev/null || brew services start postgresql 2>/dev/null || true
+            else
+                brew install postgresql@16
+                brew services start postgresql@16
+                echo "  PostgreSQL installed and started"
+            fi
+            ;;
         ubuntu|debian|linuxmint|pop)
             echo -e "${GREEN}[1/5]${NC} Updating system (apt)..."
             apt update -qq
@@ -163,29 +186,57 @@ done
 # ============================================
 echo -e "${GREEN}[3/5]${NC} Configuring database..."
 
-# Set password for postgres user
-echo "  Setting postgres password..."
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'SecurePostgresPassword123';" > /dev/null 2>&1
+# macOS uses different commands (no sudo -u postgres needed)
+if [ "$DISTRO" = "macos" ]; then
+    # Set password for current user (default superuser on macOS)
+    echo "  Setting postgres password..."
+    psql -d postgres -c "ALTER USER $(whoami) PASSWORD 'SecurePostgresPassword123';" > /dev/null 2>&1 || true
 
-# Create cold_user (used in migrations for GRANT statements)
-echo "  Creating cold_user..."
-sudo -u postgres psql -c "CREATE USER cold_user WITH PASSWORD 'SecurePostgresPassword123';" 2>/dev/null || \
-    sudo -u postgres psql -c "ALTER USER cold_user PASSWORD 'SecurePostgresPassword123';" 2>/dev/null
+    # Create cold_user
+    echo "  Creating cold_user..."
+    psql -d postgres -c "CREATE USER cold_user WITH PASSWORD 'SecurePostgresPassword123';" 2>/dev/null || \
+        psql -d postgres -c "ALTER USER cold_user PASSWORD 'SecurePostgresPassword123';" 2>/dev/null
 
-# Create database if not exists
-if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw cold_db; then
-    echo "  Database 'cold_db' already exists"
+    # Create database if not exists
+    if psql -lqt | cut -d \| -f 1 | grep -qw cold_db; then
+        echo "  Database 'cold_db' already exists"
+    else
+        psql -d postgres -c "CREATE DATABASE cold_db;" > /dev/null
+        echo "  Database 'cold_db' created"
+    fi
+
+    # Grant cold_user access to cold_db
+    psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE cold_db TO cold_user;" > /dev/null 2>&1
+
+    # Configure pg_hba.conf for password authentication
+    echo "  Configuring authentication..."
+    PG_HBA=$(psql -d postgres -t -c "SHOW hba_file;" 2>/dev/null | xargs)
 else
-    sudo -u postgres psql -c "CREATE DATABASE cold_db OWNER postgres;" > /dev/null
-    echo "  Database 'cold_db' created"
+    # Linux: use sudo -u postgres
+    # Set password for postgres user
+    echo "  Setting postgres password..."
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'SecurePostgresPassword123';" > /dev/null 2>&1
+
+    # Create cold_user (used in migrations for GRANT statements)
+    echo "  Creating cold_user..."
+    sudo -u postgres psql -c "CREATE USER cold_user WITH PASSWORD 'SecurePostgresPassword123';" 2>/dev/null || \
+        sudo -u postgres psql -c "ALTER USER cold_user PASSWORD 'SecurePostgresPassword123';" 2>/dev/null
+
+    # Create database if not exists
+    if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw cold_db; then
+        echo "  Database 'cold_db' already exists"
+    else
+        sudo -u postgres psql -c "CREATE DATABASE cold_db OWNER postgres;" > /dev/null
+        echo "  Database 'cold_db' created"
+    fi
+
+    # Grant cold_user access to cold_db
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cold_db TO cold_user;" > /dev/null 2>&1
+
+    # Configure pg_hba.conf for password authentication
+    echo "  Configuring authentication..."
+    PG_HBA=$(sudo -u postgres psql -t -c "SHOW hba_file;" 2>/dev/null | xargs)
 fi
-
-# Grant cold_user access to cold_db
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cold_db TO cold_user;" > /dev/null 2>&1
-
-# Configure pg_hba.conf for password authentication
-echo "  Configuring authentication..."
-PG_HBA=$(sudo -u postgres psql -t -c "SHOW hba_file;" 2>/dev/null | xargs)
 if [ -f "$PG_HBA" ]; then
     # Check if already configured
     if ! grep -q "host.*cold_db.*127.0.0.1" "$PG_HBA" 2>/dev/null; then
@@ -195,16 +246,19 @@ if [ -f "$PG_HBA" ]; then
         # Add password auth entries at the beginning of the file (before other host entries)
         {
             echo "# Cold Storage authentication (added by installer)"
-            echo "host    cold_db         postgres        127.0.0.1/32            scram-sha-256"
-            echo "host    cold_db         postgres        ::1/128                 scram-sha-256"
-            echo "host    cold_db         cold_user       127.0.0.1/32            scram-sha-256"
-            echo "host    cold_db         cold_user       ::1/128                 scram-sha-256"
-            echo "host    cold_db         postgres        0.0.0.0/0               scram-sha-256"
-            echo "host    cold_db         cold_user       0.0.0.0/0               scram-sha-256"
+            echo "host    cold_db         all             127.0.0.1/32            scram-sha-256"
+            echo "host    cold_db         all             ::1/128                 scram-sha-256"
+            echo "host    cold_db         all             0.0.0.0/0               scram-sha-256"
             cat "$PG_HBA"
         } > "${PG_HBA}.new"
         mv "${PG_HBA}.new" "$PG_HBA"
-        chown postgres:postgres "$PG_HBA"
+
+        # Set ownership (different on macOS vs Linux)
+        if [ "$DISTRO" = "macos" ]; then
+            chown $(whoami) "$PG_HBA" 2>/dev/null || true
+        else
+            chown postgres:postgres "$PG_HBA"
+        fi
 
         echo "  Password authentication configured"
     else
@@ -212,62 +266,172 @@ if [ -f "$PG_HBA" ]; then
     fi
 
     # Enable listening on all interfaces (for remote DR access)
-    PG_CONF=$(sudo -u postgres psql -t -c "SHOW config_file;" 2>/dev/null | xargs)
+    if [ "$DISTRO" = "macos" ]; then
+        PG_CONF=$(psql -d postgres -t -c "SHOW config_file;" 2>/dev/null | xargs)
+    else
+        PG_CONF=$(sudo -u postgres psql -t -c "SHOW config_file;" 2>/dev/null | xargs)
+    fi
+
     if [ -f "$PG_CONF" ]; then
         if ! grep -q "^listen_addresses.*=.*'\*'" "$PG_CONF" 2>/dev/null; then
-            # Update listen_addresses
-            if grep -q "^#*listen_addresses" "$PG_CONF"; then
-                sed -i "s/^#*listen_addresses.*/listen_addresses = '*'/" "$PG_CONF"
+            # Update listen_addresses (use gsed on macOS if available, otherwise sed)
+            if [ "$DISTRO" = "macos" ]; then
+                if command -v gsed &> /dev/null; then
+                    gsed -i "s/^#*listen_addresses.*/listen_addresses = '*'/" "$PG_CONF"
+                else
+                    sed -i '' "s/^#*listen_addresses.*/listen_addresses = '*'/" "$PG_CONF" 2>/dev/null || \
+                        echo "listen_addresses = '*'" >> "$PG_CONF"
+                fi
             else
-                echo "listen_addresses = '*'" >> "$PG_CONF"
+                if grep -q "^#*listen_addresses" "$PG_CONF"; then
+                    sed -i "s/^#*listen_addresses.*/listen_addresses = '*'/" "$PG_CONF"
+                else
+                    echo "listen_addresses = '*'" >> "$PG_CONF"
+                fi
             fi
             echo "  Configured to listen on all interfaces"
         fi
     fi
 
     # Reload PostgreSQL to apply changes
-    systemctl reload postgresql 2>/dev/null || systemctl restart postgresql
+    if [ "$DISTRO" = "macos" ]; then
+        brew services restart postgresql@16 2>/dev/null || brew services restart postgresql 2>/dev/null || true
+    else
+        systemctl reload postgresql 2>/dev/null || systemctl restart postgresql
+    fi
 fi
 
 echo "  Database configuration complete"
 
 # ============================================
-# SETUP SYSTEMD SERVICE
+# SETUP SERVICE
 # ============================================
 echo -e "${GREEN}[4/5]${NC} Setting up service..."
 
-# Stop existing service if running (to avoid "Text file busy" error)
-if systemctl is-active --quiet cold-backend 2>/dev/null; then
-    echo "  Stopping existing service..."
-    systemctl stop cold-backend
-    sleep 2
+if [ "$DISTRO" = "macos" ]; then
+    # macOS: Use launchd
+    INSTALL_DIR="/usr/local/cold-backend"
+
+    # Stop existing service if running
+    launchctl unload /Library/LaunchDaemons/com.cold.backend.plist 2>/dev/null || true
+    pkill -f "cold-backend/server" 2>/dev/null || true
+    sleep 1
+
+    # Copy binary
+    mkdir -p "$INSTALL_DIR"
+    cp "$BINARY" "$INSTALL_DIR/server"
+    chmod +x "$INSTALL_DIR/server"
+else
+    # Linux: Use systemd
+    # Stop existing service if running (to avoid "Text file busy" error)
+    if systemctl is-active --quiet cold-backend 2>/dev/null; then
+        echo "  Stopping existing service..."
+        systemctl stop cold-backend
+        sleep 2
+    fi
+
+    # Copy binary to /opt
+    mkdir -p /opt/cold-backend
+    cp "$BINARY" /opt/cold-backend/server
+    chmod +x /opt/cold-backend/server
 fi
 
-# Copy binary to /opt
-mkdir -p /opt/cold-backend
-cp "$BINARY" /opt/cold-backend/server
-chmod +x /opt/cold-backend/server
+if [ "$DISTRO" = "macos" ]; then
+    # macOS: Create launchd plist
+    cat > /Library/LaunchDaemons/com.cold.backend.plist << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cold.backend</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/cold-backend/server</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/cold-backend</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DB_HOST</key>
+        <string>localhost</string>
+        <key>DB_PORT</key>
+        <string>5432</string>
+        <key>DB_USER</key>
+        <string>cold_user</string>
+        <key>DB_PASSWORD</key>
+        <string>SecurePostgresPassword123</string>
+        <key>DB_NAME</key>
+        <string>cold_db</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/usr/local/cold-backend/server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/usr/local/cold-backend/server.log</string>
+</dict>
+</plist>
+EOF
 
-# Copy templates if they exist
-if [ -d "$SCRIPT_DIR/templates" ]; then
-    cp -r "$SCRIPT_DIR/templates" /opt/cold-backend/
-    echo "  Templates copied"
-fi
+    # ============================================
+    # START SERVER (macOS)
+    # ============================================
+    echo -e "${GREEN}[5/5]${NC} Starting server..."
+    launchctl load /Library/LaunchDaemons/com.cold.backend.plist
 
-# Copy static files if they exist
-if [ -d "$SCRIPT_DIR/static" ]; then
-    cp -r "$SCRIPT_DIR/static" /opt/cold-backend/
-    echo "  Static files copied"
-fi
+    # Wait for server to start
+    sleep 5
 
-# Copy migrations if they exist
-if [ -d "$SCRIPT_DIR/migrations" ]; then
-    cp -r "$SCRIPT_DIR/migrations" /opt/cold-backend/
-    echo "  Migrations copied"
-fi
+    # Check if running
+    if pgrep -f "cold-backend/server" > /dev/null; then
+        IP_ADDR=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1)
+        echo ""
+        echo "╔════════════════════════════════════════════════════════════╗"
+        echo "║                    INSTALLATION COMPLETE                    ║"
+        echo "╠════════════════════════════════════════════════════════════╣"
+        echo "║                                                            ║"
+        echo "║  Server running on: http://${IP_ADDR:-localhost}:8080"
+        echo "║                                                            ║"
+        echo "║  Commands:                                                 ║"
+        echo "║    View logs:    tail -f /usr/local/cold-backend/server.log"
+        echo "║    Stop:         sudo launchctl unload /Library/LaunchDaemons/com.cold.backend.plist"
+        echo "║    Start:        sudo launchctl load /Library/LaunchDaemons/com.cold.backend.plist"
+        echo "║                                                            ║"
+        echo "╚════════════════════════════════════════════════════════════╝"
+        echo ""
 
-# Create systemd service
-cat > /etc/systemd/system/cold-backend.service << 'EOF'
+        # Show recent logs
+        echo "Recent logs:"
+        tail -20 /usr/local/cold-backend/server.log 2>/dev/null || echo "  (waiting for logs...)"
+    else
+        echo -e "${RED}Server failed to start. Check logs:${NC}"
+        tail -50 /usr/local/cold-backend/server.log 2>/dev/null
+        exit 1
+    fi
+else
+    # Linux: Copy templates if they exist
+    if [ -d "$SCRIPT_DIR/templates" ]; then
+        cp -r "$SCRIPT_DIR/templates" /opt/cold-backend/
+        echo "  Templates copied"
+    fi
+
+    # Copy static files if they exist
+    if [ -d "$SCRIPT_DIR/static" ]; then
+        cp -r "$SCRIPT_DIR/static" /opt/cold-backend/
+        echo "  Static files copied"
+    fi
+
+    # Copy migrations if they exist
+    if [ -d "$SCRIPT_DIR/migrations" ]; then
+        cp -r "$SCRIPT_DIR/migrations" /opt/cold-backend/
+        echo "  Migrations copied"
+    fi
+
+    # Create systemd service
+    cat > /etc/systemd/system/cold-backend.service << 'EOF'
 [Unit]
 Description=Cold Storage Backend
 After=postgresql.service network.target
@@ -294,42 +458,43 @@ Environment="DB_NAME=cold_db"
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable cold-backend
+    systemctl daemon-reload
+    systemctl enable cold-backend
 
-# ============================================
-# START SERVER
-# ============================================
-echo -e "${GREEN}[5/5]${NC} Starting server..."
-systemctl start cold-backend
+    # ============================================
+    # START SERVER (Linux)
+    # ============================================
+    echo -e "${GREEN}[5/5]${NC} Starting server..."
+    systemctl start cold-backend
 
-# Wait for server to start
-sleep 10
+    # Wait for server to start
+    sleep 10
 
-# Check if running
-if systemctl is-active --quiet cold-backend; then
-    IP_ADDR=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -1 2>/dev/null || echo "localhost")
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║                    INSTALLATION COMPLETE                    ║"
-    echo "╠════════════════════════════════════════════════════════════╣"
-    echo "║                                                            ║"
-    echo "║  Server running on: http://$IP_ADDR:8080"
-    echo "║                                                            ║"
-    echo "║  Commands:                                                 ║"
-    echo "║    View logs:    journalctl -u cold-backend -f            ║"
-    echo "║    Stop:         systemctl stop cold-backend              ║"
-    echo "║    Start:        systemctl start cold-backend             ║"
-    echo "║    Status:       systemctl status cold-backend            ║"
-    echo "║                                                            ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
-    echo ""
+    # Check if running
+    if systemctl is-active --quiet cold-backend; then
+        IP_ADDR=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -1 2>/dev/null || echo "localhost")
+        echo ""
+        echo "╔════════════════════════════════════════════════════════════╗"
+        echo "║                    INSTALLATION COMPLETE                    ║"
+        echo "╠════════════════════════════════════════════════════════════╣"
+        echo "║                                                            ║"
+        echo "║  Server running on: http://$IP_ADDR:8080"
+        echo "║                                                            ║"
+        echo "║  Commands:                                                 ║"
+        echo "║    View logs:    journalctl -u cold-backend -f            ║"
+        echo "║    Stop:         systemctl stop cold-backend              ║"
+        echo "║    Start:        systemctl start cold-backend             ║"
+        echo "║    Status:       systemctl status cold-backend            ║"
+        echo "║                                                            ║"
+        echo "╚════════════════════════════════════════════════════════════╝"
+        echo ""
 
-    # Show recent logs
-    echo "Recent logs:"
-    journalctl -u cold-backend -n 20 --no-pager
-else
-    echo -e "${RED}Server failed to start. Check logs:${NC}"
-    journalctl -u cold-backend -n 50 --no-pager
-    exit 1
+        # Show recent logs
+        echo "Recent logs:"
+        journalctl -u cold-backend -n 20 --no-pager
+    else
+        echo -e "${RED}Server failed to start. Check logs:${NC}"
+        journalctl -u cold-backend -n 50 --no-pager
+        exit 1
+    fi
 fi
