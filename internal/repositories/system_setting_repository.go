@@ -81,3 +81,16 @@ func (r *SystemSettingRepository) Update(ctx context.Context, key string, value 
 	_, err := r.DB.Exec(ctx, query, value, userID, key)
 	return err
 }
+
+// Upsert creates a new setting or updates an existing one
+func (r *SystemSettingRepository) Upsert(ctx context.Context, key string, value string, description string, userID int) error {
+	query := `
+		INSERT INTO system_settings (setting_key, setting_value, description, updated_at, updated_by_user_id)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+		ON CONFLICT (setting_key)
+		DO UPDATE SET setting_value = $2, description = $3, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $4
+	`
+
+	_, err := r.DB.Exec(ctx, query, key, value, description, userID)
+	return err
+}

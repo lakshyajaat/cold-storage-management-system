@@ -8,6 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// SkipRange represents a range of thock numbers to skip
+type SkipRange struct {
+	From int
+	To   int
+}
+
 type EntryRepository struct {
 	DB *pgxpool.Pool
 }
@@ -17,10 +23,12 @@ func NewEntryRepository(db *pgxpool.Pool) *EntryRepository {
 }
 
 func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
-	// Use atomic INSERT with COUNT in a single query to prevent race conditions
-	// This ensures counters auto-reset when entries are deleted (season reset)
-	// The CTE (Common Table Expression) makes the count and insert atomic
+	// Delegate to CreateWithSkipRanges with no skip ranges
+	return r.CreateWithSkipRanges(ctx, e, nil)
+}
 
+// CreateWithSkipRanges creates an entry with thock number that skips specified ranges
+func (r *EntryRepository) CreateWithSkipRanges(ctx context.Context, e *models.Entry, skipRanges []SkipRange) error {
 	if e.ThockCategory != "seed" && e.ThockCategory != "sell" {
 		return fmt.Errorf("invalid thock category: %s", e.ThockCategory)
 	}
@@ -33,39 +41,100 @@ func (r *EntryRepository) Create(ctx context.Context, e *models.Entry) error {
 		baseOffset = 1501 // SELL starts at 1501
 	}
 
-	// Atomic query: COUNT and INSERT happen together in a single transaction
-	// This prevents race conditions where two requests get the same count
-	// Note: Parameters cast explicitly to avoid type inference issues
+	// If no skip ranges, use the original simple query
+	if len(skipRanges) == 0 {
+		query := `
+			WITH next_num AS (
+				SELECT COALESCE(COUNT(*), 0) + $1 as num
+				FROM entries
+				WHERE thock_category = $2
+			)
+			INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, remark, created_by_user_id)
+			SELECT $3, $4, $5, $6, $7, $8::integer, $9::text,
+				CASE WHEN $9::text = 'seed'
+					THEN LPAD(num::text, 4, '0') || '/' || $8::text
+					ELSE num::text || '/' || $8::text
+				END,
+				$10,
+				$11
+			FROM next_num
+			RETURNING id, thock_number, created_at, updated_at
+		`
+
+		return r.DB.QueryRow(ctx, query,
+			baseOffset,           // $1
+			e.ThockCategory,      // $2
+			e.CustomerID,         // $3
+			e.Phone,              // $4
+			e.Name,               // $5
+			e.Village,            // $6
+			e.SO,                 // $7
+			e.ExpectedQuantity,   // $8
+			e.ThockCategory,      // $9
+			e.Remark,             // $10
+			e.CreatedByUserID,    // $11
+		).Scan(&e.ID, &e.ThockNumber, &e.CreatedAt, &e.UpdatedAt)
+	}
+
+	// With skip ranges, we need to calculate the next number in Go
+	// First get the count
+	var count int
+	err := r.DB.QueryRow(ctx, "SELECT COUNT(*) FROM entries WHERE thock_category = $1", e.ThockCategory).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to get entry count: %w", err)
+	}
+
+	// Calculate base next number
+	nextNum := count + baseOffset
+
+	// Apply skip ranges - keep incrementing if in a skip range
+	// Also count how many skipped numbers we've passed
+	for {
+		inSkipRange := false
+		for _, sr := range skipRanges {
+			if nextNum >= sr.From && nextNum <= sr.To {
+				// Count how many numbers in this range we're skipping
+				skipCount := sr.To - nextNum + 1
+				nextNum = sr.To + 1
+				// We need to account for these skipped numbers by not counting them
+				// Actually, we need to add them since they're "phantom" entries
+				count += skipCount
+				nextNum = count + baseOffset
+				inSkipRange = true
+				break
+			}
+		}
+		if !inSkipRange {
+			break
+		}
+	}
+
+	// Format the thock number
+	var thockNumber string
+	if e.ThockCategory == "seed" {
+		thockNumber = fmt.Sprintf("%04d/%d", nextNum, e.ExpectedQuantity)
+	} else {
+		thockNumber = fmt.Sprintf("%d/%d", nextNum, e.ExpectedQuantity)
+	}
+
+	// Insert with the calculated thock number
 	query := `
-		WITH next_num AS (
-			SELECT COALESCE(COUNT(*), 0) + $1 as num
-			FROM entries
-			WHERE thock_category = $2
-		)
 		INSERT INTO entries(customer_id, phone, name, village, so, expected_quantity, thock_category, thock_number, remark, created_by_user_id)
-		SELECT $3, $4, $5, $6, $7, $8::integer, $9::text,
-			CASE WHEN $9::text = 'seed'
-				THEN LPAD(num::text, 4, '0') || '/' || $8::text
-				ELSE num::text || '/' || $8::text
-			END,
-			$10,
-			$11
-		FROM next_num
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, thock_number, created_at, updated_at
 	`
 
 	return r.DB.QueryRow(ctx, query,
-		baseOffset,           // $1
-		e.ThockCategory,      // $2
-		e.CustomerID,         // $3
-		e.Phone,              // $4
-		e.Name,               // $5
-		e.Village,            // $6
-		e.SO,                 // $7
-		e.ExpectedQuantity,   // $8
-		e.ThockCategory,      // $9
-		e.Remark,             // $10
-		e.CreatedByUserID,    // $11
+		e.CustomerID,         // $1
+		e.Phone,              // $2
+		e.Name,               // $3
+		e.Village,            // $4
+		e.SO,                 // $5
+		e.ExpectedQuantity,   // $6
+		e.ThockCategory,      // $7
+		thockNumber,          // $8
+		e.Remark,             // $9
+		e.CreatedByUserID,    // $10
 	).Scan(&e.ID, &e.ThockNumber, &e.CreatedAt, &e.UpdatedAt)
 }
 

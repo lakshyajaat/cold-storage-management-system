@@ -93,6 +93,79 @@ func (h *SystemSettingHandler) UpdateSetting(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(map[string]string{"message": "Setting updated successfully"})
 }
 
+// SkipRange represents a range of thock numbers to skip
+type SkipRange struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+// SkipRangesRequest represents the request body for skip ranges
+type SkipRangesRequest struct {
+	SeedRanges []SkipRange `json:"seed_ranges"`
+	SellRanges []SkipRange `json:"sell_ranges"`
+}
+
+// GetSkipThockRanges returns the skip ranges for both categories
+func (h *SystemSettingHandler) GetSkipThockRanges(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get seed ranges
+	seedSetting, _ := h.Service.GetSetting(ctx, "skip_thock_ranges_seed")
+	sellSetting, _ := h.Service.GetSetting(ctx, "skip_thock_ranges_sell")
+
+	var seedRanges, sellRanges []SkipRange
+
+	if seedSetting != nil && seedSetting.SettingValue != "" {
+		json.Unmarshal([]byte(seedSetting.SettingValue), &seedRanges)
+	}
+	if sellSetting != nil && sellSetting.SettingValue != "" {
+		json.Unmarshal([]byte(sellSetting.SettingValue), &sellRanges)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"seed_ranges": seedRanges,
+		"sell_ranges": sellRanges,
+	})
+}
+
+// UpdateSkipThockRanges updates the skip ranges for both categories
+func (h *SystemSettingHandler) UpdateSkipThockRanges(w http.ResponseWriter, r *http.Request) {
+	var req SkipRangesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Save seed ranges
+	seedData, _ := json.Marshal(req.SeedRanges)
+	if err := h.Service.UpsertSetting(ctx, "skip_thock_ranges_seed", string(seedData), "Thock number ranges to skip for SEED category", userID); err != nil {
+		http.Error(w, "Failed to save seed ranges: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Save sell ranges
+	sellData, _ := json.Marshal(req.SellRanges)
+	if err := h.Service.UpsertSetting(ctx, "skip_thock_ranges_sell", string(sellData), "Thock number ranges to skip for SELL category", userID); err != nil {
+		http.Error(w, "Failed to save sell ranges: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate settings cache
+	cache.InvalidateSettingCaches(ctx)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Skip ranges updated successfully"})
+}
+
 // GetOperationMode returns the current system operation mode
 func (h *SystemSettingHandler) GetOperationMode(w http.ResponseWriter, r *http.Request) {
 	// Try to get from database, fallback to default

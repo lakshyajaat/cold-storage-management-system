@@ -16,8 +16,9 @@ import (
 )
 
 type EntryHandler struct {
-	Service     *services.EntryService
-	EditLogRepo *repositories.EntryEditLogRepository
+	Service        *services.EntryService
+	EditLogRepo    *repositories.EntryEditLogRepository
+	SettingService *services.SystemSettingService
 }
 
 func NewEntryHandler(s *services.EntryService, editLogRepo *repositories.EntryEditLogRepository) *EntryHandler {
@@ -25,6 +26,11 @@ func NewEntryHandler(s *services.EntryService, editLogRepo *repositories.EntryEd
 		Service:     s,
 		EditLogRepo: editLogRepo,
 	}
+}
+
+// SetSettingService sets the SystemSettingService for skip range calculation
+func (h *EntryHandler) SetSettingService(ss *services.SystemSettingService) {
+	h.SettingService = ss
 }
 
 func (h *EntryHandler) CreateEntry(w http.ResponseWriter, r *http.Request) {
@@ -225,4 +231,86 @@ func (h *EntryHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entry)
+}
+
+// SkipRange for JSON parsing
+type SkipRangeEntry struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+// GetNextThockPreview returns the next thock numbers for both categories considering skip ranges
+func (h *EntryHandler) GetNextThockPreview(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get current counts
+	seedCount, _ := h.Service.GetCountByCategory(ctx, "seed")
+	sellCount, _ := h.Service.GetCountByCategory(ctx, "sell")
+
+	// Calculate base next numbers
+	nextSeed := seedCount + 1
+	nextSell := 1501 + sellCount
+
+	// Get skip ranges from settings if SettingService is available
+	if h.SettingService != nil {
+		// Get seed skip ranges
+		seedSetting, _ := h.SettingService.GetSetting(ctx, "skip_thock_ranges_seed")
+		if seedSetting != nil && seedSetting.SettingValue != "" {
+			var seedRanges []SkipRangeEntry
+			if json.Unmarshal([]byte(seedSetting.SettingValue), &seedRanges) == nil {
+				nextSeed = calculateNextWithSkips(nextSeed, seedRanges)
+			}
+		}
+
+		// Get sell skip ranges
+		sellSetting, _ := h.SettingService.GetSetting(ctx, "skip_thock_ranges_sell")
+		if sellSetting != nil && sellSetting.SettingValue != "" {
+			var sellRanges []SkipRangeEntry
+			if json.Unmarshal([]byte(sellSetting.SettingValue), &sellRanges) == nil {
+				nextSell = calculateNextWithSkips(nextSell, sellRanges)
+			}
+		}
+	}
+
+	// Format the thock numbers
+	nextSeedStr := padThockNumber(nextSeed, "seed")
+	nextSellStr := strconv.Itoa(nextSell)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"next_seed":     nextSeedStr,
+		"next_sell":     nextSellStr,
+		"next_seed_num": nextSeed,
+		"next_sell_num": nextSell,
+		"seed_count":    seedCount,
+		"sell_count":    sellCount,
+	})
+}
+
+// calculateNextWithSkips finds the next valid number by skipping ranges
+func calculateNextWithSkips(num int, ranges []SkipRangeEntry) int {
+	// Keep incrementing if the number falls within any skip range
+	for {
+		inSkipRange := false
+		for _, r := range ranges {
+			if num >= r.From && num <= r.To {
+				// Jump to after this range
+				num = r.To + 1
+				inSkipRange = true
+				break
+			}
+		}
+		if !inSkipRange {
+			break
+		}
+	}
+	return num
+}
+
+// padThockNumber formats the thock number based on category
+func padThockNumber(num int, category string) string {
+	if category == "seed" {
+		return strconv.Itoa(num) // Will be padded to 4 digits when combined with quantity
+	}
+	return strconv.Itoa(num)
 }

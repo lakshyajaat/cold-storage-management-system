@@ -466,6 +466,7 @@ func main() {
 		userService := services.NewUserService(userRepo, jwtManager)
 		customerService := services.NewCustomerService(customerRepo)
 		entryService := services.NewEntryService(entryRepo, customerRepo, entryEventRepo)
+		entryService.SetSettingRepo(systemSettingRepo) // Wire SettingRepo for skip thock ranges
 		roomEntryService := services.NewRoomEntryService(roomEntryRepo, entryRepo, entryEventRepo)
 		systemSettingService := services.NewSystemSettingService(systemSettingRepo)
 		rentPaymentService := services.NewRentPaymentService(rentPaymentRepo)
@@ -480,6 +481,7 @@ func main() {
 		roomEntryHandler := handlers.NewRoomEntryHandler(roomEntryService, roomEntryEditLogRepo)
 		entryEventHandler := handlers.NewEntryEventHandler(entryEventRepo)
 		systemSettingHandler := handlers.NewSystemSettingHandler(systemSettingService)
+		entryHandler.SetSettingService(systemSettingService) // Wire SettingService for skip thock ranges
 		rentPaymentHandler := handlers.NewRentPaymentHandler(rentPaymentService)
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		loginLogHandler := handlers.NewLoginLogHandler(loginLogRepo)

@@ -125,6 +125,8 @@ func NewRouter(
 	settingsAPI.Use(authMiddleware.Authenticate)
 	settingsAPI.HandleFunc("", systemSettingHandler.ListSettings).Methods("GET")
 	settingsAPI.HandleFunc("/operation_mode", systemSettingHandler.GetOperationMode).Methods("GET")
+	settingsAPI.HandleFunc("/skip_thock_ranges", systemSettingHandler.GetSkipThockRanges).Methods("GET")
+	settingsAPI.HandleFunc("/skip_thock_ranges", authMiddleware.RequireAdmin(http.HandlerFunc(systemSettingHandler.UpdateSkipThockRanges)).ServeHTTP).Methods("PUT")
 	settingsAPI.HandleFunc("/{key}", systemSettingHandler.GetSetting).Methods("GET")
 	settingsAPI.HandleFunc("/{key}", authMiddleware.RequireAdmin(http.HandlerFunc(systemSettingHandler.UpdateSetting)).ServeHTTP).Methods("PUT")
 
@@ -158,6 +160,7 @@ func NewRouter(
 	).ServeHTTP).Methods("POST")
 	entriesAPI.HandleFunc("/count", entryHandler.GetCountByCategory).Methods("GET")
 	entriesAPI.HandleFunc("/unassigned", roomEntryHandler.GetUnassignedEntries).Methods("GET")
+	entriesAPI.HandleFunc("/next-thock-preview", entryHandler.GetNextThockPreview).Methods("GET")
 	entriesAPI.HandleFunc("/{id}", entryHandler.GetEntry).Methods("GET")
 	entriesAPI.HandleFunc("/{id}", entryHandler.UpdateEntry).Methods("PUT")
 	entriesAPI.HandleFunc("/customer/{customer_id}", entryHandler.ListEntriesByCustomer).Methods("GET")

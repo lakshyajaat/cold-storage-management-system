@@ -2,16 +2,24 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
 )
 
+// SkipRange represents a range of thock numbers to skip
+type SkipRange struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
 type EntryService struct {
 	EntryRepo      *repositories.EntryRepository
 	CustomerRepo   *repositories.CustomerRepository
 	EntryEventRepo *repositories.EntryEventRepository
+	SettingRepo    *repositories.SystemSettingRepository
 }
 
 func NewEntryService(entryRepo *repositories.EntryRepository, customerRepo *repositories.CustomerRepository, entryEventRepo *repositories.EntryEventRepository) *EntryService {
@@ -20,6 +28,30 @@ func NewEntryService(entryRepo *repositories.EntryRepository, customerRepo *repo
 		CustomerRepo:   customerRepo,
 		EntryEventRepo: entryEventRepo,
 	}
+}
+
+// SetSettingRepo sets the SystemSettingRepository for skip range calculation
+func (s *EntryService) SetSettingRepo(repo *repositories.SystemSettingRepository) {
+	s.SettingRepo = repo
+}
+
+// getSkipRanges retrieves skip ranges from settings for a given category
+func (s *EntryService) getSkipRanges(ctx context.Context, category string) []SkipRange {
+	if s.SettingRepo == nil {
+		return nil
+	}
+
+	key := "skip_thock_ranges_" + category
+	setting, err := s.SettingRepo.Get(ctx, key)
+	if err != nil || setting == nil || setting.SettingValue == "" {
+		return nil
+	}
+
+	var ranges []SkipRange
+	if err := json.Unmarshal([]byte(setting.SettingValue), &ranges); err != nil {
+		return nil
+	}
+	return ranges
 }
 
 func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryRequest, userID int) (*models.Entry, error) {
@@ -76,6 +108,9 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 		}
 	}
 
+	// Get skip ranges for the category
+	skipRanges := s.getSkipRanges(ctx, req.ThockCategory)
+
 	// Create entry with denormalized customer data for historical record
 	entry := &models.Entry{
 		CustomerID:       customer.ID,
@@ -89,7 +124,13 @@ func (s *EntryService) CreateEntry(ctx context.Context, req *models.CreateEntryR
 		CreatedByUserID:  userID,
 	}
 
-	if err := s.EntryRepo.Create(ctx, entry); err != nil {
+	// Convert SkipRange to repositories.SkipRange
+	var repoSkipRanges []repositories.SkipRange
+	for _, r := range skipRanges {
+		repoSkipRanges = append(repoSkipRanges, repositories.SkipRange{From: r.From, To: r.To})
+	}
+
+	if err := s.EntryRepo.CreateWithSkipRanges(ctx, entry, repoSkipRanges); err != nil {
 		return nil, err
 	}
 

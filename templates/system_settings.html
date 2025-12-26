@@ -277,6 +277,96 @@
             </div>
         </div>
 
+        <!-- Skip Thock Numbers Section -->
+        <div class="neu-border bg-white p-8 mt-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-skip-forward-fill text-indigo-600"></i>
+                Skip Thock Numbers
+            </h2>
+
+            <div class="mb-6 p-4 bg-indigo-50 neu-border">
+                <p class="text-sm text-indigo-800">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> Add range of thock numbers to skip during entry creation.
+                    Numbers in these ranges will never be assigned to new entries.
+                </p>
+            </div>
+
+            <!-- Seed Category Skips -->
+            <div class="mb-6">
+                <h3 class="font-bold mb-3 flex items-center gap-2">
+                    <span class="px-2 py-1 bg-green-500 text-white text-xs rounded">SEED</span>
+                    Skip Ranges (1-1500)
+                </h3>
+                <div class="flex flex-wrap gap-2 mb-3" id="seedSkipsList">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="flex gap-2 items-center">
+                    <span class="text-gray-600 font-medium">From:</span>
+                    <input type="number" id="seedSkipFrom" min="1" max="1500"
+                           class="neu-input w-24" placeholder="1">
+                    <span class="text-gray-600 font-medium">To:</span>
+                    <input type="number" id="seedSkipTo" min="1" max="1500"
+                           class="neu-input w-24" placeholder="10">
+                    <button onclick="addSkipRange('seed')" class="neu-button bg-green-500 text-white">
+                        <i class="bi bi-plus-circle"></i> Add Range
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sell Category Skips -->
+            <div class="mb-6">
+                <h3 class="font-bold mb-3 flex items-center gap-2">
+                    <span class="px-2 py-1 bg-orange-500 text-white text-xs rounded">SELL</span>
+                    Skip Ranges (1501+)
+                </h3>
+                <div class="flex flex-wrap gap-2 mb-3" id="sellSkipsList">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="flex gap-2 items-center">
+                    <span class="text-gray-600 font-medium">From:</span>
+                    <input type="number" id="sellSkipFrom" min="1501"
+                           class="neu-input w-24" placeholder="1501">
+                    <span class="text-gray-600 font-medium">To:</span>
+                    <input type="number" id="sellSkipTo" min="1501"
+                           class="neu-input w-24" placeholder="1510">
+                    <button onclick="addSkipRange('sell')" class="neu-button bg-orange-500 text-white">
+                        <i class="bi bi-plus-circle"></i> Add Range
+                    </button>
+                </div>
+            </div>
+
+            <div id="skipSuccessMessage" class="hidden p-4 bg-green-100 border-3 border-green-600 mb-4">
+                <p class="text-green-800 font-bold">
+                    <i class="bi bi-check-circle-fill"></i> Skip range updated successfully!
+                </p>
+            </div>
+
+            <div id="skipErrorMessage" class="hidden p-4 bg-red-100 border-3 border-red-600 mb-4">
+                <p class="text-red-800 font-bold">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <span id="skipErrorText"></span>
+                </p>
+            </div>
+
+            <!-- Next Thock Number Preview -->
+            <div class="mt-6 p-4 neu-border bg-gray-50">
+                <h3 class="font-bold mb-3 flex items-center gap-2">
+                    <i class="bi bi-eye"></i>
+                    Next Thock Numbers Preview
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-green-100 rounded">
+                        <p class="text-sm text-gray-600">Next SEED Number:</p>
+                        <p class="font-bold text-xl text-green-700" id="nextSeedNumber">Loading...</p>
+                    </div>
+                    <div class="p-3 bg-orange-100 rounded">
+                        <p class="text-sm text-gray-600">Next SELL Number:</p>
+                        <p class="font-bold text-xl text-orange-700" id="nextSellNumber">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- New Season Management Section -->
         <div class="neu-border bg-white p-8 mt-8">
             <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -1194,6 +1284,166 @@
 
         // Load season data on page load
         window.addEventListener('load', loadSeasonData);
+
+        // ============================================
+        // Skip Thock Numbers Management
+        // ============================================
+        let seedSkipRanges = [];  // Array of {from: X, to: Y}
+        let sellSkipRanges = [];
+
+        async function loadSkipRanges() {
+            try {
+                const response = await fetch('/api/settings/skip_thock_ranges', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    seedSkipRanges = data.seed_ranges || [];
+                    sellSkipRanges = data.sell_ranges || [];
+                    renderSkipRanges();
+                    updateNextThockPreview();
+                }
+            } catch (error) {
+                console.error('Error loading skip ranges:', error);
+            }
+        }
+
+        function renderSkipRanges() {
+            // Render seed ranges
+            const seedContainer = document.getElementById('seedSkipsList');
+            if (seedSkipRanges.length === 0) {
+                seedContainer.innerHTML = '<span class="text-gray-500 text-sm">No ranges set</span>';
+            } else {
+                seedContainer.innerHTML = seedSkipRanges.map((range, idx) => `
+                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 border-2 border-green-500 rounded-full">
+                        <span class="font-bold">${range.from} - ${range.to}</span>
+                        <button onclick="removeSkipRange('seed', ${idx})" class="text-red-500 hover:text-red-700">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+
+            // Render sell ranges
+            const sellContainer = document.getElementById('sellSkipsList');
+            if (sellSkipRanges.length === 0) {
+                sellContainer.innerHTML = '<span class="text-gray-500 text-sm">No ranges set</span>';
+            } else {
+                sellContainer.innerHTML = sellSkipRanges.map((range, idx) => `
+                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 border-2 border-orange-500 rounded-full">
+                        <span class="font-bold">${range.from} - ${range.to}</span>
+                        <button onclick="removeSkipRange('sell', ${idx})" class="text-red-500 hover:text-red-700">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        async function addSkipRange(category) {
+            const fromInput = document.getElementById(`${category}SkipFrom`);
+            const toInput = document.getElementById(`${category}SkipTo`);
+
+            const from = parseInt(fromInput.value);
+            const to = parseInt(toInput.value);
+
+            // Validation
+            if (isNaN(from) || isNaN(to)) {
+                showSkipError('Please enter both From and To values');
+                return;
+            }
+
+            if (from > to) {
+                showSkipError('From value must be less than or equal to To value');
+                return;
+            }
+
+            if (category === 'seed') {
+                if (from < 1 || to > 1500) {
+                    showSkipError('SEED range must be between 1 and 1500');
+                    return;
+                }
+                seedSkipRanges.push({ from, to });
+            } else {
+                if (from < 1501) {
+                    showSkipError('SELL range must start from 1501 or higher');
+                    return;
+                }
+                sellSkipRanges.push({ from, to });
+            }
+
+            await saveSkipRanges();
+            fromInput.value = '';
+            toInput.value = '';
+        }
+
+        async function removeSkipRange(category, index) {
+            if (category === 'seed') {
+                seedSkipRanges.splice(index, 1);
+            } else {
+                sellSkipRanges.splice(index, 1);
+            }
+            await saveSkipRanges();
+        }
+
+        async function saveSkipRanges() {
+            try {
+                const response = await fetch('/api/settings/skip_thock_ranges', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        seed_ranges: seedSkipRanges,
+                        sell_ranges: sellSkipRanges
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save skip ranges');
+                }
+
+                renderSkipRanges();
+                updateNextThockPreview();
+                showSkipSuccess();
+            } catch (error) {
+                console.error('Error saving skip ranges:', error);
+                showSkipError('Failed to save: ' + error.message);
+            }
+        }
+
+        async function updateNextThockPreview() {
+            try {
+                const response = await fetch('/api/entries/next-thock-preview', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('nextSeedNumber').textContent = data.next_seed || '-';
+                    document.getElementById('nextSellNumber').textContent = data.next_sell || '-';
+                }
+            } catch (error) {
+                console.error('Error loading next thock preview:', error);
+            }
+        }
+
+        function showSkipSuccess() {
+            document.getElementById('skipErrorMessage').classList.add('hidden');
+            document.getElementById('skipSuccessMessage').classList.remove('hidden');
+            setTimeout(() => document.getElementById('skipSuccessMessage').classList.add('hidden'), 3000);
+        }
+
+        function showSkipError(message) {
+            document.getElementById('skipSuccessMessage').classList.add('hidden');
+            document.getElementById('skipErrorText').textContent = message;
+            document.getElementById('skipErrorMessage').classList.remove('hidden');
+        }
+
+        // Load skip ranges on page load
+        window.addEventListener('load', loadSkipRanges);
 
         // Archived Data Functions
         async function viewArchivedData(seasonName) {
