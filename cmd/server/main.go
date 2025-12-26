@@ -60,6 +60,48 @@ func startSetupMode(cfg *config.Config) {
 	}
 }
 
+// startRecoveryMode starts the server in recovery mode when VIP and backup servers are down
+// but localhost PostgreSQL is available. Shows restore options instead of auto-restoring.
+func startRecoveryMode(cfg *config.Config, connStr string) {
+	log.Println("╔════════════════════════════════════════════════════════════╗")
+	log.Println("║  RECOVERY MODE - Primary servers unreachable               ║")
+	log.Println("║                                                            ║")
+	log.Println("║  VIP-DB (192.168.15.210) - FAILED                          ║")
+	log.Println("║  Backup Server (192.168.15.195) - FAILED                   ║")
+	log.Println("║  Localhost PostgreSQL - CONNECTED                          ║")
+	log.Println("║                                                            ║")
+	log.Println("║  Open browser to restore from backup:                      ║")
+	log.Println("║    - Restore from R2 cloud backup                          ║")
+	log.Println("║    - Upload .sql backup file                               ║")
+	log.Println("║    - Continue with current database                        ║")
+	log.Println("╚════════════════════════════════════════════════════════════╝")
+
+	setupHandler := handlers.NewSetupHandler()
+	setupHandler.SetRecoveryMode(true, connStr)
+
+	mux := http.NewServeMux()
+
+	// Recovery routes (same as setup, but in recovery mode)
+	mux.HandleFunc("/", setupHandler.RecoveryPage)
+	mux.HandleFunc("/recovery", setupHandler.RecoveryPage)
+	mux.HandleFunc("/setup/r2-check", setupHandler.CheckR2Connection)
+	mux.HandleFunc("/setup/backups", setupHandler.ListBackups)
+	mux.HandleFunc("/setup/restore", setupHandler.RestoreFromR2)
+	mux.HandleFunc("/setup/upload-restore", setupHandler.UploadRestore)
+	mux.HandleFunc("/setup/continue", setupHandler.ContinueWithCurrent)
+
+	// Serve static files from embedded filesystem
+	staticFS, _ := fs.Sub(static.FS, ".")
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	log.Printf("Recovery mode running on %s", addr)
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatalf("Recovery server failed: %v", err)
+	}
+}
+
 // connectTimescaleDB connects to the TimescaleDB metrics database
 func connectTimescaleDB() *pgxpool.Pool {
 	// TimescaleDB connection string from environment or default
@@ -353,7 +395,7 @@ func main() {
 
 	// Try cascading database connection: VIP → 195 → localhost → Unix socket
 	// If all fail and running as root, install PostgreSQL automatically
-	pool, connectedTo, connStr := db.TryConnectWithFallback()
+	pool, connectedTo, connStr, isDisasterRecovery := db.TryConnectWithFallback()
 	if pool == nil {
 		// Check if running as root - if so, auto-install PostgreSQL
 		if os.Geteuid() == 0 {
@@ -362,7 +404,7 @@ func main() {
 			log.Println("╚════════════════════════════════════════════════════════════╝")
 			autoInstallPostgreSQL()
 			// Try connecting again after install
-			pool, connectedTo, connStr = db.TryConnectWithFallback()
+			pool, connectedTo, connStr, isDisasterRecovery = db.TryConnectWithFallback()
 		}
 
 		if pool == nil {
@@ -377,6 +419,22 @@ func main() {
 		}
 	}
 	log.Printf("Connected to database: %s", connectedTo)
+
+	// If this is a disaster recovery scenario (VIP and 195 failed, localhost connected),
+	// enter recovery mode to let user choose restore option instead of auto-restoring
+	// Skip if user previously chose to continue with current database
+	if isDisasterRecovery {
+		// Check if user chose to skip recovery mode
+		if _, err := os.Stat("/tmp/.cold_skip_recovery"); err == nil {
+			log.Println("[Recovery] Skipping recovery mode (user chose to continue with current database)")
+			os.Remove("/tmp/.cold_skip_recovery") // Clean up marker
+		} else {
+			pool.Close() // Close the pool before entering recovery mode
+			startRecoveryMode(cfg, connStr)
+			return // Will never reach here (startRecoveryMode blocks)
+		}
+	}
+
 	defer pool.Close()
 
 	// Initialize Redis cache (optional - graceful fallback if unavailable)
@@ -396,12 +454,6 @@ func main() {
 
 	if err := migrator.RunMigrations(ctx); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	// Automatic disaster recovery: restore from R2 if database is empty
-	// This only runs when connecting to localhost (disaster recovery scenario)
-	if connectedTo == "Localhost (Disaster Recovery)" {
-		handlers.AutoRestoreFromR2(connStr)
 	}
 
 	// Initialize health checker

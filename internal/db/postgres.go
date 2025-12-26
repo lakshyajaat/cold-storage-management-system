@@ -250,10 +250,14 @@ func ConnectG(cfg *config.Config) *pgxpool.Pool {
 
 // TryConnectWithFallback attempts to connect to databases in order of fallback priority.
 // Tries all common passwords for each host to handle password sync issues.
-// Returns the pool, name, and connection string if successful, or nil if all connections fail.
-func TryConnectWithFallback() (*pgxpool.Pool, string, string) {
+// Returns the pool, name, connection string, and disaster recovery flag if successful, or nil if all connections fail.
+// The disaster recovery flag is true if VIP and 195 failed but localhost connected.
+func TryConnectWithFallback() (*pgxpool.Pool, string, string, bool) {
+	// Track which databases failed - used to determine if this is a disaster recovery scenario
+	var vipFailed, backupServerFailed bool
+
 	// Try each fallback database
-	for _, dbConfig := range config.DatabaseFallbacks {
+	for i, dbConfig := range config.DatabaseFallbacks {
 		if dbConfig.UsePeer {
 			log.Printf("[DB] Trying to connect to %s (Unix socket)...", dbConfig.Name)
 		} else {
@@ -302,15 +306,24 @@ func TryConnectWithFallback() (*pgxpool.Pool, string, string) {
 			log.Printf("[DB] Successfully connected to %s", dbConfig.Name)
 			// Return connection URI for psql
 			connURI := dbConfig.ConnectionURI(password)
-			return pool, dbConfig.Name, connURI
+			// Disaster recovery mode: VIP and 195 failed, but localhost/socket connected
+			isDisasterRecovery := vipFailed && backupServerFailed && (i >= 2)
+			return pool, dbConfig.Name, connURI, isDisasterRecovery
 		}
 		if dbConfig.UsePeer {
 			log.Printf("[DB] Failed to connect to %s", dbConfig.Name)
 		} else {
 			log.Printf("[DB] Failed to connect to %s (tried all passwords)", dbConfig.Name)
 		}
+
+		// Track which servers failed (for disaster recovery detection)
+		if i == 0 {
+			vipFailed = true
+		} else if i == 1 {
+			backupServerFailed = true
+		}
 	}
 
 	log.Println("[DB] All database connections failed")
-	return nil, "", ""
+	return nil, "", "", false
 }

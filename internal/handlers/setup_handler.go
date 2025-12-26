@@ -13,9 +13,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"cold-backend/internal/config"
+	"cold-backend/migrations"
 	"cold-backend/templates"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,7 +29,9 @@ import (
 )
 
 type SetupHandler struct {
-	templates *template.Template
+	templates      *template.Template
+	isRecoveryMode bool
+	connStr        string
 }
 
 func NewSetupHandler() *SetupHandler {
@@ -340,6 +344,56 @@ func (h *SetupHandler) RestoreFromR2(w http.ResponseWriter, r *http.Request) {
 	connStr := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
 		req.User, req.Password, req.Host, req.Port, req.Database)
 
+	// First, drop all tables to avoid duplicate key errors
+	log.Println("[Restore] Cleaning database before restore...")
+	cleanupSQL := `
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- Disable triggers
+    SET session_replication_role = 'replica';
+
+    -- Drop all tables in public schema
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+
+    -- Re-enable triggers
+    SET session_replication_role = 'origin';
+END $$;
+`
+	cleanCmd := exec.Command("psql", connStr, "-c", cleanupSQL)
+	cleanOutput, cleanErr := cleanCmd.CombinedOutput()
+	if cleanErr != nil {
+		log.Printf("[Restore] Warning: cleanup failed: %v - %s", cleanErr, string(cleanOutput))
+	} else {
+		log.Println("[Restore] Database cleaned successfully")
+	}
+
+	// Run schema creation from embedded migration file
+	log.Println("[Restore] Creating database schema...")
+	schemaSQL, err := migrations.FS.ReadFile("001_complete_schema.sql")
+	if err != nil {
+		log.Printf("[Restore] Warning: could not read schema file: %v", err)
+	} else {
+		// Write schema to temp file and execute
+		schemaTmpFile := "/tmp/cold_schema.sql"
+		if err := os.WriteFile(schemaTmpFile, schemaSQL, 0644); err != nil {
+			log.Printf("[Restore] Warning: could not write schema file: %v", err)
+		} else {
+			schemaCmd := exec.Command("psql", connStr, "-f", schemaTmpFile)
+			schemaOutput, schemaErr := schemaCmd.CombinedOutput()
+			os.Remove(schemaTmpFile)
+			if schemaErr != nil {
+				log.Printf("[Restore] Warning: schema creation had issues: %v - %s", schemaErr, string(schemaOutput))
+			} else {
+				log.Println("[Restore] Schema created successfully")
+			}
+		}
+	}
+
+	// Now restore data from backup
 	cmd := exec.Command("psql", connStr, "-f", tmpFile)
 	output, err := cmd.CombinedOutput()
 
@@ -379,17 +433,39 @@ JWT_SECRET=cold-backend-jwt-secret-2025
 
 	os.WriteFile(".env", []byte(envContent), 0600)
 
+	// Set skip recovery marker so server runs normally after restart
+	os.WriteFile("/tmp/.cold_skip_recovery", []byte("1"), 0644)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Database restored successfully! Restarting server...",
 	})
 
-	// Trigger restart
-	go func() {
-		time.Sleep(2 * time.Second)
+	// Trigger restart - use syscall.Exec to replace current process
+	go restartServer()
+}
+
+// restartServer restarts the server by replacing the current process
+func restartServer() {
+	time.Sleep(2 * time.Second)
+
+	// Get the executable path
+	executable, err := os.Executable()
+	if err != nil {
+		log.Printf("[Restart] Failed to get executable path: %v, falling back to exit", err)
 		os.Exit(0)
-	}()
+		return
+	}
+
+	log.Printf("[Restart] Restarting server: %s", executable)
+
+	// Replace current process with new instance
+	err = syscall.Exec(executable, os.Args, os.Environ())
+	if err != nil {
+		log.Printf("[Restart] Failed to exec: %v, falling back to exit", err)
+		os.Exit(0)
+	}
 }
 
 // AutoRestoreFromR2 automatically restores from R2 if database is empty after migrations.
@@ -677,6 +753,54 @@ func (h *SetupHandler) UploadRestore(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[UploadRestore] Restoring to %s:%s/%s", host, port, database)
 
+	// First, drop all tables to avoid duplicate key errors
+	log.Println("[UploadRestore] Cleaning database before restore...")
+	cleanupSQL := `
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- Disable triggers
+    SET session_replication_role = 'replica';
+
+    -- Drop all tables in public schema
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+
+    -- Re-enable triggers
+    SET session_replication_role = 'origin';
+END $$;
+`
+	cleanCmd := exec.Command("psql", connStr, "-c", cleanupSQL)
+	cleanOutput, cleanErr := cleanCmd.CombinedOutput()
+	if cleanErr != nil {
+		log.Printf("[UploadRestore] Warning: cleanup failed: %v - %s", cleanErr, string(cleanOutput))
+	} else {
+		log.Println("[UploadRestore] Database cleaned successfully")
+	}
+
+	// Run schema creation from embedded migration file
+	log.Println("[UploadRestore] Creating database schema...")
+	schemaSQL, schemaReadErr := migrations.FS.ReadFile("001_complete_schema.sql")
+	if schemaReadErr != nil {
+		log.Printf("[UploadRestore] Warning: could not read schema file: %v", schemaReadErr)
+	} else {
+		schemaTmpFile := "/tmp/cold_schema.sql"
+		if writeErr := os.WriteFile(schemaTmpFile, schemaSQL, 0644); writeErr != nil {
+			log.Printf("[UploadRestore] Warning: could not write schema file: %v", writeErr)
+		} else {
+			schemaCmd := exec.Command("psql", connStr, "-f", schemaTmpFile)
+			schemaOutput, schemaErr := schemaCmd.CombinedOutput()
+			os.Remove(schemaTmpFile)
+			if schemaErr != nil {
+				log.Printf("[UploadRestore] Warning: schema creation had issues: %v - %s", schemaErr, string(schemaOutput))
+			} else {
+				log.Println("[UploadRestore] Schema created successfully")
+			}
+		}
+	}
+
 	// Execute psql restore
 	cmd := exec.Command("psql", connStr, "-f", tmpFile)
 	output, err := cmd.CombinedOutput()
@@ -716,14 +840,55 @@ JWT_SECRET=cold-backend-jwt-secret-2025
 
 	os.WriteFile(".env", []byte(envContent), 0600)
 
+	// Set skip recovery marker so server runs normally after restart
+	os.WriteFile("/tmp/.cold_skip_recovery", []byte("1"), 0644)
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Database restored successfully! Restarting server...",
 	})
 
-	// Trigger restart
-	go func() {
-		time.Sleep(2 * time.Second)
-		os.Exit(0)
-	}()
+	// Trigger restart - use syscall.Exec to replace current process
+	go restartServer()
+}
+
+// SetRecoveryMode configures the handler for disaster recovery mode
+func (h *SetupHandler) SetRecoveryMode(isRecovery bool, connStr string) {
+	h.isRecoveryMode = isRecovery
+	h.connStr = connStr
+}
+
+// RecoveryPage shows the recovery page when VIP and 195 are down but localhost is available
+func (h *SetupHandler) RecoveryPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFS(templates.FS, "recovery.html")
+	if err != nil {
+		// Fallback to setup.html if recovery.html doesn't exist
+		tmpl, err = template.ParseFS(templates.FS, "setup.html")
+		if err != nil {
+			http.Error(w, "Template not found", http.StatusInternalServerError)
+			return
+		}
+	}
+	tmpl.Execute(w, map[string]interface{}{
+		"IsRecoveryMode": true,
+		"ConnStr":        h.connStr,
+	})
+}
+
+// ContinueWithCurrent continues with the current database (skip restore)
+func (h *SetupHandler) ContinueWithCurrent(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Just trigger a restart - the app will connect to localhost and run normally
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Continuing with current database. Restarting server...",
+	})
+
+	// Set environment variable to skip recovery mode on next startup
+	// This is done by creating a marker file
+	os.WriteFile("/tmp/.cold_skip_recovery", []byte("1"), 0644)
+
+	// Trigger restart - use syscall.Exec to replace current process
+	go restartServer()
 }
