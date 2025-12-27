@@ -14,6 +14,7 @@
     <link href="/static/css/arbitrary.css" rel="stylesheet">
     <link href="/static/css/fonts.css" rel="stylesheet">
     <link href="/static/css/dark-mode.css" rel="stylesheet">
+    <link href="/static/css/responsive.css" rel="stylesheet">
 
     <style>
         * {
@@ -60,59 +61,72 @@
             border: 2px solid #000;
             box-shadow: 2px 2px 0px #000;
         }
+
+        /* Tablet/Phone Portrait Optimizations */
+        @media (max-width: 1023px) and (orientation: portrait) {
+            .page-button {
+                padding: 1rem;
+                gap: 0.5rem;
+            }
+            .page-button i {
+                font-size: 1.5rem;
+            }
+            .page-button small {
+                display: none;
+            }
+        }
     </style>
     <script src="/static/js/theme.js"></script>
 </head>
-<body class="bg-[#E8F5E9] min-h-screen p-4 md:p-8">
+<body class="bg-[#E8F5E9] min-h-screen p-2 sm:p-4 md:p-8">
     <div class="max-w-6xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 md:mb-12 neu-border bg-white p-4 md:p-6 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-12 neu-border bg-white p-3 md:p-6 gap-3 md:gap-4">
             <div>
-                <div class="flex items-center gap-3">
-                    <i class="bi bi-snow2 text-3xl md:text-4xl text-blue-600"></i>
+                <div class="flex items-center gap-2 md:gap-3">
+                    <i class="bi bi-snow2 text-2xl md:text-4xl text-blue-600"></i>
                     <div>
-                        <h1 class="text-2xl md:text-4xl font-bold" data-i18n="employee_dashboard">Employee Dashboard</h1>
-                        <p class="text-gray-600 text-sm md:text-base" data-i18n="cold_storage_operations">Cold Storage Operations</p>
+                        <h1 class="text-xl md:text-4xl font-bold" data-i18n="employee_dashboard">Employee Dashboard</h1>
+                        <p class="text-gray-600 text-xs md:text-base hidden sm:block" data-i18n="cold_storage_operations">Cold Storage Operations</p>
                     </div>
                 </div>
                 <div class="mt-2 flex items-center gap-2">
-                    <span class="employee-badge inline-block">
+                    <span class="employee-badge inline-block text-sm">
                         <i class="bi bi-person-circle"></i> <span id="employeeName">Loading...</span>
                     </span>
                     <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 border-2 border-black shadow-[2px_2px_0px_#000]">v1.5.173</span>
                 </div>
             </div>
-            <nav class="flex gap-3 md:gap-4 items-center w-full md:w-auto justify-end">
+            <nav class="flex gap-2 md:gap-4 items-center w-full md:w-auto justify-end flex-wrap">
                 <!-- Language Selector -->
                 <select id="langSelector" onchange="i18n.setLanguage(this.value)"
-                        class="lang-selector bg-white px-3 py-2 text-sm font-medium cursor-pointer">
+                        class="lang-selector bg-white px-2 md:px-3 py-2 text-sm font-medium cursor-pointer">
                     <option value="en">EN</option>
                     <option value="hi">हिं</option>
                 </select>
                 <!-- Theme Toggle -->
-                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-3 py-2" title="Toggle Dark Mode">
+                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-2 md:px-3 py-2" title="Toggle Dark Mode">
                     <i class="bi bi-moon-fill theme-icon-moon"></i>
                     <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
                 </button>
-                <!-- Fullscreen Toggle (Tablets) -->
-                <button class="neu-border bg-[#81C784] px-6 py-2" onclick="window.location.href='/home'">
-                    <i class="bi bi-house-door"></i> <span data-i18n="home">Home</span>
+                <button class="neu-border bg-[#81C784] px-3 md:px-6 py-2" onclick="window.location.href='/home'">
+                    <i class="bi bi-house-door"></i> <span class="hidden sm:inline" data-i18n="home">Home</span>
                 </button>
-                <button class="neu-border bg-[#FF6B6B] text-white px-6 py-2" onclick="logout()">
-                    <i class="bi bi-box-arrow-right"></i> <span data-i18n="logout">Logout</span>
+                <button class="neu-border bg-[#FF6B6B] text-white px-3 md:px-6 py-2" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> <span class="hidden sm:inline" data-i18n="logout">Logout</span>
                 </button>
             </nav>
         </header>
 
         <!-- Employee Notice -->
-        <div class="mb-6 md:mb-8 neu-border bg-blue-100 p-3 md:p-4">
-            <h3 class="font-bold text-lg mb-2">
+        <div class="mb-4 md:mb-8 neu-border bg-blue-100 p-2 md:p-4">
+            <h3 class="font-bold text-sm md:text-lg mb-1 md:mb-2">
                 <i class="bi bi-info-circle-fill text-blue-600"></i> <span data-i18n="employee_access">Employee Access</span>
             </h3>
-            <p class="text-sm" data-i18n="employee_access_notice">Welcome! You have access to daily operations. Contact admin for additional permissions.</p>
+            <p class="text-xs md:text-sm hidden sm:block" data-i18n="employee_access_notice">Welcome! You have access to daily operations. Contact admin for additional permissions.</p>
         </div>
 
         <!-- Main Operations (Employee View) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-6 md:mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-8 mb-4 md:mb-8">
             <button class="page-button bg-[#FFE082]" onclick="navigate('/guard/dashboard')">
                 <i class="bi bi-shield-check"></i>
                 <span data-i18n="guard_register">Guard Register</span>
@@ -170,32 +184,33 @@
         </div>
 
         <!-- Today's Summary -->
-        <div class="neu-border bg-white p-4 md:p-6">
-            <h3 class="text-xl md:text-2xl font-bold mb-4" data-i18n="todays_summary">Today's Summary</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <div class="p-4 bg-blue-50 border-2 border-black">
-                    <p class="text-sm text-gray-600" data-i18n="my_entries_today">My Entries Today</p>
-                    <p id="myEntriesToday" class="text-3xl font-bold">...</p>
+        <div class="neu-border bg-white p-3 md:p-6">
+            <h3 class="text-lg md:text-2xl font-bold mb-3 md:mb-4" data-i18n="todays_summary">Today's Summary</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                <div class="p-2 md:p-4 bg-blue-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600" data-i18n="my_entries_today">My Entries Today</p>
+                    <p id="myEntriesToday" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
-                <div class="p-4 bg-green-50 border-2 border-black">
-                    <p class="text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
-                    <p id="totalEntries" class="text-3xl font-bold">...</p>
+                <div class="p-2 md:p-4 bg-green-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
+                    <p id="totalEntries" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
-                <div class="p-4 bg-purple-50 border-2 border-black">
-                    <p class="text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
-                    <p id="totalRoomEntries" class="text-3xl font-bold">...</p>
+                <div class="p-2 md:p-4 bg-purple-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
+                    <p id="totalRoomEntries" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
-                <div class="p-4 bg-orange-50 border-2 border-black">
-                    <p class="text-sm text-gray-600" data-i18n="todays_bags">Today's Bags</p>
-                    <p id="totalBags" class="text-3xl font-bold">...</p>
+                <div class="p-2 md:p-4 bg-orange-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_bags">Today's Bags</p>
+                    <p id="totalBags" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
             </div>
         </div>
 
         <!-- Restricted Access Notice -->
-        <div class="mt-8 p-4 border-2 border-gray-300 bg-gray-50">
-            <p class="text-sm text-gray-600 text-center">
-                <i class="bi bi-lock"></i> <span data-i18n="restricted_notice">Some features are restricted to administrators. Contact your admin for access to reports, employee management, and system settings.</span>
+        <div class="mt-4 md:mt-8 p-2 md:p-4 border-2 border-gray-300 bg-gray-50">
+            <p class="text-xs md:text-sm text-gray-600 text-center">
+                <i class="bi bi-lock"></i> <span class="hidden sm:inline" data-i18n="restricted_notice">Some features are restricted to administrators. Contact your admin for access to reports, employee management, and system settings.</span>
+                <span class="sm:hidden">Admin features restricted</span>
             </p>
         </div>
     </div>

@@ -1,0 +1,294 @@
+/* Responsive CSS for Tablet/Phone Portrait Mode */
+/* Include this file in all templates for consistent responsive behavior */
+
+/* ===== BODY PADDING ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    body.responsive-body {
+        padding: 0.5rem !important;
+    }
+}
+
+/* ===== HEADER STYLES ===== */
+.responsive-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .responsive-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+    }
+}
+
+/* ===== HIDE ON MOBILE/TABLET PORTRAIT ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .hide-portrait {
+        display: none !important;
+    }
+}
+
+/* ===== SHOW ONLY ON MOBILE/TABLET PORTRAIT ===== */
+.show-portrait {
+    display: none !important;
+}
+
+@media (max-width: 1023px) and (orientation: portrait) {
+    .show-portrait {
+        display: block !important;
+    }
+    .show-portrait-inline {
+        display: inline !important;
+    }
+    .show-portrait-flex {
+        display: flex !important;
+    }
+}
+
+/* ===== COMPACT CARDS ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .compact-card {
+        padding: 0.5rem !important;
+    }
+    .compact-card .card-icon {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+    }
+    .compact-card .card-icon i {
+        font-size: 1.25rem !important;
+    }
+    .compact-card .card-value {
+        font-size: 1.25rem !important;
+    }
+    .compact-card .card-label {
+        font-size: 0.65rem !important;
+    }
+}
+
+/* ===== COMPACT BUTTONS ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .compact-btn {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.875rem !important;
+    }
+    .compact-btn .btn-text {
+        display: none !important;
+    }
+    .compact-btn i {
+        margin-right: 0 !important;
+    }
+}
+
+/* ===== RESPONSIVE GRID ===== */
+.grid-responsive-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.grid-responsive-3 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.grid-responsive-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .grid-responsive-3 {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    .grid-responsive-4 {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .grid-responsive-2 {
+        gap: 1rem;
+    }
+    .grid-responsive-3 {
+        gap: 1rem;
+    }
+    .grid-responsive-4 {
+        gap: 1rem;
+    }
+}
+
+/* ===== RESPONSIVE TEXT ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .text-responsive-sm {
+        font-size: 0.75rem !important;
+    }
+    .text-responsive-base {
+        font-size: 0.875rem !important;
+    }
+    .text-responsive-lg {
+        font-size: 1rem !important;
+    }
+    .text-responsive-xl {
+        font-size: 1.125rem !important;
+    }
+    .text-responsive-2xl {
+        font-size: 1.25rem !important;
+    }
+    .text-responsive-3xl {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* ===== RESPONSIVE TABLES ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .table-responsive {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .table-responsive table {
+        min-width: 600px;
+    }
+    .table-responsive th,
+    .table-responsive td {
+        padding: 0.5rem !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap;
+    }
+}
+
+/* ===== STACK ON PORTRAIT ===== */
+.stack-portrait {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+}
+
+@media (max-width: 1023px) and (orientation: portrait) {
+    .stack-portrait {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* ===== FORM INPUTS ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .input-responsive {
+        padding: 0.625rem !important;
+        font-size: 1rem !important; /* Prevent zoom on iOS */
+    }
+    .label-responsive {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+}
+
+/* ===== MODAL/DIALOG ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .modal-responsive {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 0.5rem !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+    .modal-responsive .modal-header {
+        padding: 0.75rem !important;
+    }
+    .modal-responsive .modal-body {
+        padding: 0.75rem !important;
+    }
+    .modal-responsive .modal-footer {
+        padding: 0.75rem !important;
+    }
+}
+
+/* ===== NEU-MORPHISM ADJUSTMENTS ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .neu-border-responsive {
+        border-width: 2px !important;
+        box-shadow: 2px 2px 0 #000 !important;
+    }
+    .neu-border-responsive:hover {
+        transform: none !important;
+        box-shadow: 2px 2px 0 #000 !important;
+    }
+}
+
+/* ===== PAGE BUTTONS (Dashboard style) ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .page-button-responsive {
+        padding: 0.75rem !important;
+        min-height: 80px !important;
+    }
+    .page-button-responsive i {
+        font-size: 1.5rem !important;
+    }
+    .page-button-responsive span {
+        font-size: 0.875rem !important;
+    }
+    .page-button-responsive small {
+        display: none !important;
+    }
+}
+
+/* ===== SUMMARY CARDS ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .summary-card-responsive {
+        padding: 0.5rem !important;
+    }
+    .summary-card-responsive .icon-box {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+    .summary-card-responsive .icon-box i {
+        font-size: 1rem !important;
+    }
+    .summary-card-responsive .value {
+        font-size: 1.125rem !important;
+    }
+    .summary-card-responsive .label {
+        font-size: 0.625rem !important;
+    }
+}
+
+/* ===== TOUCH FRIENDLY ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .touch-target {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+}
+
+/* ===== SCROLLABLE CONTENT ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .scroll-container-responsive {
+        max-height: 60vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ===== FLEX UTILITIES ===== */
+@media (max-width: 1023px) and (orientation: portrait) {
+    .flex-col-portrait {
+        flex-direction: column !important;
+    }
+    .gap-sm-portrait {
+        gap: 0.5rem !important;
+    }
+    .items-start-portrait {
+        align-items: flex-start !important;
+    }
+    .w-full-portrait {
+        width: 100% !important;
+    }
+}

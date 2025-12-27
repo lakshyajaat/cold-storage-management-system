@@ -14,10 +14,19 @@
     <link href="/static/css/arbitrary.css" rel="stylesheet">
     <link href="/static/css/fonts.css" rel="stylesheet">
     <link href="/static/css/dark-mode.css" rel="stylesheet">
+    <link href="/static/css/responsive.css" rel="stylesheet">
 
     <style>
         * {
             font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Tablet/Phone Portrait Optimizations */
+        @media (max-width: 1023px) and (orientation: portrait) {
+            .neu-input {
+                padding: 0.625rem;
+                font-size: 1rem;
+            }
         }
         .neu-border {
             border: 3px solid #000;
@@ -85,58 +94,58 @@
 <script src="/static/js/prefetch.js?v=5"></script>
     <script src="/static/js/theme.js"></script>
 </head>
-<body class="bg-[#FFF9E6] min-h-screen p-4 md:p-8">
+<body class="bg-[#FFF9E6] min-h-screen p-2 sm:p-4 md:p-8">
     <!-- Loading Screen -->
     <div id="loadingScreen" class="max-w-7xl mx-auto">
-        <div class="neu-border bg-white p-6 md:p-8 text-center">
-            <i class="bi bi-hourglass-split text-4xl animate-pulse"></i>
-            <p class="mt-4">Verifying permissions...</p>
+        <div class="neu-border bg-white p-4 md:p-8 text-center">
+            <i class="bi bi-hourglass-split text-3xl md:text-4xl animate-pulse"></i>
+            <p class="mt-3 md:mt-4 text-sm md:text-base">Verifying permissions...</p>
         </div>
     </div>
 
     <!-- Main Content (hidden by default) -->
     <div id="mainContent" class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 neu-border bg-white p-4 md:p-6 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-8 neu-border bg-white p-3 md:p-6 gap-3 md:gap-4">
             <div>
-                <div class="flex items-center gap-3">
-                    <i class="bi bi-wallet2 text-3xl md:text-4xl text-green-600"></i>
+                <div class="flex items-center gap-2 md:gap-3">
+                    <i class="bi bi-wallet2 text-2xl md:text-4xl text-green-600"></i>
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold">Account Management</h1>
-                        <p class="text-gray-600 text-sm md:text-base">Customer accounts and payment collection</p>
+                        <h1 class="text-xl md:text-3xl font-bold">Account Management</h1>
+                        <p class="text-gray-600 text-xs md:text-base hidden sm:block">Customer accounts and payment collection</p>
                     </div>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="/account/audit" class="neu-button bg-indigo-500 text-white">
-                    <i class="bi bi-journal-text"></i> <span class="hidden md:inline">Audit Trail</span>
+                <a href="/account/audit" class="neu-button bg-indigo-500 text-white px-3 md:px-4 py-2">
+                    <i class="bi bi-journal-text"></i> <span class="hidden sm:inline">Audit</span>
                 </a>
-                <a href="/account/debtors" class="neu-button bg-red-500 text-white">
-                    <i class="bi bi-exclamation-triangle"></i> <span class="hidden md:inline">Debtors</span>
+                <a href="/account/debtors" class="neu-button bg-red-500 text-white px-3 md:px-4 py-2">
+                    <i class="bi bi-exclamation-triangle"></i> <span class="hidden sm:inline">Debtors</span>
                 </a>
-                <button onclick="theme.toggle()" class="neu-button bg-gray-200" title="Toggle Dark Mode">
+                <button onclick="theme.toggle()" class="neu-button bg-gray-200 px-2 md:px-3 py-2" title="Toggle Dark Mode">
                     <i class="bi bi-moon-fill theme-icon-moon"></i>
                     <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
                 </button>
-                <button onclick="window.history.back()" class="neu-button bg-gray-200 w-full md:w-auto justify-center">
-                    <i class="bi bi-arrow-left"></i> Back
+                <button onclick="window.history.back()" class="neu-button bg-gray-200 px-3 md:px-4 py-2">
+                    <i class="bi bi-arrow-left"></i> <span class="hidden sm:inline">Back</span>
                 </button>
             </div>
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-6 mb-6 md:mb-8">
-            <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-3 md:p-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 md:gap-6 mb-4 md:mb-8">
+            <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-2 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Total Customers</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalCustomers">0</p>
+                        <p class="text-xs opacity-90">Total Customers</p>
+                        <p class="text-lg md:text-3xl font-bold mt-1" id="totalCustomers">0</p>
                     </div>
-                    <i class="bi bi-people text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-people text-2xl md:text-5xl opacity-50"></i>
                 </div>
             </div>
 
-            <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-3 md:p-6">
+            <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-2 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs md:text-sm opacity-90">Total Thoks</p>
