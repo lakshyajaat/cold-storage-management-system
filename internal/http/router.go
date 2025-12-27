@@ -534,11 +534,10 @@ func NewRouter(
 		entryRoomAPI.HandleFunc("/since", entryRoomHandler.GetDelta).Methods("GET")
 	}
 
-	// Protected API routes - Room Visualization (admin only)
+	// Protected API routes - Room Visualization (all authenticated users)
 	if roomVisualizationHandler != nil {
 		vizAPI := r.PathPrefix("/api/room-visualization").Subrouter()
 		vizAPI.Use(authMiddleware.Authenticate)
-		vizAPI.Use(authMiddleware.RequireRole("admin"))
 		vizAPI.HandleFunc("/stats", roomVisualizationHandler.GetRoomStats).Methods("GET")
 		vizAPI.HandleFunc("/gatar", roomVisualizationHandler.GetGatarOccupancy).Methods("GET")
 		vizAPI.HandleFunc("/gatar-details", roomVisualizationHandler.GetGatarDetails).Methods("GET")
