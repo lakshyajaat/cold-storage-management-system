@@ -274,49 +274,21 @@
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <!-- Left: Floor Plan (3 columns) -->
             <div class="lg:col-span-3">
-                <!-- Room Tabs -->
-                <div class="flex flex-wrap gap-1 mb-0">
-                    <button onclick="selectRoom('1')" id="room-tab-1" class="room-tab seed active">
-                        Room 1 <span class="text-xs opacity-75">(Seed)</span>
-                    </button>
-                    <button onclick="selectRoom('2')" id="room-tab-2" class="room-tab seed">
-                        Room 2 <span class="text-xs opacity-75">(Seed)</span>
-                    </button>
-                    <button onclick="selectRoom('3')" id="room-tab-3" class="room-tab sell">
-                        Room 3 <span class="text-xs opacity-75">(Sell)</span>
-                    </button>
-                    <button onclick="selectRoom('4')" id="room-tab-4" class="room-tab sell">
-                        Room 4 <span class="text-xs opacity-75">(Sell)</span>
-                    </button>
-                    <button onclick="selectRoom('G')" id="room-tab-G" class="room-tab sell">
-                        Gallery <span class="text-xs opacity-75">(Sell)</span>
-                    </button>
-                </div>
-
                 <!-- Floor Plan Card -->
                 <div class="neu-border bg-white p-6">
-                    <!-- Floor Tabs -->
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
-                        <div class="inline-flex">
-                            <button onclick="selectFloor('0')" id="floor-tab-0" class="floor-tab active">Floor 0</button>
-                            <button onclick="selectFloor('1')" id="floor-tab-1" class="floor-tab">Floor 1</button>
-                            <button onclick="selectFloor('2')" id="floor-tab-2" class="floor-tab">Floor 2</button>
-                            <button onclick="selectFloor('3')" id="floor-tab-3" class="floor-tab">Floor 3</button>
-                            <button onclick="selectFloor('4')" id="floor-tab-4" class="floor-tab">Floor 4</button>
+                    <!-- Legend -->
+                    <div class="flex flex-wrap items-center gap-3 text-sm mb-4">
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 bg-yellow-400 border-2 border-black"></div>
+                            <span class="font-bold">Full (200+)</span>
                         </div>
-                        <div class="flex flex-wrap items-center gap-3 text-sm">
-                            <div class="flex items-center gap-1">
-                                <div class="w-5 h-5 bg-yellow-400 border-2 border-black"></div>
-                                <span class="font-bold">Full (200+)</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <div class="w-5 h-5 bg-orange-400 border-2 border-black"></div>
-                                <span class="font-bold">Partial (&lt;200)</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <div class="w-5 h-5 bg-white border-2 border-black"></div>
-                                <span class="font-bold" data-i18n="empty">Empty</span>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 bg-orange-400 border-2 border-black"></div>
+                            <span class="font-bold">Partial (&lt;200)</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 bg-white border-2 border-black"></div>
+                            <span class="font-bold" data-i18n="empty">Empty</span>
                         </div>
                     </div>
 
@@ -365,16 +337,6 @@
                     </div>
                 </div>
 
-                <!-- Floor Summary -->
-                <div class="neu-border bg-white p-6">
-                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                        <i class="bi bi-bar-chart-fill text-orange-500"></i>
-                        <span data-i18n="floor_summary">Floor Summary</span>
-                    </h3>
-                    <div id="roomSummary" class="space-y-3">
-                        <div class="text-center text-gray-400 text-sm" data-i18n="loading">Loading...</div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -562,6 +524,23 @@
                 });
 
                 const isActive = room.room_no === currentRoom;
+
+                // Build floor buttons
+                let floorButtons = '';
+                room.floors.forEach(f => {
+                    const floorNum = f.floor_no;
+                    const isFloorActive = isActive && currentFloor === String(floorNum);
+                    const hasItems = (f.total_qty || 0) > 0;
+                    floorButtons += `
+                        <button onclick="event.stopPropagation(); selectRoom('${room.room_no}'); selectFloor('${floorNum}');"
+                                class="px-2 py-1 text-xs font-bold border-2 border-black transition-all
+                                       ${isFloorActive ? 'bg-yellow-400' : hasItems ? config.border.replace('border-', 'bg-') : 'bg-gray-200'}
+                                       hover:scale-105">
+                            F${floorNum}
+                        </button>
+                    `;
+                });
+
                 html += `
                     <div class="neu-border ${config.bg} p-3 cursor-pointer transition-all ${isActive ? 'ring-4 ring-yellow-400' : ''}"
                          onclick="selectRoom('${room.room_no}')">
@@ -576,6 +555,9 @@
                             <div class="h-full ${config.border.replace('border-', 'bg-')}" style="width: ${roomTotal ? (roomOccupied/roomTotal*100) : 0}%"></div>
                         </div>
                         <p class="text-xs text-gray-500 mt-1">${roomOccupied}/${roomTotal} gatars</p>
+                        <div class="mt-2 flex gap-1 flex-wrap">
+                            ${floorButtons}
+                        </div>
                     </div>
                 `;
             });
