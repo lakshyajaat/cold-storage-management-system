@@ -525,9 +525,10 @@
 
                 const isActive = room.room_no === currentRoom;
 
-                // Build floor buttons with progress bars
-                let floorButtons = '';
-                room.floors.forEach(f => {
+                // Build floor rows with progress bars (reverse order: 4,3,2,1,0 from top to bottom)
+                let floorRows = '';
+                const sortedFloors = [...room.floors].sort((a, b) => parseInt(b.floor) - parseInt(a.floor));
+                sortedFloors.forEach(f => {
                     const floorNum = f.floor;
                     const isFloorActive = isActive && currentFloor === String(floorNum);
                     const floorQty = f.total_qty || 0;
@@ -536,16 +537,16 @@
                     const pct = Math.round((occupiedGatars / totalGatars) * 100);
                     const barColor = isFloorActive ? 'bg-yellow-500' : pct > 0 ? config.border.replace('border-', 'bg-') : 'bg-gray-300';
 
-                    floorButtons += `
+                    floorRows += `
                         <div onclick="event.stopPropagation(); selectRoom('${room.room_no}'); selectFloor('${floorNum}');"
-                             class="flex flex-col items-center cursor-pointer transition-all hover:scale-105 p-1.5 border-2 border-black
-                                    ${isFloorActive ? 'bg-yellow-400 ring-2 ring-yellow-600' : 'bg-white'}"
+                             class="flex items-center gap-2 cursor-pointer transition-all hover:bg-gray-100 p-1 border-b border-gray-200
+                                    ${isFloorActive ? 'bg-yellow-200 border-yellow-400' : ''}"
                              title="${floorQty.toLocaleString('en-IN')} bags | ${occupiedGatars}/${totalGatars} gatars">
-                            <span class="text-sm font-bold">F${floorNum}</span>
-                            <div class="w-10 h-3 bg-gray-200 border border-black mt-1">
+                            <span class="text-xs font-bold w-6">F${floorNum}</span>
+                            <div class="flex-1 h-2.5 bg-gray-200 border border-black">
                                 <div class="h-full ${barColor}" style="width: ${pct}%"></div>
                             </div>
-                            <span class="text-xs text-gray-600 mt-0.5">${pct}%</span>
+                            <span class="text-xs text-gray-600 w-8 text-right">${pct}%</span>
                         </div>
                     `;
                 });
@@ -559,13 +560,9 @@
                             <span class="text-xs text-gray-500">(${config.type})</span>
                         </div>
                         <p class="text-2xl font-bold ${config.icon}">${roomBags.toLocaleString('en-IN')}</p>
-                        <p class="text-xs text-gray-600">bags stored</p>
-                        <div class="mt-2 h-2 bg-gray-200 border border-black">
-                            <div class="h-full ${config.border.replace('border-', 'bg-')}" style="width: ${roomTotal ? (roomOccupied/roomTotal*100) : 0}%"></div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">${roomOccupied}/${roomTotal} gatars</p>
-                        <div class="mt-2 flex gap-1 flex-wrap">
-                            ${floorButtons}
+                        <p class="text-xs text-gray-600 mb-2">${roomOccupied}/${roomTotal} gatars</p>
+                        <div class="border-t border-gray-300 pt-1">
+                            ${floorRows}
                         </div>
                     </div>
                 `;
