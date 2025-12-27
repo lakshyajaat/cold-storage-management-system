@@ -528,14 +528,16 @@
                 // Build floor buttons
                 let floorButtons = '';
                 room.floors.forEach(f => {
-                    const floorNum = f.floor_no;
+                    const floorNum = f.floor;
                     const isFloorActive = isActive && currentFloor === String(floorNum);
                     const hasItems = (f.total_qty || 0) > 0;
+                    const floorQty = f.total_qty || 0;
                     floorButtons += `
                         <button onclick="event.stopPropagation(); selectRoom('${room.room_no}'); selectFloor('${floorNum}');"
                                 class="px-2 py-1 text-xs font-bold border-2 border-black transition-all
                                        ${isFloorActive ? 'bg-yellow-400' : hasItems ? config.border.replace('border-', 'bg-') : 'bg-gray-200'}
-                                       hover:scale-105">
+                                       hover:scale-105"
+                                title="${floorQty.toLocaleString('en-IN')} bags">
                             F${floorNum}
                         </button>
                     `;
@@ -566,67 +568,15 @@
         }
 
         function updateRoomSummary() {
-            if (!statsData) return;
-
-            const roomData = statsData.rooms.find(r => r.room_no === currentRoom);
-            if (!roomData) {
-                document.getElementById('roomSummary').innerHTML = '<div class="text-gray-400 text-sm">No data</div>';
-                return;
-            }
-
-            // Calculate room totals
-            let roomTotalQty = 0;
-            let roomOccupied = 0;
-            let roomTotal = 0;
-            roomData.floors.forEach(f => {
-                roomTotalQty += f.total_qty || 0;
-                roomOccupied += f.occupied_gatars || 0;
-                roomTotal += f.total_gatars || 0;
-            });
-
-            let html = `
-                <div class="mb-4 p-3 bg-blue-50 border-2 border-blue-300 rounded">
-                    <div class="text-center">
-                        <p class="text-2xl font-bold text-blue-700">${roomTotalQty.toLocaleString('en-IN')}</p>
-                        <p class="text-xs text-gray-600 font-bold">Total Bags in ${currentRoom === 'G' ? 'Gallery' : 'Room ' + currentRoom}</p>
-                    </div>
-                    <div class="flex justify-between mt-2 text-xs">
-                        <span><strong>${roomOccupied}</strong> occupied</span>
-                        <span><strong>${roomTotal - roomOccupied}</strong> empty</span>
-                    </div>
-                </div>
-            `;
-
-            roomData.floors.forEach(floor => {
-                const pct = floor.total_gatars ? ((floor.occupied_gatars / floor.total_gatars) * 100).toFixed(0) : 0;
-                const isActive = floor.floor === currentFloor;
-                html += `
-                    <div class="flex items-center gap-2 ${isActive ? 'bg-yellow-100 -mx-2 px-2 py-2 border-2 border-yellow-400' : 'py-1'}" onclick="selectFloor('${floor.floor}')" style="cursor: pointer;">
-                        <span class="w-12 text-sm font-bold ${isActive ? 'text-yellow-700' : 'text-gray-600'}">F${floor.floor}</span>
-                        <div class="flex-1 h-4 bg-gray-200 border border-black overflow-hidden">
-                            <div class="h-full ${isActive ? 'bg-yellow-500' : 'bg-yellow-400'} transition-all" style="width: ${pct}%"></div>
-                        </div>
-                        <span class="text-xs font-bold text-gray-600 w-20 text-right">${floor.total_qty?.toLocaleString('en-IN') || 0} bags</span>
-                    </div>
-                `;
-            });
-
-            document.getElementById('roomSummary').innerHTML = html;
+            // Floor Summary panel was removed - this function is now a no-op
+            return;
         }
 
         function selectRoom(roomNo) {
             currentRoom = roomNo;
             selectedGatar = null;
-
-            // Update room tabs
-            document.querySelectorAll('[id^="room-tab-"]').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.getElementById(`room-tab-${roomNo}`).classList.add('active');
-
             currentFloor = '0';
             updateFloorTabs();
-            updateRoomSummary();
             updateRoomSummaryCards(); // Update cards to show active state
             loadFloorPlan();
             resetDetailPanel();
