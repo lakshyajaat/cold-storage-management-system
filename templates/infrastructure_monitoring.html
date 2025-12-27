@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infrastructure Monitoring - Cold Storage</title>
     <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
@@ -649,7 +653,7 @@
         </div>
     </div>
 
-    <script src="/static/js/prefetch.js?v=3"></script>
+    <script src="/static/js/prefetch.js?v=4"></script>
     <script src="/static/js/chart.umd.min.js"></script>
     <script>
         const token = localStorage.getItem('token');

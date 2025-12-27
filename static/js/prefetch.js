@@ -214,11 +214,23 @@
 })();
 
 /**
- * Persistent Fullscreen Support
- * - Fullscreen persists across page navigation
- * - Stores preference in localStorage
- * - Auto-enters fullscreen on every page load if enabled
+ * Fullscreen Support
+ * - PWA mode: App is always fullscreen when installed on home screen
+ * - Browser mode: Auto-fullscreen on tablets/phones only
+ * - Toggle button available for manual control
  */
+
+// Check if running as installed PWA
+function isPWA() {
+    return window.matchMedia('(display-mode: fullscreen)').matches ||
+           window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+}
+
+// Check if touch device (tablet/phone)
+function isTouchDevice() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
 
 // Check if in fullscreen
 function isFullscreen() {
@@ -233,14 +245,8 @@ function isFullscreen() {
 // Request fullscreen
 function enterFullscreen() {
     var elem = document.documentElement;
-
-    // Save preference
-    localStorage.setItem('fullscreen_enabled', 'true');
-
     if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(function(err) {
-            console.log('Fullscreen error:', err.message);
-        });
+        elem.requestFullscreen().catch(function() {});
     } else if (elem.webkitRequestFullscreen) {
         elem.webkitRequestFullscreen();
     } else if (elem.mozRequestFullScreen) {
@@ -252,13 +258,8 @@ function enterFullscreen() {
 
 // Exit fullscreen
 function exitFullscreen() {
-    // Clear preference
-    localStorage.setItem('fullscreen_enabled', 'false');
-
     if (document.exitFullscreen) {
-        document.exitFullscreen().catch(function(err) {
-            console.log('Exit fullscreen error:', err.message);
-        });
+        document.exitFullscreen().catch(function() {});
     } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
     } else if (document.mozCancelFullScreen) {
@@ -268,7 +269,7 @@ function exitFullscreen() {
     }
 }
 
-// Toggle fullscreen (called by button onclick)
+// Toggle fullscreen (button onclick)
 function toggleFullscreen() {
     if (isFullscreen()) {
         exitFullscreen();
@@ -277,45 +278,29 @@ function toggleFullscreen() {
     }
 }
 
-// Update icon when fullscreen state changes
+// Update icon
 function updateFullscreenIcon() {
     var icon = document.getElementById('fullscreenIcon');
     if (icon) {
-        if (isFullscreen()) {
-            icon.className = 'bi bi-fullscreen-exit';
-        } else {
-            icon.className = 'bi bi-fullscreen';
-        }
+        icon.className = isFullscreen() ? 'bi bi-fullscreen-exit' : 'bi bi-fullscreen';
     }
 }
 
-// Listen for fullscreen changes
 document.addEventListener('fullscreenchange', updateFullscreenIcon);
 document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
-document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
-document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
 
-// Auto-restore fullscreen on page load
+// Auto-fullscreen on tablets/phones (not desktop, not PWA)
 (function() {
-    function restoreFullscreen() {
-        // Check if fullscreen was enabled
-        if (localStorage.getItem('fullscreen_enabled') === 'true' && !isFullscreen()) {
-            // Need user interaction to enter fullscreen, so do it on first click/touch
-            var restored = false;
-            var restoreHandler = function() {
-                if (!restored && !isFullscreen()) {
-                    restored = true;
-                    enterFullscreen();
-                }
-            };
-            document.addEventListener('click', restoreHandler, { once: true });
-            document.addEventListener('touchend', restoreHandler, { once: true });
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', restoreFullscreen);
-    } else {
-        restoreFullscreen();
+    if (isTouchDevice() && !isPWA()) {
+        // Enter fullscreen on first interaction
+        var done = false;
+        var handler = function() {
+            if (!done) {
+                done = true;
+                enterFullscreen();
+            }
+        };
+        document.addEventListener('click', handler, { once: true });
+        document.addEventListener('touchend', handler, { once: true });
     }
 })();
