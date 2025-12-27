@@ -23,19 +23,44 @@
 
         /* Tablet/Phone Portrait Optimizations */
         @media (max-width: 1023px) and (orientation: portrait) {
-            .neu-input {
-                padding: 0.625rem;
-                font-size: 1rem;
+            body {
+                font-size: 0.875rem;
             }
-            .neu-button {
-                padding: 0.5rem 0.75rem;
+            .neu-border {
+                border-width: 2px;
+                box-shadow: 2px 2px 0 #000;
+            }
+            .neu-border:hover {
+                transform: none;
+                box-shadow: 2px 2px 0 #000;
+            }
+            .neu-input {
+                padding: 0.5rem;
                 font-size: 0.875rem;
                 border-width: 2px;
                 box-shadow: 2px 2px 0 #000;
             }
-            .neu-button i {
-                font-size: 0.875rem;
+            .neu-button {
+                padding: 0.375rem 0.625rem;
+                font-size: 0.75rem;
+                border-width: 2px;
+                box-shadow: 2px 2px 0 #000;
             }
+            .neu-button i {
+                font-size: 0.75rem;
+            }
+            .customer-card {
+                border-width: 2px;
+                box-shadow: 2px 2px 0 #000;
+                margin-bottom: 0.5rem;
+            }
+            .badge {
+                padding: 0.125rem 0.5rem;
+                font-size: 0.625rem;
+            }
+            h1 { font-size: 1.125rem !important; }
+            h2 { font-size: 1rem !important; }
+            h3 { font-size: 0.875rem !important; }
         }
         .neu-border {
             border: 3px solid #000;
@@ -143,71 +168,71 @@
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 md:gap-6 mb-4 md:mb-8">
-            <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-2 md:p-6">
+        <div class="grid grid-cols-3 md:grid-cols-6 gap-1 md:gap-6 mb-3 md:mb-8">
+            <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-1.5 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs opacity-90">Total Customers</p>
-                        <p class="text-lg md:text-3xl font-bold mt-1" id="totalCustomers">0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Customers</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalCustomers">0</p>
                     </div>
-                    <i class="bi bi-people text-2xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-people text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </div>
 
-            <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-2 md:p-6">
+            <div class="neu-border bg-gradient-to-br from-blue-400 to-blue-600 text-white p-1.5 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Total Thoks</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalThocks">0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Thoks</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalThocks">0</p>
                     </div>
-                    <i class="bi bi-truck text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-truck text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </div>
 
-            <div class="neu-border bg-gradient-to-br from-teal-400 to-teal-600 text-white p-3 md:p-6">
+            <div class="neu-border bg-gradient-to-br from-teal-400 to-teal-600 text-white p-1.5 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Total Qty</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalQuantity">0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Qty</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalQuantity">0</p>
                     </div>
-                    <i class="bi bi-box-seam text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-box-seam text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </div>
 
-            <div class="neu-border bg-gradient-to-br from-yellow-400 to-yellow-600 text-white p-3 md:p-6">
+            <div class="neu-border bg-gradient-to-br from-yellow-400 to-yellow-600 text-white p-1.5 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Outstanding</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalOutstanding">₹0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Outstanding</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalOutstanding">₹0</p>
                     </div>
-                    <i class="bi bi-cash-stack text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-cash-stack text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </div>
 
-            <a href="/account/debtors" class="neu-border bg-gradient-to-br from-red-400 to-red-600 text-white p-3 md:p-6 cursor-pointer">
+            <a href="/account/debtors" class="neu-border bg-gradient-to-br from-red-400 to-red-600 text-white p-1.5 md:p-6 cursor-pointer">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Debtors</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalDebtors">0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Debtors</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalDebtors">0</p>
                     </div>
-                    <i class="bi bi-exclamation-triangle text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-exclamation-triangle text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </a>
 
-            <div class="neu-border bg-gradient-to-br from-purple-400 to-purple-600 text-white p-3 md:p-6">
+            <div class="neu-border bg-gradient-to-br from-purple-400 to-purple-600 text-white p-1.5 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs md:text-sm opacity-90">Collected</p>
-                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalCollected">₹0</p>
+                        <p class="text-[10px] md:text-sm opacity-90">Collected</p>
+                        <p class="text-sm md:text-3xl font-bold" id="totalCollected">₹0</p>
                     </div>
-                    <i class="bi bi-check-circle text-3xl md:text-5xl opacity-50"></i>
+                    <i class="bi bi-check-circle text-lg md:text-5xl opacity-50 hidden md:block"></i>
                 </div>
             </div>
         </div>
 
         <!-- Search Bar -->
-        <div class="neu-border bg-white p-3 md:p-4 mb-4 md:mb-6">
-            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
+        <div class="neu-border bg-white p-2 md:p-4 mb-3 md:mb-6">
+            <div class="flex flex-col md:flex-row gap-2 md:gap-4">
                 <div class="flex-1">
                     <input
                         type="text"
