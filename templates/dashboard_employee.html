@@ -176,7 +176,7 @@
                     <p id="totalEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-purple-50 border-2 border-black">
-                    <p class="text-sm text-gray-600" data-i18n="room_entries">Room Entries</p>
+                    <p class="text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
                     <p id="totalRoomEntries" class="text-3xl font-bold">...</p>
                 </div>
                 <div class="p-4 bg-orange-50 border-2 border-black">
@@ -284,7 +284,7 @@
                 // Update UI
                 document.getElementById('myEntriesToday').textContent = myEntriesToday.length;
                 document.getElementById('totalEntries').textContent = entries.length || 0;
-                document.getElementById('totalRoomEntries').textContent = roomEntries.length || 0;
+                document.getElementById('totalRoomEntries').textContent = todayRoomEntries.length || 0;
                 document.getElementById('totalBags').textContent = totalBags.toLocaleString();
 
             } catch (error) {

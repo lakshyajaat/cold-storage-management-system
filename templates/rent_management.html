@@ -125,7 +125,7 @@
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6 mb-6 md:mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-6 mb-6 md:mb-8">
             <div class="neu-border bg-gradient-to-br from-green-400 to-green-600 text-white p-3 md:p-6">
                 <div class="flex items-center justify-between">
                     <div>
@@ -165,6 +165,16 @@
                     <i class="bi bi-cash-stack text-3xl md:text-5xl opacity-50"></i>
                 </div>
             </div>
+
+            <a href="/account/debtors" class="neu-border bg-gradient-to-br from-red-400 to-red-600 text-white p-3 md:p-6 cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs md:text-sm opacity-90">Debtors</p>
+                        <p class="text-xl md:text-3xl font-bold mt-1 md:mt-2" id="totalDebtors">0</p>
+                    </div>
+                    <i class="bi bi-exclamation-triangle text-3xl md:text-5xl opacity-50"></i>
+                </div>
+            </a>
 
             <div class="neu-border bg-gradient-to-br from-purple-400 to-purple-600 text-white p-3 md:p-6">
                 <div class="flex items-center justify-between">
@@ -465,6 +475,9 @@
             document.getElementById('totalQuantity').textContent = summary.total_quantity.toLocaleString('en-IN');
             document.getElementById('totalOutstanding').textContent = '₹' + summary.total_outstanding.toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('totalCollected').textContent = '₹' + summary.total_collected.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            // Calculate debtors count (customers with balance > 0)
+            const debtorsCount = summary.customers ? summary.customers.filter(c => c.balance > 0).length : 0;
+            document.getElementById('totalDebtors').textContent = debtorsCount;
         }
 
         function displayCustomerAccounts(accounts) {
