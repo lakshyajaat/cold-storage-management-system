@@ -38,11 +38,12 @@ SELECT
     rp.id as reference_id,
     'payment' as reference_type,
     COALESCE(rp.processed_by_user_id, 1) as created_by_user_id,
-    COALESCE(rp.processed_by_name, 'System Migration') as created_by_name,
+    COALESCE(u.name, 'System Migration') as created_by_name,
     rp.created_at,
     COALESCE(rp.notes, 'Migrated from rent_payments table')
 FROM rent_payments rp
 LEFT JOIN entries e ON rp.entry_id = e.id
+LEFT JOIN users u ON rp.processed_by_user_id = u.id
 WHERE rp.amount_paid > 0
 AND NOT EXISTS (
     -- Don't insert if already migrated
