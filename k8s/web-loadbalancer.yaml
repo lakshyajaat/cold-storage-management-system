@@ -10,6 +10,7 @@ metadata:
     metallb.universe.tf/allow-shared-ip: cold-storage-vip
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local  # Preserve client IP
   ports:
   - name: http
     port: 8080
@@ -31,6 +32,7 @@ metadata:
     metallb.universe.tf/allow-shared-ip: cold-storage-vip
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local  # Preserve client IP
   ports:
   - name: http
     port: 8081
@@ -52,6 +54,7 @@ metadata:
     metallb.universe.tf/allow-shared-ip: cold-storage-vip
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local  # Preserve client IP
   ports:
   - name: http
     port: 9090
