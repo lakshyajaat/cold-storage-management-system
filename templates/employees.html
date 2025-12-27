@@ -14,6 +14,7 @@
     <link href="/static/css/fonts.css" rel="stylesheet">
     <link href="/static/css/dark-mode.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
+    <link href="/static/css/responsive.css" rel="stylesheet">
     <style>
         * { font-family: 'Space Grotesk', sans-serif; }
         .neu-brutal {
@@ -40,6 +41,26 @@
             background-color: rgba(0,0,0,0.5);
         }
         .modal.show { display: flex; }
+
+        /* Tablet/Phone Portrait Optimizations */
+        @media (max-width: 1023px) and (orientation: portrait) {
+            body { font-size: 0.875rem; }
+            .neu-brutal {
+                border-width: 2px;
+                box-shadow: 3px 3px 0 #000;
+            }
+            .neu-brutal:hover {
+                transform: none;
+                box-shadow: 3px 3px 0 #000;
+            }
+            h1 { font-size: 1.25rem !important; }
+            p.text-base { font-size: 0.75rem !important; }
+            table th, table td { padding: 0.5rem; font-size: 0.75rem; }
+            table td button { padding: 0.25rem 0.5rem; font-size: 0.65rem; margin-bottom: 0.25rem; }
+            .modal > div { padding: 1rem; margin: 0.5rem; }
+            .modal h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+            .modal input, .modal select { padding: 0.5rem; font-size: 0.875rem; }
+        }
     </style>
 <script src="/static/js/prefetch.js?v=5"></script>
     <script src="/static/js/theme.js"></script>
