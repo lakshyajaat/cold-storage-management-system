@@ -16,13 +16,25 @@ import (
 )
 
 const customersCacheTTL = 30 * time.Minute
+const customersCacheKey = "customers:list"
 
 type CustomerHandler struct {
 	Service *services.CustomerService
 }
 
 func NewCustomerHandler(s *services.CustomerService) *CustomerHandler {
-	return &CustomerHandler{Service: s}
+	h := &CustomerHandler{Service: s}
+
+	// Register pre-warm callback for customer list (faster search on cold start)
+	cache.RegisterPreWarm(customersCacheKey, func(ctx context.Context) ([]byte, error) {
+		customers, err := h.Service.ListCustomers(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(customers)
+	})
+
+	return h
 }
 
 func (h *CustomerHandler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
@@ -95,10 +107,9 @@ func (h *CustomerHandler) SearchByPhone(w http.ResponseWriter, r *http.Request) 
 
 func (h *CustomerHandler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	cacheKey := "customers:list"
 
 	// Try cache first
-	if data, ok := cache.GetCached(ctx, cacheKey); ok {
+	if data, ok := cache.GetCached(ctx, customersCacheKey); ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "HIT")
 		w.Write(data)
@@ -113,7 +124,7 @@ func (h *CustomerHandler) ListCustomers(w http.ResponseWriter, r *http.Request) 
 
 	// Cache the response
 	data, _ := json.Marshal(customers)
-	cache.SetCached(ctx, cacheKey, data, customersCacheTTL)
+	cache.SetCached(ctx, customersCacheKey, data, customersCacheTTL)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "MISS")

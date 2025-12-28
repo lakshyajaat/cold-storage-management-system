@@ -192,21 +192,19 @@
                 <div class="grid grid-cols-1 gap-4 mb-6">
                     <div class="relative">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <span data-i18n="phone">Phone</span> * <span class="text-sm text-gray-500">(<span data-i18n="phone_must_10_digits">Must be 10 digits</span>)</span>
+                            <span data-i18n="search_customer">Search Customer</span> * <span class="text-sm text-gray-500">(Name / Phone / Village)</span>
                         </label>
                         <input
-                            type="tel"
+                            type="text"
                             id="userPhone"
                             required
                             class="w-full neu-input"
                             data-i18n-placeholder="phone_placeholder"
-                            placeholder="Search or enter 10-digit phone number"
-                            maxlength="10"
-                            minlength="10"
-                            pattern="[0-9]{10}"
+                            placeholder="Search by name, phone or village..."
+                            maxlength="50"
                             autocomplete="off"
                             onfocus="showPhoneDropdown()"
-                            oninput="filterPhones()"
+                            oninput="debouncedFilterPhones()"
                         >
                         <div id="phoneDropdown" class="village-dropdown hidden">
                             <div id="phoneList" class="village-list"></div>
@@ -592,6 +590,13 @@
 
         // Phone list from database - will be populated on load
         let customerPhones = [];
+        let phoneSearchTimeout; // For debounced search
+
+        // Debounced phone filter - waits 150ms after user stops typing
+        function debouncedFilterPhones() {
+            clearTimeout(phoneSearchTimeout);
+            phoneSearchTimeout = setTimeout(filterPhones, 150);
+        }
 
         // Village list for searchable dropdown
         const villages = ["Jahangirabad","Anupshahr","Achalpur","Ahamad Nagar Urf Touli","Ahar Bangar","Ahar Khadar","Akbarpur Urf Bachchikhera Bang","Alampur Urf Torai Bangar","Amarpur","Amba","Ametha","Aniwas","Anjni","Badarkha","Badshahpur Pauta","Bagsara","Bamanpur","Banawaripur","Barhpura","Begampur Urf Jairampur","Bhailai","Bhaipur","Bhiroli","Bhopur","Bibiyana","Bichaula","Bidhipur","Birauli","Borha","Chacharai","Charaura","Chhaturiya","Dabka","Daraura","Daravar","Davkora","Devakaranpur Urf Bajhera","Dugrau","Dungara Jogi","Enchora","Faridpur Bariyan","Fatahpur","Gahana Govardhanpur","Gangabas Pahara","Garhara","Godhana","Harchandpur","Hasanpur Bangar","Hisavati","Hoshiyarpur Urf Adhiyar","Jafrabad Urf Gangabas Bangar","Jahangirabad Rural","Jairampur Kudena","Jalilpur","Jamrau","Jasar","Jatpura","Jatvai","Jugasana Kalan","Jugasana Khurd","Karanpur Kalan","Karanpur Urf Nurpur","Karonji","Katiyavali","Khadana","Khalaur","Khalikabad/Dungrajat","Khalikpur","Khanpura","Khaunada","Khijarabad","Khushalgarh","Kishanpur Urf Kishan Khera","Kubari","Lachchhampur","Lachhoi","Madagavan","Madhogarh","Malakpur","Man Karora","Mau","Mauharsa","Maujpur","Mohammadpur Bangar","Mohammadpur Khadar","Mubarikpur","Mubarikpur Bangar","Muradnagar","Nagala Nalu","Navabpur Urf Dharampur","Navi Nagar","Pachdevra","Pagauna","Paharpur","Parali","Patrampur","Pipehara","Pootha","Rajapur","Rajaur","Rajner Urf Sorla","Rajpur","Raura","Rohallapur/Kharva","Ronda","Roopvas","Rooth Bangar","Rootha","Sahibad Urf Kakarai","Salamatpur","Salgavan","Sankhani","Shahjahanpur","Shekupur Raura","Sherpur Bangar","Shikoi","Shyampuri","Shyaurampur Jinai","Sihlinagar","Siraura Bangar","Soharkhan","Sunai","Sunana","Suratgarh Urf Lodhai","Telia Nagla","Titota Urf Birgaon","Ugevan","Abhaypur","Akapur Riyana","Alampur Nagla","Alavas Baturi","Amargarh","Amarthal Urf Unchagaon","Aurangabad Tahapur Bager","Aurangabad Tahapur Khader","B B Nagar","Badshahpur Gadia","Badshahpur Talab","Bahainpur","Baharmpur Urf Pali","Bahedi Khera","Bainipur","Balipur","Bamanpur Talluka","Bansuri","Barauli Basdevpur","Barhana","Barkatpur","Basi Bangar","Basi Khadar","Bathada Vajidpur","Bhadaura","Bhadoi Asarfpur","Bhagawantpur","Bhainsaura","Bhamrauli","Bhansa Khur","Bharkau","Bharra","Bhatpura","Bhaupur","Bhirawti","Bhurawala","Bigraon","Biharipur","Bihata","Chandpur Poothi","Chandyana","Chasi","Chatehra","Chhanaura","Chhatamwala","Chigrawati","Chitsona Alipur","Darauli","Darveshpur","Daulatpur Kalan","Dehra","Dhakauli","Dhakka","Dhakrauli","Dhalna","Dhaniyawali","Dulkhara","Eklaidi","Emamabad","Farida Bager","Farida Khadar","Fatehpur","Fatehpur Gujar","Fulaira","Gasupur","Ghansoorpur","Ghunghraoli","Ginaura Nagli","Giraura","Gulab Nagar","Guraoli","Hajipur","Harwanpur Urf Bhagawanpur","Hasanpur Ujarra","Hingbara","Ilna","Imalia","Ishanpur","Jadaul","Jadauli","Jalalpur","Jaria Alampur","Jawasa","Kachraut","Kalyanpur","Kamalpur","Kanauna","Kapsaipur","Karaitha","Karauthi","Karethha","Kariyari","Kaura Shamshadbad","Kesorpur Sathla","Khad Mohan Nagar","Khandoi","Khanpur Guntu","Khanpur Majra","Kharkali","Kharpur","Khijarpur","Kisola","Kriyawali","Kuchesar","Kurena","Ladana","Lalgarhi","Launga","Madangarh","Madona Jafrabad","Maduhasan Garhi Bager","Maduhasan Garhi Khadar","Mahav","Mahiuddinpur Bukalana","Mahuddinpur","Makri","Mangalpur","Mania Tikri","Manpur","Mathura Nagal","Maua Khera","Mavai","Mirzapur Nagli","Modh Allipur Urf Nima Patty Al","Mohamadpurbarwala","Mullani","Nagaur","Nagla Madaripur","Narendrapur","Narsena","Nehchauli","Nikhob","Nirsukha","Nittyanandpur Nagli","Nizampur Bager","Nizampur Khadar","Pali","Pali Anandgarhi","Palipartapur","Parawana Mahmudpur","Pempur","Pilkhani","Pirpur","Pota Kabulpur","Pyana Kalan","Pyana Khurd","Raghunathpur","Rahmatpur Augna","Rampur Pitampur","Ranapur","Rasulpur","Ratanpur","Rausla","Ravani Katiri Bangar","Ravani Katiri Khadar","Sabdalpur","Sahanpur","Sahera","Saidpur","Salabad Dhamaira","Saujna Rani","Sega Jagatpur","Seorampur","Shadipur Banboi","Shafi Nagar","Shakarpur","Shekhupura","Sikri","Sinhali Jhaya","Siyana","Sojna Jhaya","Sulaila","Surajpur Tikri","Takrarpur Ladpor","Tehgora","Thalinayatpur","Thana Gajraula","Thauna","Tibra","Timarpur","Umarpur","Verafirojpur","Yunispur","Abdullapur Hulasan","Ahmad Baj","Ahmadgarh","Ajijabad","Akbarpur Bas Kaneni","Allipur","Allipura Mubarikpur","Amarpur","Anaouna","Anchar Kalan","Ancharu Khurd","Asawari","Ashrefpur Abdullapur","Asrauli","Aurangabad Chandok","Azampur Dariapur","Bad","Badarkha Sirbas","Badrampur","Bailonth","Bamanpur","Ban","Banaul","Barasau","Barauda","Barauli","Barkatpur","Barkhara Hasangarhi","Beram Nagar","Bhaipur","Bhalolpur","Bhansroli Nasirpur","Bhataula","Bhonpur","Bohich","Chakla","Chitsaun","Dargahpur Basauti","Derveshpur","Dhalna","Dhaurau","Dhooturi","Domla Hasangarh","Faizallapur Ajnara","Faridpur Haveli","Fatahabad","Fatehgarh","Fazilpur","Ganga Garh","Gangabaj","Ghungravali Banvaripur","Golabas","Halpura","Hatampur","Hauganpur","Hazaratpur","Hinnaut","Hurthala","Jagdishpur Aurangabad","Jainawai","Jakhauta","Jalalpur","Jalalpur Karira","Jalalpur Katora","Jalaluddinpur Ginauri","Jalphi","Jamalpur","Janipur Kalan","Janipur Khurd","Jatpura","Jeerajpur","Kadon","Kadrabad","Kailawali","Kaisawan","Kamauna","Kaneni Badrampur","Karaina","Karauda","Karira","Kastaba Dhadd","Kasumi","Keratpur","Khailia Kalyanpur","Khairpur","Khakuda","Khandar","Khandwama","Khassia","Kiryawali","Kondupur","Kutubpur","Kuwarpur","Lalgarhi","Lalner","Lohra","Ludhpura","Madanpur Mubarakpur","Mahmudpur","Mahuwa Khara","Mamau","Mandawali","Maudi","Meerapur","Mohammadpur Ginauri","Morauni","Mukeempur","Mukhara","Mustfabad Daduwa","Nagalia Lachhamanpur","Nagla Dalpatpur","Nagla Lutf Alipur","Nagla Naw","Nagla Sarangpur","Nagla Urf Fattapur","Narau","Nawada","Noorpur Nagalia","Padha","Paharpur Haveli","Paharpur Surjawali","Pahasu Dehat","Pandrawal","Pitampur","Poothri Khurd","Poroli","Ragsonth","Rahmapur","Rajpura","Rajupura","Rampur Manpur","Ranau Raham Alipur","Ranayach Narendrapur","Rangpur","Raniwala","Rasulgarhi","Rasulpur","Rasulpur Nagla Bichat","Risalu","Riwara","Runsi","Sahar","Sahatpur Khairi","Saidh Garhi","Salabad","Salbahanpur","Salempur","Samanpur","Samaspur","Sarawa","Sarbhanna","Sargaon","Shikarpur","Shikarpur Rural","Siddhpur","Sidgarhi","Soi","Sujapur Pootha","Sultanpur Khader","Sultanpur Mirgarhi","Surajpur Nisfi","Surjawali","Surkharu","Syarli","Tayabpur","Teyor Bujurag","Teyori","Tunda Khera","Turkipura Khas","Urdmi","Urf Dusari","Utrawali","Yakubpur"];
@@ -780,11 +785,13 @@
             const phone = phoneData.phone.toLowerCase();
             const name = (phoneData.name || '').toLowerCase();
             const village = (phoneData.village || '').toLowerCase();
+            const so = (phoneData.so || '').toLowerCase();
 
-            // Check if search term matches phone, name, or village
+            // Check if search term matches phone, name, village, or S/O
             if (phone.includes(searchTerm)) return true;
             if (name.includes(searchTerm)) return true;
             if (village.includes(searchTerm)) return true;
+            if (so.includes(searchTerm)) return true;
 
             // Fuzzy matching on name
             let searchIndex = 0;
@@ -849,7 +856,10 @@
 
             const phoneList = document.getElementById('phoneList');
             phoneList.innerHTML = displayPhones.map(phoneData => {
-                const displayText = `${phoneData.phone} - ${phoneData.name}${phoneData.village ? ' (' + phoneData.village + ')' : ''}`;
+                let displayText = `<span class="font-semibold">${phoneData.name}</span>`;
+                if (phoneData.so) displayText += ` <span class="text-gray-500">S/O ${phoneData.so}</span>`;
+                displayText += ` - <span class="text-blue-600">${phoneData.phone}</span>`;
+                if (phoneData.village) displayText += ` <span class="text-green-600">(${phoneData.village})</span>`;
                 return `<div class="village-item" onclick='selectPhone(${JSON.stringify(phoneData)})'>${displayText}</div>`;
             }).join('');
 
