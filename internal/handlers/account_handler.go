@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -332,9 +333,16 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 		totalQty += customer.TotalQuantity
 	}
 
-	// Sort by balance (highest first)
+	// Sort: customers with dues first (alphabetically), then no-due customers (alphabetically)
 	sort.Slice(customers, func(i, j int) bool {
-		return customers[i].Balance > customers[j].Balance
+		iHasDue := customers[i].Balance > 0
+		jHasDue := customers[j].Balance > 0
+
+		if iHasDue != jHasDue {
+			return iHasDue // Customers with dues come first
+		}
+		// Within same category, sort alphabetically by name
+		return strings.ToLower(customers[i].Name) < strings.ToLower(customers[j].Name)
 	})
 
 	return &AccountSummary{
