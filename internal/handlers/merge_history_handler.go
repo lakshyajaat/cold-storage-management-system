@@ -69,10 +69,10 @@ func (h *MergeHistoryHandler) GetMergeHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get merge logs from entry_management_logs (with full details)
+	// Get ALL logs from entry_management_logs (merge + reassign)
 	var mergeLogs []*models.EntryManagementLog
 	if h.ManagementLogRepo != nil {
-		logs, err := h.ManagementLogRepo.ListByType(ctx, "merge")
+		logs, err := h.ManagementLogRepo.List(ctx)
 		if err == nil {
 			mergeLogs = logs
 		}
