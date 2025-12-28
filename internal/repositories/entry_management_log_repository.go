@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 
 	"cold-backend/internal/models"
 
@@ -35,22 +36,36 @@ func (r *EntryManagementLogRepository) CreateReassignLog(ctx context.Context, lo
 	).Scan(&log.ID, &log.CreatedAt)
 }
 
-// CreateMergeLog logs a customer merge
+// CreateMergeLog logs a customer merge with full details
 func (r *EntryManagementLogRepository) CreateMergeLog(ctx context.Context, log *models.EntryManagementLog) error {
+	// Serialize merge details to JSON
+	var mergeDetailsJSON []byte
+	if log.MergeDetails != nil {
+		var err error
+		mergeDetailsJSON, err = json.Marshal(log.MergeDetails)
+		if err != nil {
+			return err
+		}
+	}
+
 	query := `
 		INSERT INTO entry_management_logs (
 			action_type, performed_by_id,
 			source_customer_id, source_customer_name, source_customer_phone,
+			source_customer_village, source_customer_so,
 			target_customer_id, target_customer_name, target_customer_phone,
-			entries_moved
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			target_customer_village, target_customer_so,
+			entries_moved, payments_moved, merge_details
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at
 	`
 	return r.DB.QueryRow(ctx, query,
 		"merge", log.PerformedByID,
 		log.SourceCustomerID, log.SourceCustomerName, log.SourceCustomerPhone,
+		log.SourceCustomerVillage, log.SourceCustomerSO,
 		log.TargetCustomerID, log.TargetCustomerName, log.TargetCustomerPhone,
-		log.EntriesMoved,
+		log.TargetCustomerVillage, log.TargetCustomerSO,
+		log.EntriesMoved, log.PaymentsMoved, mergeDetailsJSON,
 	).Scan(&log.ID, &log.CreatedAt)
 }
 

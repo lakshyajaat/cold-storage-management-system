@@ -12,22 +12,25 @@ import (
 
 // MergeHistoryHandler handles merge and transfer history endpoints
 type MergeHistoryHandler struct {
-	CustomerRepo *repositories.CustomerRepository
-	EntryRepo    *repositories.EntryRepository
+	CustomerRepo      *repositories.CustomerRepository
+	EntryRepo         *repositories.EntryRepository
+	ManagementLogRepo *repositories.EntryManagementLogRepository
 }
 
 // NewMergeHistoryHandler creates a new MergeHistoryHandler
-func NewMergeHistoryHandler(customerRepo *repositories.CustomerRepository, entryRepo *repositories.EntryRepository) *MergeHistoryHandler {
+func NewMergeHistoryHandler(customerRepo *repositories.CustomerRepository, entryRepo *repositories.EntryRepository, managementLogRepo *repositories.EntryManagementLogRepository) *MergeHistoryHandler {
 	return &MergeHistoryHandler{
-		CustomerRepo: customerRepo,
-		EntryRepo:    entryRepo,
+		CustomerRepo:      customerRepo,
+		EntryRepo:         entryRepo,
+		ManagementLogRepo: managementLogRepo,
 	}
 }
 
 // MergeHistoryResponse contains all merge and transfer history data
 type MergeHistoryResponse struct {
-	MergedCustomers    []*MergedCustomerInfo    `json:"merged_customers"`
-	TransferredEntries []*TransferredEntryInfo  `json:"transferred_entries"`
+	MergeLogs          []*models.EntryManagementLog `json:"merge_logs"`
+	MergedCustomers    []*MergedCustomerInfo        `json:"merged_customers"`
+	TransferredEntries []*TransferredEntryInfo      `json:"transferred_entries"`
 }
 
 // MergedCustomerInfo contains merged customer details with target info
@@ -64,6 +67,15 @@ func (h *MergeHistoryHandler) GetMergeHistory(w http.ResponseWriter, r *http.Req
 	if !ok || role != "admin" {
 		http.Error(w, "Admin access required", http.StatusForbidden)
 		return
+	}
+
+	// Get merge logs from entry_management_logs (with full details)
+	var mergeLogs []*models.EntryManagementLog
+	if h.ManagementLogRepo != nil {
+		logs, err := h.ManagementLogRepo.ListByType(ctx, "merge")
+		if err == nil {
+			mergeLogs = logs
+		}
 	}
 
 	// Get merged customers
@@ -129,6 +141,7 @@ func (h *MergeHistoryHandler) GetMergeHistory(w http.ResponseWriter, r *http.Req
 	}
 
 	response := MergeHistoryResponse{
+		MergeLogs:          mergeLogs,
 		MergedCustomers:    mergedInfos,
 		TransferredEntries: transferredInfos,
 	}

@@ -99,29 +99,60 @@ func (r *CustomerRepository) GetEntryCount(ctx context.Context, customerID int) 
 
 // MergeCustomers moves all entries and payments from source customer to target customer
 // Instead of deleting, marks source customer as 'merged' for audit trail
-// Returns the number of entries moved
-func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targetID int, targetName, targetPhone, targetVillage, targetSO string, sourcePhone string) (int, error) {
+// Returns the number of entries moved, payments moved, and detailed info
+func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targetID int, targetName, targetPhone, targetVillage, targetSO string, sourcePhone string) (int, int, *models.MergeDetails, error) {
 	// Start transaction
 	tx, err := r.DB.Begin(ctx)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 	defer tx.Rollback(ctx)
 
-	// Count entries to be moved (by customer_id)
-	var entriesMoved int
-	err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM entries WHERE customer_id=$1`, sourceID).Scan(&entriesMoved)
+	// Collect entry details BEFORE moving (for audit trail)
+	entryRows, err := tx.Query(ctx, `
+		SELECT id, thock_number, expected_quantity, thock_category
+		FROM entries WHERE customer_id=$1
+		UNION ALL
+		SELECT id, thock_number, expected_quantity, thock_category
+		FROM entries WHERE phone=$2 AND customer_id NOT IN (SELECT id FROM customers)`,
+		sourceID, sourcePhone)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
-	// Also count orphaned entries with source phone (entries with invalid customer_id but matching phone)
-	var orphanedCount int
-	tx.QueryRow(ctx, `
-		SELECT COUNT(*) FROM entries
-		WHERE phone=$1 AND customer_id NOT IN (SELECT id FROM customers)`,
-		sourcePhone).Scan(&orphanedCount)
-	entriesMoved += orphanedCount
+	var entryDetails []models.MergeEntryDetail
+	for entryRows.Next() {
+		var e models.MergeEntryDetail
+		if err := entryRows.Scan(&e.ID, &e.ThockNumber, &e.ExpectedQuantity, &e.ThockCategory); err != nil {
+			entryRows.Close()
+			return 0, 0, nil, err
+		}
+		entryDetails = append(entryDetails, e)
+	}
+	entryRows.Close()
+
+	// Collect payment details BEFORE moving (for audit trail)
+	paymentRows, err := tx.Query(ctx, `
+		SELECT id, amount, COALESCE(receipt_number, ''), TO_CHAR(payment_date, 'DD/MM/YYYY')
+		FROM rent_payments WHERE customer_phone=$1`,
+		sourcePhone)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+
+	var paymentDetails []models.MergePaymentDetail
+	for paymentRows.Next() {
+		var p models.MergePaymentDetail
+		if err := paymentRows.Scan(&p.ID, &p.Amount, &p.ReceiptNumber, &p.PaymentDate); err != nil {
+			paymentRows.Close()
+			return 0, 0, nil, err
+		}
+		paymentDetails = append(paymentDetails, p)
+	}
+	paymentRows.Close()
+
+	entriesMoved := len(entryDetails)
+	paymentsMoved := len(paymentDetails)
 
 	// Move all entries from source to target (update customer_id and denormalized fields)
 	_, err = tx.Exec(ctx, `
@@ -130,7 +161,7 @@ func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targe
 		WHERE customer_id=$6`,
 		targetID, targetName, targetPhone, targetVillage, targetSO, sourceID)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
 	// Also move orphaned entries with source phone
@@ -140,7 +171,7 @@ func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targe
 		WHERE phone=$6 AND customer_id NOT IN (SELECT id FROM customers)`,
 		targetID, targetName, targetPhone, targetVillage, targetSO, sourcePhone)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
 	// Transfer all rent payments from source customer to target customer
@@ -150,7 +181,7 @@ func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targe
 		WHERE customer_phone=$3`,
 		targetName, targetPhone, sourcePhone)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
 	// SOFT DELETE: Mark source customer as merged (don't delete)
@@ -160,15 +191,20 @@ func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targe
 		WHERE id=$2`,
 		targetID, sourceID)
 	if err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
 	// Commit transaction
 	if err = tx.Commit(ctx); err != nil {
-		return 0, err
+		return 0, 0, nil, err
 	}
 
-	return entriesMoved, nil
+	mergeDetails := &models.MergeDetails{
+		Entries:  entryDetails,
+		Payments: paymentDetails,
+	}
+
+	return entriesMoved, paymentsMoved, mergeDetails, nil
 }
 
 // GetMergedCustomers returns all customers that have been merged

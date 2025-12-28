@@ -255,17 +255,23 @@ func (h *CustomerHandler) MergeCustomers(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Log the merge to management log
+	// Log the merge to management log with full details
 	if h.ManagementLogRepo != nil {
 		managementLog := &models.EntryManagementLog{
-			PerformedByID:       userID,
-			SourceCustomerID:    &req.SourceCustomerID,
-			SourceCustomerName:  &sourceCustomer.Name,
-			SourceCustomerPhone: &sourceCustomer.Phone,
-			TargetCustomerID:    &req.TargetCustomerID,
-			TargetCustomerName:  &targetCustomer.Name,
-			TargetCustomerPhone: &targetCustomer.Phone,
-			EntriesMoved:        &response.EntriesMoved,
+			PerformedByID:         userID,
+			SourceCustomerID:      &req.SourceCustomerID,
+			SourceCustomerName:    &sourceCustomer.Name,
+			SourceCustomerPhone:   &sourceCustomer.Phone,
+			SourceCustomerVillage: &sourceCustomer.Village,
+			SourceCustomerSO:      &sourceCustomer.SO,
+			TargetCustomerID:      &req.TargetCustomerID,
+			TargetCustomerName:    &targetCustomer.Name,
+			TargetCustomerPhone:   &targetCustomer.Phone,
+			TargetCustomerVillage: &targetCustomer.Village,
+			TargetCustomerSO:      &targetCustomer.SO,
+			EntriesMoved:          &response.EntriesMoved,
+			PaymentsMoved:         &response.PaymentsMoved,
+			MergeDetails:          response.MergeDetails,
 		}
 		h.ManagementLogRepo.CreateMergeLog(context.Background(), managementLog)
 	}

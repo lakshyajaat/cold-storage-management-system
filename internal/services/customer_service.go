@@ -114,8 +114,8 @@ func (s *CustomerService) MergeCustomers(ctx context.Context, req *models.MergeC
 		return nil, errors.New("target customer not found")
 	}
 
-	// Merge customers (move entries, transfer payments, and delete source)
-	entriesMoved, err := s.Repo.MergeCustomers(ctx, req.SourceCustomerID, req.TargetCustomerID,
+	// Merge customers (move entries, transfer payments, and mark source as merged)
+	entriesMoved, paymentsMoved, mergeDetails, err := s.Repo.MergeCustomers(ctx, req.SourceCustomerID, req.TargetCustomerID,
 		targetCustomer.Name, targetCustomer.Phone, targetCustomer.Village, targetCustomer.SO, sourceCustomer.Phone)
 	if err != nil {
 		return nil, errors.New("failed to merge customers: " + err.Error())
@@ -124,6 +124,8 @@ func (s *CustomerService) MergeCustomers(ctx context.Context, req *models.MergeC
 	return &models.MergeCustomersResponse{
 		TargetCustomer: targetCustomer,
 		EntriesMoved:   entriesMoved,
+		PaymentsMoved:  paymentsMoved,
+		MergeDetails:   mergeDetails,
 		Message:        "Customers merged successfully",
 	}, nil
 }

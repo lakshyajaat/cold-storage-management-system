@@ -111,7 +111,10 @@
 
         <!-- Tabs -->
         <div class="flex gap-2 mb-4">
-            <button id="mergedTab" onclick="showTab('merged')" class="neu-button bg-purple-500 text-white">
+            <button id="mergeLogsTab" onclick="showTab('mergeLogs')" class="neu-button bg-purple-500 text-white">
+                <i class="bi bi-journal-text"></i> Merge Logs
+            </button>
+            <button id="mergedTab" onclick="showTab('merged')" class="neu-button bg-gray-300">
                 <i class="bi bi-people"></i> Merged Customers
             </button>
             <button id="transferredTab" onclick="showTab('transferred')" class="neu-button bg-gray-300">
@@ -119,8 +122,18 @@
             </button>
         </div>
 
+        <!-- Merge Logs Section (Detailed) -->
+        <div id="mergeLogsSection">
+            <div id="mergeLogsContainer">
+                <div class="text-center py-12">
+                    <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
+                    <p class="text-gray-600 mt-4">Loading merge logs...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Merged Customers Section -->
-        <div id="mergedSection">
+        <div id="mergedSection" class="hidden">
             <div id="mergedContainer">
                 <div class="text-center py-12">
                     <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
@@ -165,20 +178,32 @@
         })();
 
         function showTab(tab) {
-            if (tab === 'merged') {
+            // Hide all sections
+            document.getElementById('mergeLogsSection').classList.add('hidden');
+            document.getElementById('mergedSection').classList.add('hidden');
+            document.getElementById('transferredSection').classList.add('hidden');
+
+            // Reset all tabs
+            document.getElementById('mergeLogsTab').classList.remove('bg-purple-500', 'bg-blue-500', 'text-white');
+            document.getElementById('mergeLogsTab').classList.add('bg-gray-300');
+            document.getElementById('mergedTab').classList.remove('bg-purple-500', 'bg-blue-500', 'text-white');
+            document.getElementById('mergedTab').classList.add('bg-gray-300');
+            document.getElementById('transferredTab').classList.remove('bg-purple-500', 'bg-blue-500', 'text-white');
+            document.getElementById('transferredTab').classList.add('bg-gray-300');
+
+            // Show selected section
+            if (tab === 'mergeLogs') {
+                document.getElementById('mergeLogsSection').classList.remove('hidden');
+                document.getElementById('mergeLogsTab').classList.remove('bg-gray-300');
+                document.getElementById('mergeLogsTab').classList.add('bg-purple-500', 'text-white');
+            } else if (tab === 'merged') {
                 document.getElementById('mergedSection').classList.remove('hidden');
-                document.getElementById('transferredSection').classList.add('hidden');
                 document.getElementById('mergedTab').classList.remove('bg-gray-300');
                 document.getElementById('mergedTab').classList.add('bg-purple-500', 'text-white');
-                document.getElementById('transferredTab').classList.remove('bg-blue-500', 'text-white');
-                document.getElementById('transferredTab').classList.add('bg-gray-300');
             } else {
-                document.getElementById('mergedSection').classList.add('hidden');
                 document.getElementById('transferredSection').classList.remove('hidden');
                 document.getElementById('transferredTab').classList.remove('bg-gray-300');
                 document.getElementById('transferredTab').classList.add('bg-blue-500', 'text-white');
-                document.getElementById('mergedTab').classList.remove('bg-purple-500', 'text-white');
-                document.getElementById('mergedTab').classList.add('bg-gray-300');
             }
         }
 
@@ -199,8 +224,11 @@
                 historyData = await response.json();
 
                 // Update counts
-                document.getElementById('mergedCount').textContent = historyData.merged_customers?.length || 0;
+                document.getElementById('mergedCount').textContent = historyData.merge_logs?.length || historyData.merged_customers?.length || 0;
                 document.getElementById('transferredCount').textContent = historyData.transferred_entries?.length || 0;
+
+                // Render merge logs (detailed)
+                renderMergeLogs(historyData.merge_logs || []);
 
                 // Render merged customers
                 renderMergedCustomers(historyData.merged_customers || []);
@@ -217,6 +245,114 @@
                     </div>
                 `;
             }
+        }
+
+        function renderMergeLogs(logs) {
+            const container = document.getElementById('mergeLogsContainer');
+
+            if (!logs || logs.length === 0) {
+                container.innerHTML = `
+                    <div class="neu-border bg-white p-8 text-center">
+                        <i class="bi bi-info-circle text-4xl text-blue-500"></i>
+                        <p class="text-gray-600 mt-4">No merge logs found. Detailed logs will appear here after new merges.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = logs.map(log => {
+                const date = new Date(log.created_at).toLocaleString('en-IN', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+
+                // Build entries list
+                let entriesHtml = '';
+                if (log.merge_details?.entries && log.merge_details.entries.length > 0) {
+                    entriesHtml = `
+                        <div class="mt-3 p-3 bg-yellow-50 border-2 border-yellow-300">
+                            <p class="font-bold text-sm mb-2"><i class="bi bi-box-seam"></i> Thocks Transferred (${log.merge_details.entries.length}):</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                ${log.merge_details.entries.map(e => `
+                                    <div class="bg-white p-2 border text-sm">
+                                        <strong>${e.thock_number}</strong><br>
+                                        <span class="text-gray-500">${e.expected_quantity} bags | ${e.thock_category}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Build payments list
+                let paymentsHtml = '';
+                if (log.merge_details?.payments && log.merge_details.payments.length > 0) {
+                    const totalPayments = log.merge_details.payments.reduce((sum, p) => sum + p.amount, 0);
+                    paymentsHtml = `
+                        <div class="mt-3 p-3 bg-green-50 border-2 border-green-300">
+                            <p class="font-bold text-sm mb-2"><i class="bi bi-cash"></i> Payments Transferred (${log.merge_details.payments.length}) - Total: ₹${totalPayments.toLocaleString()}:</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                ${log.merge_details.payments.map(p => `
+                                    <div class="bg-white p-2 border text-sm">
+                                        <strong>₹${p.amount.toLocaleString()}</strong><br>
+                                        <span class="text-gray-500">${p.receipt_number || 'No receipt'} | ${p.payment_date}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="history-card merged p-4 mb-4">
+                        <div class="flex justify-between items-start flex-wrap gap-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span class="bg-purple-500 text-white px-2 py-1 text-xs font-bold">MERGE</span>
+                                    <span class="text-gray-500 text-sm">${date}</span>
+                                    <span class="text-gray-500 text-sm">by ${capitalizeText(log.performed_by_name)}</span>
+                                </div>
+
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <!-- Source Customer -->
+                                    <div class="p-3 bg-red-50 border-2 border-red-300">
+                                        <p class="text-xs text-red-600 font-bold mb-1">SOURCE (MERGED)</p>
+                                        <h3 class="text-lg font-bold">${capitalizeText(log.source_customer_name || '')}</h3>
+                                        <p class="text-gray-600 text-sm">
+                                            <i class="bi bi-telephone"></i> ${log.source_customer_phone || ''}
+                                            ${log.source_customer_so ? ` | S/O: ${capitalizeText(log.source_customer_so)}` : ''}
+                                            ${log.source_customer_village ? ` | ${capitalizeText(log.source_customer_village)}` : ''}
+                                        </p>
+                                    </div>
+
+                                    <!-- Target Customer -->
+                                    <div class="p-3 bg-green-50 border-2 border-green-300">
+                                        <p class="text-xs text-green-600 font-bold mb-1">TARGET (KEPT)</p>
+                                        <h3 class="text-lg font-bold">${capitalizeText(log.target_customer_name || '')}</h3>
+                                        <p class="text-gray-600 text-sm">
+                                            <i class="bi bi-telephone"></i> ${log.target_customer_phone || ''}
+                                            ${log.target_customer_so ? ` | S/O: ${capitalizeText(log.target_customer_so)}` : ''}
+                                            ${log.target_customer_village ? ` | ${capitalizeText(log.target_customer_village)}` : ''}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 flex gap-4 text-sm">
+                                    <span class="bg-purple-100 px-2 py-1"><strong>${log.entries_moved || 0}</strong> Thocks</span>
+                                    <span class="bg-green-100 px-2 py-1"><strong>${log.payments_moved || 0}</strong> Payments</span>
+                                </div>
+
+                                ${entriesHtml}
+                                ${paymentsHtml}
+                            </div>
+
+                            <button onclick="undoMerge(${log.source_customer_id})" class="neu-button bg-yellow-500 text-white">
+                                <i class="bi bi-arrow-counterclockwise"></i> Undo
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderMergedCustomers(customers) {

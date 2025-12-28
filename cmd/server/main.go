@@ -575,7 +575,7 @@ func main() {
 		debtHandler := handlers.NewDebtHandler(debtService)
 
 		// Initialize merge history handler
-		mergeHistoryHandler := handlers.NewMergeHistoryHandler(customerRepo, entryRepo)
+		mergeHistoryHandler := handlers.NewMergeHistoryHandler(customerRepo, entryRepo, entryManagementLogRepo)
 
 		// Create employee router
 		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler)

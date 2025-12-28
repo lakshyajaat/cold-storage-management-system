@@ -42,7 +42,31 @@ type MergeCustomersRequest struct {
 
 // MergeCustomersResponse represents the response after merging customers
 type MergeCustomersResponse struct {
-	TargetCustomer *Customer `json:"target_customer"`
-	EntriesMoved   int       `json:"entries_moved"`
-	Message        string    `json:"message"`
+	TargetCustomer *Customer     `json:"target_customer"`
+	EntriesMoved   int           `json:"entries_moved"`
+	PaymentsMoved  int           `json:"payments_moved"`
+	MergeDetails   *MergeDetails `json:"merge_details,omitempty"`
+	Message        string        `json:"message"`
+}
+
+// MergeDetails contains detailed information about what was transferred during a merge
+type MergeDetails struct {
+	Entries  []MergeEntryDetail   `json:"entries"`
+	Payments []MergePaymentDetail `json:"payments"`
+}
+
+// MergeEntryDetail contains info about a single entry that was transferred
+type MergeEntryDetail struct {
+	ID               int    `json:"id"`
+	ThockNumber      string `json:"thock_number"`
+	ExpectedQuantity int    `json:"expected_quantity"`
+	ThockCategory    string `json:"thock_category"`
+}
+
+// MergePaymentDetail contains info about a single payment that was transferred
+type MergePaymentDetail struct {
+	ID            int     `json:"id"`
+	Amount        float64 `json:"amount"`
+	ReceiptNumber string  `json:"receipt_number"`
+	PaymentDate   string  `json:"payment_date"`
 }
