@@ -275,18 +275,18 @@
             }
         }
 
-        // Check admin permission
+        // Check admin/accountant permission
         async function checkAdminPermission() {
             const user = decodeToken();
             if (!user) return false;
 
-            if (user.role === 'admin') {
+            if (user.role === 'admin' || user.role === 'accountant' || user.has_accountant_access) {
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 return true;
             }
 
-            alert('Access denied. Admin access required.');
+            alert('Access denied. Admin or Accountant access required.');
             window.location.href = '/dashboard';
             return false;
         }
