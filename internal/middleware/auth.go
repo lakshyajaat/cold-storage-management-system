@@ -15,6 +15,7 @@ const UserIDKey contextKey = "user_id"
 const EmailKey contextKey = "email"
 const RoleKey contextKey = "role"
 const HasAccountantAccessKey contextKey = "has_accountant_access"
+const CanManageEntriesKey contextKey = "can_manage_entries"
 
 type AuthMiddleware struct {
 	jwtManager *auth.JWTManager
@@ -69,6 +70,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, EmailKey, user.Email)
 		ctx = context.WithValue(ctx, RoleKey, user.Role)
 		ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
+		ctx = context.WithValue(ctx, CanManageEntriesKey, user.CanManageEntries)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -174,6 +176,7 @@ func (m *AuthMiddleware) RequireRole(allowedRoles ...string) func(http.Handler) 
 			ctx = context.WithValue(ctx, EmailKey, user.Email)
 			ctx = context.WithValue(ctx, RoleKey, user.Role)
 			ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
+			ctx = context.WithValue(ctx, CanManageEntriesKey, user.CanManageEntries)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -256,6 +259,7 @@ func (m *AuthMiddleware) RequireAccountantAccess(next http.Handler) http.Handler
 		ctx = context.WithValue(ctx, EmailKey, user.Email)
 		ctx = context.WithValue(ctx, RoleKey, user.Role)
 		ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
+		ctx = context.WithValue(ctx, CanManageEntriesKey, user.CanManageEntries)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -331,10 +335,22 @@ func (m *AuthMiddleware) RequireAuth() func(http.Handler) http.Handler {
 			ctx = context.WithValue(ctx, EmailKey, user.Email)
 			ctx = context.WithValue(ctx, RoleKey, user.Role)
 			ctx = context.WithValue(ctx, HasAccountantAccessKey, user.HasAccountantAccess)
+			ctx = context.WithValue(ctx, CanManageEntriesKey, user.CanManageEntries)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// HasManageEntriesAccess checks if user can manage entries (reassign/merge)
+// Returns true if: admin role OR can_manage_entries=true
+func HasManageEntriesAccess(ctx context.Context) bool {
+	role, _ := GetRoleFromContext(ctx)
+	if role == "admin" {
+		return true
+	}
+	canManage, ok := ctx.Value(CanManageEntriesKey).(bool)
+	return ok && canManage
 }
 
 // Customer authentication middleware

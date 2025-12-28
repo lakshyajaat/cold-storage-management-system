@@ -200,6 +200,9 @@
             <button class="tab-button" onclick="switchTab('users')">
                 <i class="bi bi-person-badge"></i> User Management
             </button>
+            <button class="tab-button" onclick="switchTab('entrymanagement')">
+                <i class="bi bi-arrow-left-right text-purple-600"></i> Entry Management
+            </button>
         </div>
 
         <!-- Employee Activity Tab -->
@@ -643,6 +646,49 @@
             </div>
         </div>
 
+        <!-- Entry Management Tab (Reassignments & Merges) -->
+        <div id="entrymanagement-tab" class="tab-content neu-border bg-white p-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-arrow-left-right text-purple-600"></i>
+                Entry Management Logs
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">Track thock ownership changes and customer merges</p>
+
+            <!-- Toggle between Reassignments and Merges -->
+            <div class="flex gap-2 mb-4">
+                <button onclick="setManagementLogType('all')" id="mgmtType-all"
+                        class="px-4 py-2 rounded border-2 border-black bg-purple-500 text-white text-sm font-bold ring-2 ring-black">
+                    <i class="bi bi-list-ul"></i> All
+                </button>
+                <button onclick="setManagementLogType('reassign')" id="mgmtType-reassign"
+                        class="px-4 py-2 rounded border-2 border-black bg-blue-100 text-sm font-bold">
+                    <i class="bi bi-arrow-left-right"></i> Reassignments
+                </button>
+                <button onclick="setManagementLogType('merge')" id="mgmtType-merge"
+                        class="px-4 py-2 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    <i class="bi bi-people"></i> Merges
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="p-3 text-left">Date/Time</th>
+                            <th class="p-3 text-left">Action</th>
+                            <th class="p-3 text-left">Details</th>
+                            <th class="p-3 text-left">Performed By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="managementLogsTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -657,9 +703,11 @@
         let allAdminActions = [];
         let allGatePasses = [];
         let allExpiredPasses = [];
+        let allManagementLogs = [];
         let editLogFilter = 'all';  // Filter: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
         let editLogType = 'room';  // Filter: 'room' for room entries, 'entry' for entries
         let entryEditLogFilter = 'all';  // Filter for entry edits: 'all', 'name', 'phone', 'village', 'so', 'quantity', 'category', 'remark'
+        let managementLogType = 'all';  // Filter: 'all', 'reassign', 'merge'
 
         // Security: Escape HTML to prevent XSS attacks
         function escapeHtml(unsafe) {
@@ -709,6 +757,7 @@
                 loadEditLogs(),
                 loadEntryEditLogs(),
                 loadAdminActions(),
+                loadManagementLogs(),
                 loadGatePasses(),
                 loadExpiredPasses()
             ]);
@@ -853,6 +902,26 @@
                 console.error('Error loading admin actions:', error);
                 allAdminActions = [];
                 displayAdminActions();
+            }
+        }
+
+        async function loadManagementLogs() {
+            try {
+                const url = managementLogType === 'all'
+                    ? '/api/entry-management-logs'
+                    : `/api/entry-management-logs?type=${managementLogType}`;
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load management logs');
+
+                allManagementLogs = await response.json() || [];
+                displayManagementLogs();
+            } catch (error) {
+                console.error('Error loading management logs:', error);
+                allManagementLogs = [];
+                displayManagementLogs();
             }
         }
 
@@ -1558,6 +1627,91 @@
                         <td class="p-2 text-sm">${action.description}</td>
                         <td class="p-2 text-xs">${action.ip_address || 'N/A'}</td>
                         <td class="p-2 text-sm">${createdAt}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setManagementLogType(logType) {
+            managementLogType = logType;
+
+            // Update button styles
+            const allBtn = document.getElementById('mgmtType-all');
+            const reassignBtn = document.getElementById('mgmtType-reassign');
+            const mergeBtn = document.getElementById('mgmtType-merge');
+
+            allBtn.className = 'px-4 py-2 rounded border-2 border-black bg-purple-100 text-sm font-bold';
+            reassignBtn.className = 'px-4 py-2 rounded border-2 border-black bg-blue-100 text-sm font-bold';
+            mergeBtn.className = 'px-4 py-2 rounded border-2 border-black bg-green-100 text-sm font-bold';
+
+            if (logType === 'all') {
+                allBtn.className = 'px-4 py-2 rounded border-2 border-black bg-purple-500 text-white text-sm font-bold ring-2 ring-black';
+            } else if (logType === 'reassign') {
+                reassignBtn.className = 'px-4 py-2 rounded border-2 border-black bg-blue-500 text-white text-sm font-bold ring-2 ring-black';
+            } else if (logType === 'merge') {
+                mergeBtn.className = 'px-4 py-2 rounded border-2 border-black bg-green-500 text-white text-sm font-bold ring-2 ring-black';
+            }
+
+            loadManagementLogs();
+        }
+
+        function displayManagementLogs() {
+            const tbody = document.getElementById('managementLogsTableBody');
+
+            if (!allManagementLogs || allManagementLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-gray-500">No entry management logs found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allManagementLogs.map(log => {
+                const createdAt = new Date(log.created_at).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                let actionBadge = '';
+                let details = '';
+
+                if (log.action_type === 'reassign') {
+                    actionBadge = '<span class="px-2 py-1 rounded text-white text-xs bg-blue-500"><i class="bi bi-arrow-left-right"></i> Reassign</span>';
+                    details = `
+                        <div class="text-sm">
+                            <div class="font-bold">Thock #${log.thock_number || 'N/A'}</div>
+                            <div class="text-red-600">
+                                <i class="bi bi-arrow-right"></i> From: ${capitalizeText(log.old_customer_name || 'Unknown')} (${log.old_customer_phone || 'N/A'})
+                            </div>
+                            <div class="text-green-600">
+                                <i class="bi bi-arrow-left"></i> To: ${capitalizeText(log.new_customer_name || 'Unknown')} (${log.new_customer_phone || 'N/A'})
+                            </div>
+                        </div>
+                    `;
+                } else if (log.action_type === 'merge') {
+                    actionBadge = '<span class="px-2 py-1 rounded text-white text-xs bg-green-500"><i class="bi bi-people"></i> Merge</span>';
+                    details = `
+                        <div class="text-sm">
+                            <div class="text-red-600">
+                                <i class="bi bi-trash"></i> Source: ${capitalizeText(log.source_customer_name || 'Unknown')} (${log.source_customer_phone || 'N/A'})
+                            </div>
+                            <div class="text-green-600">
+                                <i class="bi bi-check-circle"></i> Target: ${capitalizeText(log.target_customer_name || 'Unknown')} (${log.target_customer_phone || 'N/A'})
+                            </div>
+                            <div class="text-blue-600 font-bold">
+                                <i class="bi bi-box-seam"></i> ${log.entries_moved || 0} entries moved
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-purple-50">
+                        <td class="p-3 text-sm">${createdAt}</td>
+                        <td class="p-3">${actionBadge}</td>
+                        <td class="p-3">${details}</td>
+                        <td class="p-3 font-semibold">${capitalizeText(log.performed_by_name || 'Unknown')}</td>
                     </tr>
                 `;
             }).join('');

@@ -151,6 +151,9 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
+                <button id="mergeCustomersBtn" onclick="openMergeModal()" class="neu-button bg-purple-500 text-white px-3 md:px-4 py-2" style="display: none;">
+                    <i class="bi bi-people"></i> <span class="hidden sm:inline">Merge Customers</span>
+                </button>
                 <a href="/account/audit" class="neu-button bg-indigo-500 text-white px-3 md:px-4 py-2">
                     <i class="bi bi-journal-text"></i> <span class="hidden sm:inline">Audit</span>
                 </a>
@@ -353,6 +356,121 @@
         </div>
     </div>
 
+    <!-- Entry Reassignment Modal -->
+    <div id="reassignModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white neu-border p-4 md:p-8 max-w-lg w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-arrow-left-right text-blue-600"></i>
+                Change Thock Customer
+            </h3>
+
+            <div class="mb-4 p-3 bg-blue-50 border-2 border-blue-200">
+                <p class="text-sm text-gray-600">Current Assignment</p>
+                <p class="font-bold">Thock #<span id="reassignThockNumber">-</span></p>
+                <p class="text-sm">Customer: <span id="reassignCurrentCustomer" class="font-semibold">-</span></p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Search New Customer *
+                </label>
+                <input
+                    type="text"
+                    id="reassignCustomerSearch"
+                    class="w-full neu-input"
+                    placeholder="Search by name or phone..."
+                    oninput="searchCustomersForReassign()"
+                >
+            </div>
+
+            <div class="mb-4 max-h-48 overflow-y-auto" id="reassignCustomerResults">
+                <p class="text-gray-500 text-sm p-4 text-center">Type to search customers...</p>
+            </div>
+
+            <div class="mb-4 p-3 bg-green-50 border-2 border-green-200 hidden" id="reassignSelectedCustomer">
+                <p class="text-sm text-gray-600">Selected Customer</p>
+                <p class="font-bold" id="reassignNewCustomerName">-</p>
+                <p class="text-sm" id="reassignNewCustomerPhone">-</p>
+            </div>
+
+            <input type="hidden" id="reassignEntryId">
+            <input type="hidden" id="reassignNewCustomerId">
+
+            <div class="flex gap-4">
+                <button id="reassignSubmitBtn" onclick="submitReassign()" class="flex-1 neu-button bg-blue-500 text-white" disabled>
+                    <i class="bi bi-arrow-left-right"></i> Reassign
+                </button>
+                <button onclick="closeReassignModal()" class="flex-1 neu-button bg-gray-300">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Merge Modal -->
+    <div id="mergeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white neu-border p-4 md:p-8 max-w-lg w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-people text-purple-600"></i>
+                Merge Customers
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">Move all entries from source customer to target customer, then delete source.</p>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    <i class="bi bi-trash text-red-600"></i> Source Customer (will be deleted) *
+                </label>
+                <input
+                    type="text"
+                    id="mergeSourceSearch"
+                    class="w-full neu-input"
+                    placeholder="Search source customer..."
+                    oninput="searchCustomersForMerge('source')"
+                >
+                <div class="max-h-32 overflow-y-auto mt-2" id="mergeSourceResults"></div>
+                <div class="p-2 bg-red-50 border-2 border-red-200 mt-2 hidden" id="mergeSourceSelected">
+                    <span id="mergeSourceName" class="font-bold">-</span>
+                    <span id="mergeSourcePhone" class="text-sm text-gray-600">-</span>
+                    <span id="mergeSourceEntryCount" class="text-xs bg-blue-500 text-white px-2 py-1 rounded ml-2">0 entries</span>
+                </div>
+            </div>
+
+            <div class="text-center mb-4">
+                <i class="bi bi-arrow-down text-3xl text-purple-600"></i>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    <i class="bi bi-check-circle text-green-600"></i> Target Customer (will keep) *
+                </label>
+                <input
+                    type="text"
+                    id="mergeTargetSearch"
+                    class="w-full neu-input"
+                    placeholder="Search target customer..."
+                    oninput="searchCustomersForMerge('target')"
+                >
+                <div class="max-h-32 overflow-y-auto mt-2" id="mergeTargetResults"></div>
+                <div class="p-2 bg-green-50 border-2 border-green-200 mt-2 hidden" id="mergeTargetSelected">
+                    <span id="mergeTargetName" class="font-bold">-</span>
+                    <span id="mergeTargetPhone" class="text-sm text-gray-600">-</span>
+                </div>
+            </div>
+
+            <input type="hidden" id="mergeSourceId">
+            <input type="hidden" id="mergeTargetId">
+
+            <div class="flex gap-4">
+                <button id="mergeSubmitBtn" onclick="submitMerge()" class="flex-1 neu-button bg-purple-500 text-white" disabled>
+                    <i class="bi bi-people"></i> Merge Customers
+                </button>
+                <button onclick="closeMergeModal()" class="flex-1 neu-button bg-gray-300">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Capitalize first letter function
         function capitalizeFirstLetter(input) {
@@ -382,6 +500,7 @@
         let allCustomerAccounts = [];
         let currentPaymentCustomer = null;
         let rentPerItem = 0;
+        let canManageEntries = false; // Permission flag for entry reassignment and customer merge
 
         // Decode JWT to get user info
         function decodeToken() {
@@ -412,9 +531,14 @@
 
             // Check if user is admin or accountant role
             if (user.role === 'admin' || user.role === 'accountant') {
+                // Admins always have manage entries access
+                if (user.role === 'admin') {
+                    canManageEntries = true;
+                }
                 // Admins and accountants always have access
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
+                updateManageEntriesUI();
                 return true;
             }
 
@@ -438,9 +562,13 @@
                         return false;
                     }
 
+                    // Check if employee has manage entries permission
+                    canManageEntries = userData.can_manage_entries || false;
+
                     // Employee has accountant access, show content
                     document.getElementById('loadingScreen').style.display = 'none';
                     document.getElementById('mainContent').style.display = 'block';
+                    updateManageEntriesUI();
                     return true;
 
                 } catch (error) {
@@ -454,6 +582,14 @@
                 alert('Access denied. This page is for accountants only.');
                 window.location.href = '/dashboard';
                 return false;
+            }
+        }
+
+        // Show/hide manage entries UI based on permission
+        function updateManageEntriesUI() {
+            const mergeBtn = document.getElementById('mergeCustomersBtn');
+            if (mergeBtn) {
+                mergeBtn.style.display = canManageEntries ? 'inline-flex' : 'none';
             }
         }
 
@@ -811,6 +947,7 @@
                                                 <th class="text-left p-3 font-bold">Quantity</th>
                                                 <th class="text-left p-3 font-bold">Rent</th>
                                                 <th class="text-left p-3 font-bold">Date</th>
+                                                ${canManageEntries ? '<th class="text-left p-3 font-bold">Action</th>' : ''}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -830,6 +967,7 @@
                                                     <td class="p-3 ${quantityClass}">${displayQty}</td>
                                                     <td class="p-3 font-bold ${rentClass}">₹${Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                                                     <td class="p-3 text-sm">${thock.date}</td>
+                                                    ${canManageEntries ? `<td class="p-3"><button onclick="openReassignModal(${thock.id}, '${thock.thock_number}', '${customer.name.replace(/'/g, "\\'")}', '${customer.phone}')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i> Change</button></td>` : ''}
                                                 </tr>
                                             `}).join('')}
                                             ${seedQuantity > 0 ? `
@@ -1123,6 +1261,333 @@
 
         function viewReceipt(receiptNumber) {
             window.open(`/payment-receipt?receipt=${receiptNumber}`, '_blank', 'width=800,height=600');
+        }
+
+        // ===============================
+        // Entry Reassignment Functions
+        // ===============================
+        let reassignSearchTimeout;
+        let currentReassignEntryId = null;
+
+        function openReassignModal(entryId, thockNumber, customerName, customerPhone) {
+            currentReassignEntryId = entryId;
+            document.getElementById('reassignEntryId').value = entryId;
+            document.getElementById('reassignThockNumber').textContent = thockNumber;
+            document.getElementById('reassignCurrentCustomer').textContent = `${customerName} (${customerPhone})`;
+            document.getElementById('reassignCustomerSearch').value = '';
+            document.getElementById('reassignCustomerResults').innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">Type to search customers...</p>';
+            document.getElementById('reassignSelectedCustomer').classList.add('hidden');
+            document.getElementById('reassignNewCustomerId').value = '';
+            document.getElementById('reassignSubmitBtn').disabled = true;
+            document.getElementById('reassignModal').classList.remove('hidden');
+        }
+
+        function closeReassignModal() {
+            document.getElementById('reassignModal').classList.add('hidden');
+            currentReassignEntryId = null;
+        }
+
+        function searchCustomersForReassign() {
+            clearTimeout(reassignSearchTimeout);
+            reassignSearchTimeout = setTimeout(async () => {
+                const searchTerm = document.getElementById('reassignCustomerSearch').value.trim();
+                const resultsDiv = document.getElementById('reassignCustomerResults');
+
+                if (searchTerm.length < 2) {
+                    resultsDiv.innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">Type at least 2 characters to search...</p>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<p class="text-gray-500 text-sm p-4 text-center"><i class="bi bi-hourglass-split"></i> Searching...</p>';
+
+                try {
+                    // Search from cached customer accounts
+                    const filtered = allCustomerAccounts.filter(c =>
+                        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        c.phone.includes(searchTerm)
+                    ).slice(0, 10);
+
+                    if (filtered.length === 0) {
+                        resultsDiv.innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">No customers found</p>';
+                        return;
+                    }
+
+                    resultsDiv.innerHTML = filtered.map(c => `
+                        <div onclick="selectCustomerForReassign('${c.phone}', '${c.name.replace(/'/g, "\\'")}', '${c.phone}')"
+                             class="p-2 border-b border-gray-200 hover:bg-blue-50 cursor-pointer">
+                            <p class="font-bold">${capitalizeText(c.name)}</p>
+                            <p class="text-sm text-gray-600">${c.phone} • ${capitalizeText(c.village)}</p>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Error searching customers:', error);
+                    resultsDiv.innerHTML = '<p class="text-red-500 text-sm p-4 text-center">Error searching customers</p>';
+                }
+            }, 300);
+        }
+
+        async function selectCustomerForReassign(customerPhone, customerName, phone) {
+            // Find the customer to get their ID
+            const customer = allCustomerAccounts.find(c => c.phone === customerPhone);
+            if (!customer) {
+                alert('Customer not found');
+                return;
+            }
+
+            // We need the customer ID, which we can get from their first entry
+            // Or we need to call an API to get customer by phone
+            try {
+                const response = await fetch(`/api/customers/search?phone=${encodeURIComponent(customerPhone)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch customer');
+                }
+
+                const customers = await response.json();
+                if (!customers || customers.length === 0) {
+                    alert('Customer not found in database');
+                    return;
+                }
+
+                const customerId = customers[0].id;
+                document.getElementById('reassignNewCustomerId').value = customerId;
+                document.getElementById('reassignNewCustomerName').textContent = capitalizeText(customerName);
+                document.getElementById('reassignNewCustomerPhone').textContent = phone;
+                document.getElementById('reassignSelectedCustomer').classList.remove('hidden');
+                document.getElementById('reassignCustomerResults').innerHTML = '';
+                document.getElementById('reassignSubmitBtn').disabled = false;
+            } catch (error) {
+                console.error('Error selecting customer:', error);
+                alert('Error selecting customer: ' + error.message);
+            }
+        }
+
+        async function submitReassign() {
+            const entryId = document.getElementById('reassignEntryId').value;
+            const newCustomerId = document.getElementById('reassignNewCustomerId').value;
+
+            if (!entryId || !newCustomerId) {
+                alert('Please select a new customer');
+                return;
+            }
+
+            const submitBtn = document.getElementById('reassignSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Reassigning...';
+
+            try {
+                const response = await fetch(`/api/entries/${entryId}/reassign`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ new_customer_id: parseInt(newCustomerId) })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to reassign entry');
+                }
+
+                const result = await response.json();
+                alert('Entry reassigned successfully!');
+                closeReassignModal();
+                loadCustomerAccounts(true); // Force refresh
+            } catch (error) {
+                console.error('Error reassigning entry:', error);
+                alert('Error reassigning entry: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Reassign';
+            }
+        }
+
+        // ===============================
+        // Customer Merge Functions
+        // ===============================
+        let mergeSourceSearchTimeout;
+        let mergeTargetSearchTimeout;
+
+        function openMergeModal() {
+            document.getElementById('mergeSourceSearch').value = '';
+            document.getElementById('mergeTargetSearch').value = '';
+            document.getElementById('mergeSourceResults').innerHTML = '';
+            document.getElementById('mergeTargetResults').innerHTML = '';
+            document.getElementById('mergeSourceSelected').classList.add('hidden');
+            document.getElementById('mergeTargetSelected').classList.add('hidden');
+            document.getElementById('mergeSourceId').value = '';
+            document.getElementById('mergeTargetId').value = '';
+            document.getElementById('mergeSubmitBtn').disabled = true;
+            document.getElementById('mergeModal').classList.remove('hidden');
+        }
+
+        function closeMergeModal() {
+            document.getElementById('mergeModal').classList.add('hidden');
+        }
+
+        function searchCustomersForMerge(type) {
+            const timeout = type === 'source' ? mergeSourceSearchTimeout : mergeTargetSearchTimeout;
+            clearTimeout(timeout);
+
+            const searchFunc = setTimeout(async () => {
+                const searchInput = document.getElementById(`merge${type === 'source' ? 'Source' : 'Target'}Search`);
+                const resultsDiv = document.getElementById(`merge${type === 'source' ? 'Source' : 'Target'}Results`);
+                const searchTerm = searchInput.value.trim();
+
+                if (searchTerm.length < 2) {
+                    resultsDiv.innerHTML = '';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<p class="text-gray-500 text-sm p-2"><i class="bi bi-hourglass-split"></i> Searching...</p>';
+
+                try {
+                    const filtered = allCustomerAccounts.filter(c =>
+                        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        c.phone.includes(searchTerm)
+                    ).slice(0, 5);
+
+                    if (filtered.length === 0) {
+                        resultsDiv.innerHTML = '<p class="text-gray-500 text-sm p-2">No customers found</p>';
+                        return;
+                    }
+
+                    resultsDiv.innerHTML = filtered.map(c => `
+                        <div onclick="selectCustomerForMerge('${type}', '${c.phone}', '${c.name.replace(/'/g, "\\'")}')"
+                             class="p-2 border-b border-gray-200 hover:bg-${type === 'source' ? 'red' : 'green'}-50 cursor-pointer">
+                            <p class="font-bold">${capitalizeText(c.name)}</p>
+                            <p class="text-sm text-gray-600">${c.phone} • ${c.thocks.length} thocks</p>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Error searching customers:', error);
+                    resultsDiv.innerHTML = '<p class="text-red-500 text-sm p-2">Error searching</p>';
+                }
+            }, 300);
+
+            if (type === 'source') {
+                mergeSourceSearchTimeout = searchFunc;
+            } else {
+                mergeTargetSearchTimeout = searchFunc;
+            }
+        }
+
+        async function selectCustomerForMerge(type, phone, name) {
+            try {
+                const response = await fetch(`/api/customers/search?phone=${encodeURIComponent(phone)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch customer');
+                }
+
+                const customers = await response.json();
+                if (!customers || customers.length === 0) {
+                    alert('Customer not found in database');
+                    return;
+                }
+
+                const customer = customers[0];
+                const isSource = type === 'source';
+                const prefix = isSource ? 'Source' : 'Target';
+
+                document.getElementById(`merge${prefix}Id`).value = customer.id;
+                document.getElementById(`merge${prefix}Name`).textContent = capitalizeText(name);
+                document.getElementById(`merge${prefix}Phone`).textContent = phone;
+                document.getElementById(`merge${prefix}Results`).innerHTML = '';
+                document.getElementById(`merge${prefix}Selected`).classList.remove('hidden');
+
+                // For source, fetch entry count
+                if (isSource) {
+                    try {
+                        const countResponse = await fetch(`/api/customers/${customer.id}/entry-count`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (countResponse.ok) {
+                            const countData = await countResponse.json();
+                            document.getElementById('mergeSourceEntryCount').textContent = `${countData.entry_count} entries`;
+                        }
+                    } catch (e) {
+                        console.error('Error fetching entry count:', e);
+                    }
+                }
+
+                checkMergeReady();
+            } catch (error) {
+                console.error('Error selecting customer:', error);
+                alert('Error selecting customer: ' + error.message);
+            }
+        }
+
+        function checkMergeReady() {
+            const sourceId = document.getElementById('mergeSourceId').value;
+            const targetId = document.getElementById('mergeTargetId').value;
+            const submitBtn = document.getElementById('mergeSubmitBtn');
+
+            if (sourceId && targetId && sourceId !== targetId) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        async function submitMerge() {
+            const sourceId = parseInt(document.getElementById('mergeSourceId').value);
+            const targetId = parseInt(document.getElementById('mergeTargetId').value);
+
+            if (!sourceId || !targetId) {
+                alert('Please select both source and target customers');
+                return;
+            }
+
+            if (sourceId === targetId) {
+                alert('Source and target customers cannot be the same');
+                return;
+            }
+
+            const sourceName = document.getElementById('mergeSourceName').textContent;
+            const targetName = document.getElementById('mergeTargetName').textContent;
+            const entryCount = document.getElementById('mergeSourceEntryCount').textContent;
+
+            if (!confirm(`Are you sure you want to merge?\n\nSource: ${sourceName} (${entryCount}) - WILL BE DELETED\nTarget: ${targetName} - WILL KEEP\n\nAll entries from source will be moved to target.`)) {
+                return;
+            }
+
+            const submitBtn = document.getElementById('mergeSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Merging...';
+
+            try {
+                const response = await fetch('/api/customers/merge', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        source_customer_id: sourceId,
+                        target_customer_id: targetId
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to merge customers');
+                }
+
+                const result = await response.json();
+                alert(`Customers merged successfully!\n${result.entries_moved} entries were moved.`);
+                closeMergeModal();
+                loadCustomerAccounts(true); // Force refresh
+            } catch (error) {
+                console.error('Error merging customers:', error);
+                alert('Error merging customers: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-people"></i> Merge Customers';
+            }
         }
 
         // Load accounts on page load (after permission check)

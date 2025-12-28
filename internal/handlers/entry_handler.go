@@ -16,15 +16,17 @@ import (
 )
 
 type EntryHandler struct {
-	Service        *services.EntryService
-	EditLogRepo    *repositories.EntryEditLogRepository
-	SettingService *services.SystemSettingService
+	Service           *services.EntryService
+	EditLogRepo       *repositories.EntryEditLogRepository
+	ManagementLogRepo *repositories.EntryManagementLogRepository
+	SettingService    *services.SystemSettingService
 }
 
-func NewEntryHandler(s *services.EntryService, editLogRepo *repositories.EntryEditLogRepository) *EntryHandler {
+func NewEntryHandler(s *services.EntryService, editLogRepo *repositories.EntryEditLogRepository, managementLogRepo *repositories.EntryManagementLogRepository) *EntryHandler {
 	return &EntryHandler{
-		Service:     s,
-		EditLogRepo: editLogRepo,
+		Service:           s,
+		EditLogRepo:       editLogRepo,
+		ManagementLogRepo: managementLogRepo,
 	}
 }
 
@@ -228,6 +230,116 @@ func (h *EntryHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entry)
+}
+
+// ReassignEntry reassigns an entry to a different customer
+// PUT /api/entries/{id}/reassign
+func (h *EntryHandler) ReassignEntry(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid entry ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check permission: admin OR can_manage_entries
+	if !middleware.HasManageEntriesAccess(r.Context()) {
+		http.Error(w, "Forbidden: Manage entries permission required", http.StatusForbidden)
+		return
+	}
+
+	// Get user ID for logging
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	var req models.ReassignEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewCustomerID <= 0 {
+		http.Error(w, "new_customer_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get old entry for logging
+	oldEntry, err := h.Service.GetEntry(context.Background(), id)
+	if err != nil {
+		http.Error(w, "Entry not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if already assigned to this customer
+	if oldEntry.CustomerID == req.NewCustomerID {
+		http.Error(w, "Entry is already assigned to this customer", http.StatusBadRequest)
+		return
+	}
+
+	// Reassign the entry
+	entry, newCustomer, err := h.Service.ReassignEntry(context.Background(), id, req.NewCustomerID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Log the reassignment to entry edit log
+	if h.EditLogRepo != nil {
+		editLog := &models.EntryEditLog{
+			EntryID:        id,
+			EditedByUserID: userID,
+		}
+
+		// Log all changed fields (customer reassignment changes all denormalized fields)
+		if oldEntry.Name != newCustomer.Name {
+			editLog.OldName = &oldEntry.Name
+			editLog.NewName = &newCustomer.Name
+		}
+		if oldEntry.Phone != newCustomer.Phone {
+			editLog.OldPhone = &oldEntry.Phone
+			editLog.NewPhone = &newCustomer.Phone
+		}
+		if oldEntry.Village != newCustomer.Village {
+			editLog.OldVillage = &oldEntry.Village
+			editLog.NewVillage = &newCustomer.Village
+		}
+		if oldEntry.SO != newCustomer.SO {
+			editLog.OldSO = &oldEntry.SO
+			editLog.NewSO = &newCustomer.SO
+		}
+
+		// Create log if something changed
+		if editLog.OldName != nil || editLog.OldPhone != nil || editLog.OldVillage != nil || editLog.OldSO != nil {
+			h.EditLogRepo.CreateEditLog(context.Background(), editLog)
+		}
+	}
+
+	// Log the reassignment to management log (separate section)
+	if h.ManagementLogRepo != nil {
+		oldCustomerID := oldEntry.CustomerID
+		managementLog := &models.EntryManagementLog{
+			PerformedByID:    userID,
+			EntryID:          &id,
+			ThockNumber:      &oldEntry.ThockNumber,
+			OldCustomerID:    &oldCustomerID,
+			OldCustomerName:  &oldEntry.Name,
+			OldCustomerPhone: &oldEntry.Phone,
+			NewCustomerID:    &req.NewCustomerID,
+			NewCustomerName:  &newCustomer.Name,
+			NewCustomerPhone: &newCustomer.Phone,
+		}
+		h.ManagementLogRepo.CreateReassignLog(context.Background(), managementLog)
+	}
+
+	// Invalidate caches
+	cache.InvalidateEntryCaches(r.Context())
+	cache.InvalidateCustomerCaches(r.Context())
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entry)

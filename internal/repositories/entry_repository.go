@@ -338,6 +338,15 @@ func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber stri
 	return &entry, err
 }
 
+// ReassignCustomer reassigns an entry to a different customer
+func (r *EntryRepository) ReassignCustomer(ctx context.Context, entryID int, newCustomerID int, name, phone, village, so string) error {
+	query := `UPDATE entries
+	          SET customer_id=$1, name=$2, phone=$3, village=$4, so=$5, updated_at=NOW()
+	          WHERE id=$6`
+	_, err := r.DB.Exec(ctx, query, newCustomerID, name, phone, village, so, entryID)
+	return err
+}
+
 // Update updates an existing entry (recalculates thock_number if category or quantity changes)
 func (r *EntryRepository) Update(ctx context.Context, e *models.Entry, oldCategory string, oldQty int) error {
 	// Check if we need to regenerate thock_number

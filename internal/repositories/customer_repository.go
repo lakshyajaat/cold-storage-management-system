@@ -81,6 +81,54 @@ func (r *CustomerRepository) Delete(ctx context.Context, id int) error {
 	return err
 }
 
+// GetEntryCount returns the number of entries for a customer
+func (r *CustomerRepository) GetEntryCount(ctx context.Context, customerID int) (int, error) {
+	var count int
+	err := r.DB.QueryRow(ctx, `SELECT COUNT(*) FROM entries WHERE customer_id=$1`, customerID).Scan(&count)
+	return count, err
+}
+
+// MergeCustomers moves all entries from source customer to target customer and deletes the source
+// Returns the number of entries moved
+func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targetID int, targetName, targetPhone, targetVillage, targetSO string) (int, error) {
+	// Start transaction
+	tx, err := r.DB.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Count entries to be moved
+	var entriesMoved int
+	err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM entries WHERE customer_id=$1`, sourceID).Scan(&entriesMoved)
+	if err != nil {
+		return 0, err
+	}
+
+	// Move all entries from source to target (update customer_id and denormalized fields)
+	_, err = tx.Exec(ctx, `
+		UPDATE entries
+		SET customer_id=$1, name=$2, phone=$3, village=$4, so=$5, updated_at=NOW()
+		WHERE customer_id=$6`,
+		targetID, targetName, targetPhone, targetVillage, targetSO, sourceID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Delete the source customer
+	_, err = tx.Exec(ctx, `DELETE FROM customers WHERE id=$1`, sourceID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Commit transaction
+	if err = tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+
+	return entriesMoved, nil
+}
+
 // FuzzySearchByPhone searches customers by phone number (fuzzy match)
 func (r *CustomerRepository) FuzzySearchByPhone(ctx context.Context, phone string) ([]*models.Customer, error) {
 	rows, err := r.DB.Query(ctx,

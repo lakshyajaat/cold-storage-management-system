@@ -187,6 +187,16 @@
                     </label>
                 </div>
 
+                <div>
+                    <label class="flex items-center gap-3 p-3 neu-brutal bg-purple-50 cursor-pointer">
+                        <input type="checkbox" id="canManageEntries" class="w-5 h-5">
+                        <div>
+                            <span class="font-semibold">Can Manage Entries</span>
+                            <p class="text-sm text-gray-600">Allow this employee to reassign thocks and merge customers</p>
+                        </div>
+                    </label>
+                </div>
+
                 <div class="flex gap-4 mt-6">
                     <button type="submit" class="flex-1 bg-[#2ecc71] text-white py-3 neu-brutal">
                         <i class="bi bi-check-circle"></i> Save
@@ -281,6 +291,7 @@
                             ${user.role.toUpperCase()}
                         </span>
                         ${user.has_accountant_access && user.role !== 'admin' ? '<span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs rounded">+Accountant</span>' : ''}
+                        ${user.can_manage_entries && user.role !== 'admin' ? '<span class="ml-2 px-2 py-1 bg-purple-500 text-white text-xs rounded">+Entries</span>' : ''}
                         ${!user.is_active ? '<span class="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded">PAUSED</span>' : ''}
                     </td>
                     <td class="p-4">${new Date(user.created_at).toLocaleDateString()}</td>
@@ -338,6 +349,7 @@
                 document.getElementById('userPassword').required = false;
                 document.getElementById('userRole').value = user.role;
                 document.getElementById('hasAccountantAccess').checked = user.has_accountant_access || false;
+                document.getElementById('canManageEntries').checked = user.can_manage_entries || false;
                 document.getElementById('userModal').classList.add('show');
             } catch (error) {
                 alert('Error loading user: ' + error.message);
@@ -398,8 +410,9 @@
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
             const hasAccountantAccess = document.getElementById('hasAccountantAccess').checked;
+            const canManageEntries = document.getElementById('canManageEntries').checked;
 
-            const userData = { name, email, role, has_accountant_access: hasAccountantAccess };
+            const userData = { name, email, role, has_accountant_access: hasAccountantAccess, can_manage_entries: canManageEntries };
             if (password) userData.password = password;
 
             try {

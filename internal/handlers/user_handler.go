@@ -63,6 +63,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		PasswordHash:        req.Password, // Will be hashed in service layer
 		Role:                req.Role,
 		HasAccountantAccess: req.HasAccountantAccess,
+		CanManageEntries:    req.CanManageEntries,
 	}
 
 	if err := h.Service.CreateUser(context.Background(), user); err != nil {
@@ -182,6 +183,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		PasswordHash:        req.Password, // Will be hashed in service layer if provided
 		Role:                req.Role,
 		HasAccountantAccess: req.HasAccountantAccess,
+		CanManageEntries:    req.CanManageEntries,
 	}
 
 	if err := h.Service.UpdateUser(context.Background(), user); err != nil {
@@ -204,6 +206,9 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 		if oldUser.HasAccountantAccess != user.HasAccountantAccess {
 			changes = append(changes, fmt.Sprintf("accountant access: %v → %v", oldUser.HasAccountantAccess, user.HasAccountantAccess))
+		}
+		if oldUser.CanManageEntries != user.CanManageEntries {
+			changes = append(changes, fmt.Sprintf("manage entries: %v → %v", oldUser.CanManageEntries, user.CanManageEntries))
 		}
 	}
 

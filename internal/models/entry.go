@@ -41,3 +41,8 @@ type UpdateEntryRequest struct {
 	Remark           string `json:"remark"`
 	ThockCategory    string `json:"thock_category"`
 }
+
+// ReassignEntryRequest represents the request body for reassigning an entry to a different customer
+type ReassignEntryRequest struct {
+	NewCustomerID int `json:"new_customer_id"`
+}

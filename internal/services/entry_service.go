@@ -180,6 +180,29 @@ func (s *EntryService) GetMaxThockNumber(ctx context.Context, category string) (
 	return s.EntryRepo.GetMaxThockNumber(ctx, category)
 }
 
+// ReassignEntry reassigns an entry to a different customer
+func (s *EntryService) ReassignEntry(ctx context.Context, entryID int, newCustomerID int) (*models.Entry, *models.Customer, error) {
+	// Get the new customer
+	newCustomer, err := s.CustomerRepo.Get(ctx, newCustomerID)
+	if err != nil {
+		return nil, nil, errors.New("new customer not found")
+	}
+
+	// Update entry with new customer details
+	err = s.EntryRepo.ReassignCustomer(ctx, entryID, newCustomerID, newCustomer.Name, newCustomer.Phone, newCustomer.Village, newCustomer.SO)
+	if err != nil {
+		return nil, nil, errors.New("failed to reassign entry: " + err.Error())
+	}
+
+	// Get updated entry
+	entry, err := s.EntryRepo.Get(ctx, entryID)
+	if err != nil {
+		return nil, newCustomer, nil
+	}
+
+	return entry, newCustomer, nil
+}
+
 func (s *EntryService) UpdateEntry(ctx context.Context, id int, req *models.UpdateEntryRequest) error {
 	// Get existing entry
 	entry, err := s.EntryRepo.Get(ctx, id)

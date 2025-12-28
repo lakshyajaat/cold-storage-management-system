@@ -25,6 +25,7 @@ func NewRouter(
 	loginLogHandler *handlers.LoginLogHandler,
 	roomEntryEditLogHandler *handlers.RoomEntryEditLogHandler,
 	entryEditLogHandler *handlers.EntryEditLogHandler,
+	entryManagementLogHandler *handlers.EntryManagementLogHandler,
 	adminActionLogHandler *handlers.AdminActionLogHandler,
 	gatePassHandler *handlers.GatePassHandler,
 	seasonHandler *handlers.SeasonHandler,
@@ -150,9 +151,11 @@ func NewRouter(
 	customersAPI.HandleFunc("", customerHandler.ListCustomers).Methods("GET")
 	customersAPI.HandleFunc("", customerHandler.CreateCustomer).Methods("POST")
 	customersAPI.HandleFunc("/search", customerHandler.SearchByPhone).Methods("GET")
+	customersAPI.HandleFunc("/merge", customerHandler.MergeCustomers).Methods("POST") // Requires can_manage_entries permission
 	customersAPI.HandleFunc("/{id}", customerHandler.GetCustomer).Methods("GET")
 	customersAPI.HandleFunc("/{id}", customerHandler.UpdateCustomer).Methods("PUT")
 	customersAPI.HandleFunc("/{id}", customerHandler.DeleteCustomer).Methods("DELETE")
+	customersAPI.HandleFunc("/{id}/entry-count", customerHandler.GetCustomerEntryCount).Methods("GET")
 
 	// Protected API routes - Entries (employees and admins only for creation, LOADING MODE ONLY)
 	entriesAPI := r.PathPrefix("/api/entries").Subrouter()
@@ -167,6 +170,7 @@ func NewRouter(
 	entriesAPI.HandleFunc("/next-thock-preview", entryHandler.GetNextThockPreview).Methods("GET")
 	entriesAPI.HandleFunc("/{id}", entryHandler.GetEntry).Methods("GET")
 	entriesAPI.HandleFunc("/{id}", entryHandler.UpdateEntry).Methods("PUT")
+	entriesAPI.HandleFunc("/{id}/reassign", entryHandler.ReassignEntry).Methods("PUT") // Requires can_manage_entries permission
 	entriesAPI.HandleFunc("/customer/{customer_id}", entryHandler.ListEntriesByCustomer).Methods("GET")
 
 	// Protected API routes - Room Entries (employees and admins only for creation/update, LOADING MODE ONLY)
@@ -225,6 +229,11 @@ func NewRouter(
 	entryEditLogsAPI.Use(authMiddleware.Authenticate)
 	entryEditLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(entryEditLogHandler.ListAll)).ServeHTTP).Methods("GET")
 	entryEditLogsAPI.HandleFunc("/{id}", authMiddleware.RequireRole("admin")(http.HandlerFunc(entryEditLogHandler.ListByEntry)).ServeHTTP).Methods("GET")
+
+	// Protected API routes - Entry Management Logs (admin only) - for reassignments and merges
+	entryManagementLogsAPI := r.PathPrefix("/api/entry-management-logs").Subrouter()
+	entryManagementLogsAPI.Use(authMiddleware.Authenticate)
+	entryManagementLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(entryManagementLogHandler.List)).ServeHTTP).Methods("GET")
 
 	// Protected API routes - Admin Action Logs (admin only)
 	adminActionLogsAPI := r.PathPrefix("/api/admin-action-logs").Subrouter()

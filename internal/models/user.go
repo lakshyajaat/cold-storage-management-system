@@ -11,6 +11,7 @@ type User struct {
 	PasswordHash         string    `json:"-"` // Never expose in JSON
 	Role                 string    `json:"role"` // admin or employee
 	HasAccountantAccess  bool      `json:"has_accountant_access"` // employees can have accountant access
+	CanManageEntries     bool      `json:"can_manage_entries"`    // can reassign entries and merge customers
 	IsActive             bool      `json:"is_active"` // true = active, false = paused/suspended
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
@@ -42,6 +43,7 @@ type CreateUserRequest struct {
 	Password            string `json:"password"`
 	Role                string `json:"role"`
 	HasAccountantAccess bool   `json:"has_accountant_access"`
+	CanManageEntries    bool   `json:"can_manage_entries"`
 }
 
 // UpdateUserRequest represents the request body for updating a user
@@ -51,4 +53,5 @@ type UpdateUserRequest struct {
 	Password            string `json:"password,omitempty"` // Optional
 	Role                string `json:"role"`
 	HasAccountantAccess bool   `json:"has_accountant_access"`
+	CanManageEntries    bool   `json:"can_manage_entries"`
 }

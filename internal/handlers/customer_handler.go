@@ -10,6 +10,7 @@ import (
 	"cold-backend/internal/cache"
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -19,11 +20,12 @@ const customersCacheTTL = 30 * time.Minute
 const customersCacheKey = "customers:list"
 
 type CustomerHandler struct {
-	Service *services.CustomerService
+	Service           *services.CustomerService
+	ManagementLogRepo *repositories.EntryManagementLogRepository
 }
 
-func NewCustomerHandler(s *services.CustomerService) *CustomerHandler {
-	h := &CustomerHandler{Service: s}
+func NewCustomerHandler(s *services.CustomerService, managementLogRepo *repositories.EntryManagementLogRepository) *CustomerHandler {
+	h := &CustomerHandler{Service: s, ManagementLogRepo: managementLogRepo}
 
 	// Register pre-warm callback for customer list (faster search on cold start)
 	cache.RegisterPreWarm(customersCacheKey, func(ctx context.Context) ([]byte, error) {
@@ -191,4 +193,87 @@ func (h *CustomerHandler) DeleteCustomer(w http.ResponseWriter, r *http.Request)
 	cache.InvalidateCustomerCaches(r.Context())
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetCustomerEntryCount returns the number of entries for a customer (for merge preview)
+func (h *CustomerHandler) GetCustomerEntryCount(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, _ := strconv.Atoi(idStr)
+
+	count, err := h.Service.GetEntryCount(context.Background(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"customer_id":  id,
+		"entry_count": count,
+	})
+}
+
+// MergeCustomers merges source customer into target customer
+// POST /api/customers/merge
+func (h *CustomerHandler) MergeCustomers(w http.ResponseWriter, r *http.Request) {
+	// Check permission: admin OR can_manage_entries
+	if !middleware.HasManageEntriesAccess(r.Context()) {
+		http.Error(w, "Forbidden: Manage entries permission required", http.StatusForbidden)
+		return
+	}
+
+	// Get user ID for logging
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	var req models.MergeCustomersRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get source customer details before merge (for logging)
+	sourceCustomer, err := h.Service.GetCustomer(context.Background(), req.SourceCustomerID)
+	if err != nil {
+		http.Error(w, "Source customer not found", http.StatusNotFound)
+		return
+	}
+
+	// Get target customer details (for logging)
+	targetCustomer, err := h.Service.GetCustomer(context.Background(), req.TargetCustomerID)
+	if err != nil {
+		http.Error(w, "Target customer not found", http.StatusNotFound)
+		return
+	}
+
+	response, err := h.Service.MergeCustomers(context.Background(), &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Log the merge to management log
+	if h.ManagementLogRepo != nil {
+		managementLog := &models.EntryManagementLog{
+			PerformedByID:       userID,
+			SourceCustomerID:    &req.SourceCustomerID,
+			SourceCustomerName:  &sourceCustomer.Name,
+			SourceCustomerPhone: &sourceCustomer.Phone,
+			TargetCustomerID:    &req.TargetCustomerID,
+			TargetCustomerName:  &targetCustomer.Name,
+			TargetCustomerPhone: &targetCustomer.Phone,
+			EntriesMoved:        &response.EntriesMoved,
+		}
+		h.ManagementLogRepo.CreateMergeLog(context.Background(), managementLog)
+	}
+
+	// Invalidate caches
+	cache.InvalidateCustomerCaches(r.Context())
+	cache.InvalidateEntryCaches(r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

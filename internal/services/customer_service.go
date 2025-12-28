@@ -85,3 +85,45 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id int, req *model
 func (s *CustomerService) DeleteCustomer(ctx context.Context, id int) error {
 	return s.Repo.Delete(ctx, id)
 }
+
+// GetEntryCount returns the number of entries for a customer
+func (s *CustomerService) GetEntryCount(ctx context.Context, customerID int) (int, error) {
+	return s.Repo.GetEntryCount(ctx, customerID)
+}
+
+// MergeCustomers merges source customer into target customer
+// All entries from source will be moved to target, then source is deleted
+func (s *CustomerService) MergeCustomers(ctx context.Context, req *models.MergeCustomersRequest) (*models.MergeCustomersResponse, error) {
+	if req.SourceCustomerID <= 0 || req.TargetCustomerID <= 0 {
+		return nil, errors.New("both source_customer_id and target_customer_id are required")
+	}
+
+	if req.SourceCustomerID == req.TargetCustomerID {
+		return nil, errors.New("source and target customers must be different")
+	}
+
+	// Get source customer (to verify it exists)
+	_, err := s.Repo.Get(ctx, req.SourceCustomerID)
+	if err != nil {
+		return nil, errors.New("source customer not found")
+	}
+
+	// Get target customer
+	targetCustomer, err := s.Repo.Get(ctx, req.TargetCustomerID)
+	if err != nil {
+		return nil, errors.New("target customer not found")
+	}
+
+	// Merge customers (move entries and delete source)
+	entriesMoved, err := s.Repo.MergeCustomers(ctx, req.SourceCustomerID, req.TargetCustomerID,
+		targetCustomer.Name, targetCustomer.Phone, targetCustomer.Village, targetCustomer.SO)
+	if err != nil {
+		return nil, errors.New("failed to merge customers: " + err.Error())
+	}
+
+	return &models.MergeCustomersResponse{
+		TargetCustomer: targetCustomer,
+		EntriesMoved:   entriesMoved,
+		Message:        "Customers merged successfully",
+	}, nil
+}
