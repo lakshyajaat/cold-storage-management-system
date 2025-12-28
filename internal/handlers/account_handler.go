@@ -37,6 +37,7 @@ type AccountHandler struct {
 type CustomerAccount struct {
 	Name          string                `json:"name"`
 	Phone         string                `json:"phone"`
+	SO            string                `json:"so"`
 	Village       string                `json:"village"`
 	Thocks        []ThockInfo           `json:"thocks"`
 	Payments      []*models.RentPayment `json:"payments"`
@@ -251,6 +252,7 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 			customerMap[phone] = &CustomerAccount{
 				Name:     entry.Name,
 				Phone:    entry.Phone,
+				SO:       entry.SO,
 				Village:  entry.Village,
 				Thocks:   make([]ThockInfo, 0),
 				Payments: make([]*models.RentPayment, 0),

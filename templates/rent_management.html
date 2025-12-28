@@ -467,6 +467,7 @@
                 allCustomerAccounts = summary.customers.map(customer => ({
                     name: customer.name,
                     phone: customer.phone,
+                    so: customer.so || '',
                     village: customer.village || 'N/A',
                     thocks: customer.thocks.map(t => ({
                         id: t.id,
@@ -639,6 +640,12 @@
                                         <i class="bi bi-telephone"></i>
                                         <span>${customer.phone}</span>
                                     </div>
+                                    ${customer.so ? `
+                                    <div class="flex items-center gap-2">
+                                        <i class="bi bi-person"></i>
+                                        <span>S/O: ${capitalizeText(customer.so)}</span>
+                                    </div>
+                                    ` : ''}
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-geo-alt"></i>
                                         <span>${capitalizeText(customer.village)}</span>
@@ -869,6 +876,7 @@
             const filtered = allCustomerAccounts.filter(customer =>
                 customer.name.toLowerCase().includes(searchTerm) ||
                 customer.phone.includes(searchTerm) ||
+                (customer.so && customer.so.toLowerCase().includes(searchTerm)) ||
                 customer.village.toLowerCase().includes(searchTerm)
             );
 
