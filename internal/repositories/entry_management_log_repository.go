@@ -171,3 +171,36 @@ func (r *EntryManagementLogRepository) ListByType(ctx context.Context, actionTyp
 
 	return logs, nil
 }
+
+// GetBySourceCustomer gets the merge log for a source customer (to extract payment IDs for undo)
+func (r *EntryManagementLogRepository) GetBySourceCustomer(ctx context.Context, sourceCustomerID int) (*models.EntryManagementLog, error) {
+	var log models.EntryManagementLog
+	var mergeDetailsJSON []byte
+	err := r.DB.QueryRow(ctx, `
+		SELECT id, COALESCE(merge_details, '{}')
+		FROM entry_management_logs
+		WHERE action_type = 'merge' AND source_customer_id = $1
+		ORDER BY created_at DESC LIMIT 1`,
+		sourceCustomerID).Scan(&log.ID, &mergeDetailsJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(mergeDetailsJSON) > 0 {
+		var details models.MergeDetails
+		if err := json.Unmarshal(mergeDetailsJSON, &details); err == nil {
+			log.MergeDetails = &details
+		}
+	}
+
+	return &log, nil
+}
+
+// DeleteBySourceCustomer deletes merge log for a source customer (used when undoing merge)
+func (r *EntryManagementLogRepository) DeleteBySourceCustomer(ctx context.Context, sourceCustomerID int) error {
+	_, err := r.DB.Exec(ctx, `
+		DELETE FROM entry_management_logs
+		WHERE action_type = 'merge' AND source_customer_id = $1`,
+		sourceCustomerID)
+	return err
+}

@@ -186,17 +186,33 @@ func (h *MergeHistoryHandler) UndoMerge(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Undo the merge
-	err := h.CustomerRepo.UndoMerge(ctx, req.CustomerID)
+	// Get payment IDs from merge log (to know which payments to move back)
+	var paymentIDs []int
+	if h.ManagementLogRepo != nil {
+		mergeLog, err := h.ManagementLogRepo.GetBySourceCustomer(ctx, req.CustomerID)
+		if err == nil && mergeLog.MergeDetails != nil {
+			for _, p := range mergeLog.MergeDetails.Payments {
+				paymentIDs = append(paymentIDs, p.ID)
+			}
+		}
+	}
+
+	// Undo the merge (moves entries and payments back)
+	err := h.CustomerRepo.UndoMerge(ctx, req.CustomerID, paymentIDs)
 	if err != nil {
 		http.Error(w, "Failed to undo merge: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Delete the merge log entry
+	if h.ManagementLogRepo != nil {
+		_ = h.ManagementLogRepo.DeleteBySourceCustomer(ctx, req.CustomerID)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
-		"message": "Merge undone successfully",
+		"message": "Merge undone successfully - entries and payments restored",
 	})
 }
 

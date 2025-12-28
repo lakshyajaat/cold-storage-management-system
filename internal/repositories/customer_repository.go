@@ -154,6 +154,16 @@ func (r *CustomerRepository) MergeCustomers(ctx context.Context, sourceID, targe
 	entriesMoved := len(entryDetails)
 	paymentsMoved := len(paymentDetails)
 
+	// Save original_customer_id before moving entries (for undo functionality)
+	_, err = tx.Exec(ctx, `
+		UPDATE entries
+		SET original_customer_id = customer_id
+		WHERE customer_id=$1 AND original_customer_id IS NULL`,
+		sourceID)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+
 	// Move all entries from source to target (update customer_id and denormalized fields)
 	_, err = tx.Exec(ctx, `
 		UPDATE entries
@@ -235,14 +245,63 @@ func (r *CustomerRepository) GetMergedCustomers(ctx context.Context) ([]*models.
 	return customers, nil
 }
 
-// UndoMerge reverses a merge by setting source customer status back to active
-func (r *CustomerRepository) UndoMerge(ctx context.Context, sourceCustomerID int) error {
-	_, err := r.DB.Exec(ctx,
-		`UPDATE customers
-		 SET status = 'active', merged_into_customer_id = NULL, merged_at = NULL, updated_at = NOW()
-		 WHERE id = $1 AND status = 'merged'`,
+// UndoMerge fully reverses a merge:
+// 1. Moves all entries back to source customer
+// 2. Moves specified payments back to source customer (using IDs from merge log)
+// 3. Sets source customer status back to active
+func (r *CustomerRepository) UndoMerge(ctx context.Context, sourceCustomerID int, paymentIDs []int) error {
+	// Start transaction
+	tx, err := r.DB.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Get source customer details (for restoring entry denormalized fields)
+	var sourceName, sourcePhone, sourceVillage, sourceSO string
+	err = tx.QueryRow(ctx, `
+		SELECT name, phone, village, COALESCE(so, '')
+		FROM customers WHERE id = $1`,
+		sourceCustomerID).Scan(&sourceName, &sourcePhone, &sourceVillage, &sourceSO)
+	if err != nil {
+		return err
+	}
+
+	// Move entries back to source customer (using original_customer_id)
+	_, err = tx.Exec(ctx, `
+		UPDATE entries
+		SET customer_id = original_customer_id,
+		    name = $1, phone = $2, village = $3, so = $4,
+		    updated_at = NOW()
+		WHERE original_customer_id = $5`,
+		sourceName, sourcePhone, sourceVillage, sourceSO, sourceCustomerID)
+	if err != nil {
+		return err
+	}
+
+	// Move payments back to source customer (only those that were moved during merge)
+	if len(paymentIDs) > 0 {
+		_, err = tx.Exec(ctx, `
+			UPDATE rent_payments
+			SET customer_name = $1, customer_phone = $2
+			WHERE id = ANY($3)`,
+			sourceName, sourcePhone, paymentIDs)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Set source customer status back to active
+	_, err = tx.Exec(ctx, `
+		UPDATE customers
+		SET status = 'active', merged_into_customer_id = NULL, merged_at = NULL, updated_at = NOW()
+		WHERE id = $1 AND status = 'merged'`,
 		sourceCustomerID)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // FuzzySearchByPhone searches customers by phone number (fuzzy match)
