@@ -46,6 +46,7 @@ func NewRouter(
 	setupHandler *handlers.SetupHandler,
 	ledgerHandler *handlers.LedgerHandler,
 	debtHandler *handlers.DebtHandler,
+	mergeHistoryHandler *handlers.MergeHistoryHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -120,6 +121,7 @@ func NewRouter(
 	r.HandleFunc("/room-visualization", pageHandler.RoomVisualizationPage).Methods("GET")
 	r.HandleFunc("/customer-export", pageHandler.CustomerPDFExportPage).Methods("GET")
 	r.HandleFunc("/customer-edit", pageHandler.CustomerEditPage).Methods("GET")
+	r.HandleFunc("/merge-history", pageHandler.MergeHistoryPage).Methods("GET")
 
 	// Guard pages (auth handled client-side via localStorage token)
 	r.HandleFunc("/guard/dashboard", pageHandler.GuardDashboardPage).Methods("GET")
@@ -239,6 +241,15 @@ func NewRouter(
 	adminActionLogsAPI := r.PathPrefix("/api/admin-action-logs").Subrouter()
 	adminActionLogsAPI.Use(authMiddleware.Authenticate)
 	adminActionLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(adminActionLogHandler.ListActionLogs)).ServeHTTP).Methods("GET")
+
+	// Protected API routes - Merge History (admin only)
+	if mergeHistoryHandler != nil {
+		mergeHistoryAPI := r.PathPrefix("/api/merge-history").Subrouter()
+		mergeHistoryAPI.Use(authMiddleware.Authenticate)
+		mergeHistoryAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(mergeHistoryHandler.GetMergeHistory)).ServeHTTP).Methods("GET")
+		mergeHistoryAPI.HandleFunc("/undo-merge", authMiddleware.RequireRole("admin")(http.HandlerFunc(mergeHistoryHandler.UndoMerge)).ServeHTTP).Methods("POST")
+		mergeHistoryAPI.HandleFunc("/undo-transfer", authMiddleware.RequireRole("admin")(http.HandlerFunc(mergeHistoryHandler.UndoTransfer)).ServeHTTP).Methods("POST")
+	}
 
 	// Protected API routes - Season Management (admin only, dual approval)
 	if seasonHandler != nil {

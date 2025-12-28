@@ -339,11 +339,62 @@ func (r *EntryRepository) GetByThockNumber(ctx context.Context, thockNumber stri
 }
 
 // ReassignCustomer reassigns an entry to a different customer
+// Tracks the transfer by updating status and transferred_to fields
 func (r *EntryRepository) ReassignCustomer(ctx context.Context, entryID int, newCustomerID int, name, phone, village, so string) error {
 	query := `UPDATE entries
-	          SET customer_id=$1, name=$2, phone=$3, village=$4, so=$5, updated_at=NOW()
+	          SET customer_id=$1, name=$2, phone=$3, village=$4, so=$5,
+	              status='transferred', transferred_to_customer_id=$1, transferred_at=NOW(),
+	              updated_at=NOW()
 	          WHERE id=$6`
 	_, err := r.DB.Exec(ctx, query, newCustomerID, name, phone, village, so, entryID)
+	return err
+}
+
+// GetTransferredEntries returns all entries that have been transferred
+func (r *EntryRepository) GetTransferredEntries(ctx context.Context) ([]*models.Entry, error) {
+	rows, err := r.DB.Query(ctx,
+		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
+		        COALESCE(rq.total_qty, 0) as actual_quantity,
+		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
+		        COALESCE(e.status, 'active') as status,
+		        e.transferred_to_customer_id, e.transferred_at,
+		        e.created_by_user_id, e.created_at, e.updated_at
+         FROM entries e
+         LEFT JOIN (
+             SELECT entry_id, SUM(quantity) as total_qty
+             FROM room_entries
+             GROUP BY entry_id
+         ) rq ON e.id = rq.entry_id
+         WHERE e.status = 'transferred'
+         ORDER BY e.transferred_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []*models.Entry
+	for rows.Next() {
+		var entry models.Entry
+		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
+			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark,
+			&entry.Status, &entry.TransferredToCustomerID, &entry.TransferredAt,
+			&entry.CreatedByUserID, &entry.CreatedAt, &entry.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, &entry)
+	}
+	return entries, nil
+}
+
+// UndoTransfer reverses a transfer by setting status back to active
+func (r *EntryRepository) UndoTransfer(ctx context.Context, entryID int, originalCustomerID int, name, phone, village, so string) error {
+	query := `UPDATE entries
+	          SET customer_id=$1, name=$2, phone=$3, village=$4, so=$5,
+	              status='active', transferred_to_customer_id=NULL, transferred_at=NULL,
+	              updated_at=NOW()
+	          WHERE id=$6 AND status='transferred'`
+	_, err := r.DB.Exec(ctx, query, originalCustomerID, name, phone, village, so, entryID)
 	return err
 }
 

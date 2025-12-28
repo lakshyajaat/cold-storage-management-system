@@ -184,6 +184,11 @@ func (h *PageHandler) CustomerEditPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "customer_edit.html", nil)
 }
 
+// MergeHistoryPage serves the merge/transfer history page
+func (h *PageHandler) MergeHistoryPage(w http.ResponseWriter, r *http.Request) {
+	h.templates.ExecuteTemplate(w, "merge_history.html", nil)
+}
+
 // GuardDashboardPage serves the guard dashboard page
 func (h *PageHandler) GuardDashboardPage(w http.ResponseWriter, r *http.Request) {
 	h.templates.ExecuteTemplate(w, "dashboard_guard.html", nil)

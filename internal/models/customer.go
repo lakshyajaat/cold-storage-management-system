@@ -3,14 +3,17 @@ package models
 import "time"
 
 type Customer struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Phone     string    `json:"phone"`
-	SO        string    `json:"so"`
-	Village   string    `json:"village"`
-	Address   string    `json:"address"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                   int        `json:"id"`
+	Name                 string     `json:"name"`
+	Phone                string     `json:"phone"`
+	SO                   string     `json:"so"`
+	Village              string     `json:"village"`
+	Address              string     `json:"address"`
+	Status               string     `json:"status"`                  // 'active', 'merged', 'inactive'
+	MergedIntoCustomerID *int       `json:"merged_into_customer_id"` // If merged, points to target customer
+	MergedAt             *time.Time `json:"merged_at"`               // When merge happened
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 // CreateCustomerRequest represents the request body for creating a customer
