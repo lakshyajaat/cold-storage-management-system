@@ -398,6 +398,34 @@ func (r *EntryRepository) UndoTransfer(ctx context.Context, entryID int, origina
 	return err
 }
 
+// AutoUndoTransfer automatically undoes a transfer using original_customer_id
+func (r *EntryRepository) AutoUndoTransfer(ctx context.Context, entryID int) error {
+	// Single query: get original customer details and update entry in one transaction
+	query := `
+		UPDATE entries e
+		SET customer_id = e.original_customer_id,
+		    name = c.name,
+		    phone = c.phone,
+		    village = c.village,
+		    so = COALESCE(c.so, ''),
+		    status = 'active',
+		    transferred_to_customer_id = NULL,
+		    transferred_at = NULL,
+		    updated_at = NOW()
+		FROM customers c
+		WHERE e.id = $1
+		  AND e.original_customer_id = c.id
+		  AND e.status = 'transferred'`
+	result, err := r.DB.Exec(ctx, query, entryID)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("entry not found or not in transferred state")
+	}
+	return nil
+}
+
 // Update updates an existing entry (recalculates thock_number if category or quantity changes)
 func (r *EntryRepository) Update(ctx context.Context, e *models.Entry, oldCategory string, oldQty int) error {
 	// Check if we need to regenerate thock_number

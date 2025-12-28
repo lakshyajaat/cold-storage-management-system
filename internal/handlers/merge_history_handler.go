@@ -227,27 +227,22 @@ func (h *MergeHistoryHandler) UndoTransfer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Parse request
+	// Parse request - only entry_id is required now
 	var req struct {
-		EntryID            int    `json:"entry_id"`
-		OriginalCustomerID int    `json:"original_customer_id"`
-		Name               string `json:"name"`
-		Phone              string `json:"phone"`
-		Village            string `json:"village"`
-		SO                 string `json:"so"`
+		EntryID int `json:"entry_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if req.EntryID == 0 || req.OriginalCustomerID == 0 {
-		http.Error(w, "entry_id and original_customer_id are required", http.StatusBadRequest)
+	if req.EntryID == 0 {
+		http.Error(w, "entry_id is required", http.StatusBadRequest)
 		return
 	}
 
-	// Undo the transfer
-	err := h.EntryRepo.UndoTransfer(ctx, req.EntryID, req.OriginalCustomerID, req.Name, req.Phone, req.Village, req.SO)
+	// Auto-undo: get original customer from entry and restore
+	err := h.EntryRepo.AutoUndoTransfer(ctx, req.EntryID)
 	if err != nil {
 		http.Error(w, "Failed to undo transfer: "+err.Error(), http.StatusInternalServerError)
 		return
