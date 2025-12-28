@@ -414,11 +414,11 @@
                 <i class="bi bi-people text-purple-600"></i>
                 Merge Customers
             </h3>
-            <p class="text-sm text-gray-600 mb-4">Move all entries from source customer to target customer, then delete source.</p>
+            <p class="text-sm text-gray-600 mb-4">Move all entries from source customer to target customer. Source will be marked as merged (can be undone).</p>
 
             <div class="mb-4">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    <i class="bi bi-trash text-red-600"></i> Source Customer (will be deleted) *
+                    <i class="bi bi-arrow-right-circle text-purple-600"></i> Source Customer (will be merged) *
                 </label>
                 <input
                     type="text"
@@ -1564,7 +1564,7 @@
             const targetName = document.getElementById('mergeTargetName').textContent;
             const entryCount = document.getElementById('mergeSourceEntryCount').textContent;
 
-            if (!confirm(`Are you sure you want to merge?\n\nSource: ${sourceName} (${entryCount}) - WILL BE DELETED\nTarget: ${targetName} - WILL KEEP\n\nAll entries from source will be moved to target.`)) {
+            if (!confirm(`Are you sure you want to merge?\n\nSource: ${sourceName} (${entryCount}) - WILL BE MARKED AS MERGED\nTarget: ${targetName} - WILL KEEP\n\nAll entries from source will be moved to target.\nYou can undo this from Admin > Merge History.`)) {
                 return;
             }
 
