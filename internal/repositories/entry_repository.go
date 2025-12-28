@@ -398,12 +398,13 @@ func (r *EntryRepository) UndoTransfer(ctx context.Context, entryID int, origina
 	return err
 }
 
-// AutoUndoTransfer automatically undoes a transfer using original_customer_id
+// AutoUndoTransfer automatically undoes a transfer using log data (more reliable than original_customer_id)
 func (r *EntryRepository) AutoUndoTransfer(ctx context.Context, entryID int) error {
-	// Single query: get original customer details and update entry in one transaction
+	// Use log data to find original customer by phone (customer data may have changed)
 	query := `
 		UPDATE entries e
-		SET customer_id = e.original_customer_id,
+		SET customer_id = c.id,
+		    original_customer_id = c.id,
 		    name = c.name,
 		    phone = c.phone,
 		    village = c.village,
@@ -412,16 +413,40 @@ func (r *EntryRepository) AutoUndoTransfer(ctx context.Context, entryID int) err
 		    transferred_to_customer_id = NULL,
 		    transferred_at = NULL,
 		    updated_at = NOW()
-		FROM customers c
+		FROM entry_management_logs eml
+		JOIN customers c ON c.phone = eml.old_customer_phone
 		WHERE e.id = $1
-		  AND e.original_customer_id = c.id
+		  AND eml.entry_id = $1
+		  AND eml.action_type = 'reassign'
 		  AND e.status = 'transferred'`
 	result, err := r.DB.Exec(ctx, query, entryID)
 	if err != nil {
 		return err
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("entry not found or not in transferred state")
+		// Fallback to original_customer_id if no log found
+		fallbackQuery := `
+			UPDATE entries e
+			SET customer_id = e.original_customer_id,
+			    name = c.name,
+			    phone = c.phone,
+			    village = c.village,
+			    so = COALESCE(c.so, ''),
+			    status = 'active',
+			    transferred_to_customer_id = NULL,
+			    transferred_at = NULL,
+			    updated_at = NOW()
+			FROM customers c
+			WHERE e.id = $1
+			  AND e.original_customer_id = c.id
+			  AND e.status = 'transferred'`
+		result, err = r.DB.Exec(ctx, fallbackQuery, entryID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("entry not found or not in transferred state")
+		}
 	}
 	return nil
 }
