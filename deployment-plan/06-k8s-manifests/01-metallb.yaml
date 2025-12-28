@@ -1,0 +1,26 @@
+# MetalLB Configuration for K3s LoadBalancer VIP
+# This provides 192.168.15.100 as the Ingress VIP
+
+---
+# First apply the MetalLB manifest:
+# kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
+
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: cold-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.15.100/32  # Single VIP for Ingress
+
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: cold-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - cold-pool

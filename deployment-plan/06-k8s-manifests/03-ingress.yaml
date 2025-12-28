@@ -1,0 +1,49 @@
+# Ingress for app.ailakshya.in
+# Enables local HTTPS access during internet outage
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cold-ingress
+  namespace: default
+  annotations:
+    # Use nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+    - hosts:
+        - app.ailakshya.in
+      secretName: ailakshya-tls
+  rules:
+    - host: app.ailakshya.in
+      http:
+        paths:
+          # Backend API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cold-backend-employee
+                port:
+                  number: 80
+          # Customer API
+          - path: /customer
+            pathType: Prefix
+            backend:
+              service:
+                name: cold-backend-customer
+                port:
+                  number: 80
+          # Frontend (if served by backend)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cold-frontend
+                port:
+                  number: 80
+
+---
+# Install nginx ingress controller:
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/cloud/deploy.yaml

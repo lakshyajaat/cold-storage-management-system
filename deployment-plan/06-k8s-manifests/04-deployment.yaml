@@ -1,0 +1,153 @@
+# Cold Storage Backend Deployment
+# Uses PostgreSQL VIP (192.168.15.200) for database
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cold-config
+  namespace: default
+data:
+  DB_HOST: "192.168.15.200"  # Patroni VIP
+  DB_PORT: "5432"
+  DB_NAME: "cold"
+  REDIS_HOST: "192.168.15.101"  # Node 1 only
+  REDIS_PORT: "6379"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cold-secrets
+  namespace: default
+type: Opaque
+stringData:
+  DB_USER: "admin"
+  DB_PASSWORD: "your_db_password"  # CHANGE THIS
+  JWT_SECRET: "your_jwt_secret"    # CHANGE THIS
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cold-backend-employee
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cold-backend-employee
+  template:
+    metadata:
+      labels:
+        app: cold-backend-employee
+    spec:
+      containers:
+        - name: backend
+          image: your-registry/cold-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: cold-config
+            - secretRef:
+                name: cold-secrets
+          env:
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: cold-backend-employee
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cold-backend-customer
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cold-backend-customer
+  template:
+    metadata:
+      labels:
+        app: cold-backend-customer
+    spec:
+      containers:
+        - name: backend
+          image: your-registry/cold-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: cold-config
+            - secretRef:
+                name: cold-secrets
+          env:
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: cold-backend-customer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-backend-employee
+  namespace: default
+spec:
+  selector:
+    app: cold-backend-employee
+  ports:
+    - port: 80
+      targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cold-backend-customer
+  namespace: default
+spec:
+  selector:
+    app: cold-backend-customer
+  ports:
+    - port: 80
+      targetPort: 8080

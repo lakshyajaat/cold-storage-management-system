@@ -1,0 +1,73 @@
+# Cloudflare Tunnel DaemonSet
+# Runs on all nodes for HA external access
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflared-credentials
+  namespace: default
+type: Opaque
+stringData:
+  # Get this from: cloudflared tunnel token <tunnel-name>
+  tunnel-token: "your-cloudflare-tunnel-token"
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloudflared
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+            - --token
+            - $(TUNNEL_TOKEN)
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-credentials
+                  key: tunnel-token
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+      restartPolicy: Always
+
+---
+# Cloudflare Tunnel Setup Instructions:
+#
+# 1. Install cloudflared CLI locally:
+#    brew install cloudflare/cloudflare/cloudflared
+#    # or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
+#
+# 2. Login to Cloudflare:
+#    cloudflared tunnel login
+#
+# 3. Create tunnel:
+#    cloudflared tunnel create cold-storage
+#
+# 4. Configure tunnel routing (in Cloudflare dashboard or config):
+#    - app.ailakshya.in -> http://cold-backend-employee:80
+#
+# 5. Get tunnel token:
+#    cloudflared tunnel token cold-storage
+#
+# 6. Update the secret above with the token
