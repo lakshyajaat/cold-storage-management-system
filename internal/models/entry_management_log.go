@@ -20,18 +20,18 @@ type EntryManagementLog struct {
 	NewCustomerPhone *string `json:"new_customer_phone,omitempty"`
 
 	// For merge
-	SourceCustomerID      *int    `json:"source_customer_id,omitempty"`
-	SourceCustomerName    *string `json:"source_customer_name,omitempty"`
-	SourceCustomerPhone   *string `json:"source_customer_phone,omitempty"`
-	SourceCustomerVillage *string `json:"source_customer_village,omitempty"`
-	SourceCustomerSO      *string `json:"source_customer_so,omitempty"`
-	TargetCustomerID      *int    `json:"target_customer_id,omitempty"`
-	TargetCustomerName    *string `json:"target_customer_name,omitempty"`
-	TargetCustomerPhone   *string `json:"target_customer_phone,omitempty"`
-	TargetCustomerVillage *string `json:"target_customer_village,omitempty"`
-	TargetCustomerSO      *string `json:"target_customer_so,omitempty"`
-	EntriesMoved          *int    `json:"entries_moved,omitempty"`
-	PaymentsMoved         *int    `json:"payments_moved,omitempty"`
+	SourceCustomerID      *int          `json:"source_customer_id,omitempty"`
+	SourceCustomerName    *string       `json:"source_customer_name,omitempty"`
+	SourceCustomerPhone   *string       `json:"source_customer_phone,omitempty"`
+	SourceCustomerVillage string        `json:"source_customer_village,omitempty"`
+	SourceCustomerSO      string        `json:"source_customer_so,omitempty"`
+	TargetCustomerID      *int          `json:"target_customer_id,omitempty"`
+	TargetCustomerName    *string       `json:"target_customer_name,omitempty"`
+	TargetCustomerPhone   *string       `json:"target_customer_phone,omitempty"`
+	TargetCustomerVillage string        `json:"target_customer_village,omitempty"`
+	TargetCustomerSO      string        `json:"target_customer_so,omitempty"`
+	EntriesMoved          *int          `json:"entries_moved,omitempty"`
+	PaymentsMoved         int           `json:"payments_moved,omitempty"`
 	MergeDetails          *MergeDetails `json:"merge_details,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
