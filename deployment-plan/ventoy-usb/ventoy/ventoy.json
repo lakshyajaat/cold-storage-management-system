@@ -1,0 +1,23 @@
+{
+    "control": [
+        {
+            "VTOY_DEFAULT_MENU_MODE": "1"
+        }
+    ],
+    "menu_alias": [
+        {
+            "image": "/ubuntu-22.04.4-live-server-amd64.iso",
+            "alias": "Ubuntu 22.04 Server - Cold Storage HA"
+        }
+    ],
+    "auto_install": [
+        {
+            "image": "/ubuntu-22.04.4-live-server-amd64.iso",
+            "template": [
+                "/autoinstall/user-data-node1",
+                "/autoinstall/user-data-node2",
+                "/autoinstall/user-data-node3"
+            ]
+        }
+    ]
+}

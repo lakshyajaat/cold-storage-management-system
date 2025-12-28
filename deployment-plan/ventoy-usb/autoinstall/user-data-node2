@@ -1,0 +1,181 @@
+#cloud-config
+autoinstall:
+  version: 1
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # Node 2 - Static IP
+  network:
+    version: 2
+    ethernets:
+      ens18:
+        addresses:
+          - 192.168.15.102/24
+        gateway4: 192.168.15.1
+        nameservers:
+          addresses:
+            - 8.8.8.8
+            - 1.1.1.1
+
+  # Full disk with LVM
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+
+  # User account - CHANGE PASSWORD HASH
+  identity:
+    hostname: cold-node-2
+    username: lakshya
+    # Password: coldha123 - Generate your own: mkpasswd -m sha-512
+    password: "$6$rounds=4096$randomsalt$KxH8JLXV8F9G5V5QZxN5Y5C5G5M5P5R5T5W5X5Y5Z5A5B5C5D5E5F5G5H5I5J5K5L5"
+
+  # SSH
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  # Base packages
+  packages:
+    - curl
+    - wget
+    - vim
+    - htop
+    - net-tools
+    - openssh-server
+    - git
+    - python3-pip
+    - gnupg2
+    - lsb-release
+    - apt-transport-https
+    - ca-certificates
+    - software-properties-common
+
+  # Post-install automation
+  late-commands:
+    # Update hosts file
+    - |
+      cat >> /target/etc/hosts << 'HOSTS'
+
+      # Cold Storage HA Cluster
+      192.168.15.101 cold-node-1
+      192.168.15.102 cold-node-2
+      192.168.15.103 cold-node-3
+      192.168.15.50  truenas
+      192.168.15.200 postgres-vip
+      192.168.15.100 k3s-vip
+      HOSTS
+
+    # Create setup scripts directory
+    - curtin in-target -- mkdir -p /opt/cold-setup
+
+    # Create PostgreSQL install script
+    - |
+      cat > /target/opt/cold-setup/01-install-postgresql.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing PostgreSQL 17..."
+      sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      apt update
+      apt install -y postgresql-17 postgresql-contrib-17
+      systemctl stop postgresql
+      systemctl disable postgresql
+      echo "PostgreSQL 17 installed (Patroni will manage it)"
+      SCRIPT
+
+    # Create Patroni install script
+    - |
+      cat > /target/opt/cold-setup/02-install-patroni.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing Patroni and etcd..."
+      apt install -y python3-psycopg2 etcd
+      pip3 install patroni[etcd]
+      systemctl enable etcd
+      echo "Patroni and etcd installed"
+      SCRIPT
+
+    # Create Keepalived install script
+    - |
+      cat > /target/opt/cold-setup/03-install-keepalived.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing Keepalived..."
+      apt install -y keepalived
+      systemctl enable keepalived
+      echo "Keepalived installed"
+      SCRIPT
+
+    # Create K3s join script
+    - |
+      cat > /target/opt/cold-setup/05-k3s-setup.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      NODE1_IP="192.168.15.101"
+
+      if [ -z "$1" ]; then
+        echo "Usage: ./05-k3s-setup.sh <K3S_TOKEN>"
+        echo "Get token from Node 1: cat /opt/cold-setup/k3s-token.txt"
+        exit 1
+      fi
+
+      K3S_TOKEN="$1"
+
+      echo "Joining K3s cluster from Node 2..."
+      curl -sfL https://get.k3s.io | sh -s - server \
+        --server https://${NODE1_IP}:6443 \
+        --token ${K3S_TOKEN} \
+        --disable traefik \
+        --disable servicelb \
+        --write-kubeconfig-mode 644
+
+      systemctl enable k3s
+      echo "Node 2 joined K3s cluster"
+      SCRIPT
+
+    # Create master setup script
+    - |
+      cat > /target/opt/cold-setup/setup-all.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "======================================"
+      echo "Cold Storage HA - Node 2 Full Setup"
+      echo "======================================"
+
+      if [ -z "$1" ]; then
+        echo "Usage: ./setup-all.sh <K3S_TOKEN>"
+        echo "Get token from Node 1: cat /opt/cold-setup/k3s-token.txt"
+        exit 1
+      fi
+
+      K3S_TOKEN="$1"
+      cd /opt/cold-setup
+
+      echo "[1/4] Installing PostgreSQL..."
+      ./01-install-postgresql.sh
+
+      echo "[2/4] Installing Patroni..."
+      ./02-install-patroni.sh
+
+      echo "[3/4] Installing Keepalived..."
+      ./03-install-keepalived.sh
+
+      echo "[4/4] Joining K3s cluster..."
+      ./05-k3s-setup.sh "$K3S_TOKEN"
+
+      echo "======================================"
+      echo "Node 2 setup complete!"
+      echo "======================================"
+      SCRIPT
+
+    # Make scripts executable
+    - curtin in-target -- chmod +x /opt/cold-setup/*.sh
+
+    # Enable SSH
+    - curtin in-target -- systemctl enable ssh
+
+  # Reboot after install
+  shutdown: reboot

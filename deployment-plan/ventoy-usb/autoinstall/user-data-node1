@@ -1,0 +1,195 @@
+#cloud-config
+autoinstall:
+  version: 1
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # Node 1 - Static IP
+  network:
+    version: 2
+    ethernets:
+      ens18:
+        addresses:
+          - 192.168.15.101/24
+        gateway4: 192.168.15.1
+        nameservers:
+          addresses:
+            - 8.8.8.8
+            - 1.1.1.1
+
+  # Full disk with LVM
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+
+  # User account - CHANGE PASSWORD HASH
+  identity:
+    hostname: cold-node-1
+    username: lakshya
+    # Password: coldha123 - Generate your own: mkpasswd -m sha-512
+    password: "$6$rounds=4096$randomsalt$KxH8JLXV8F9G5V5QZxN5Y5C5G5M5P5R5T5W5X5Y5Z5A5B5C5D5E5F5G5H5I5J5K5L5"
+
+  # SSH
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  # Base packages
+  packages:
+    - curl
+    - wget
+    - vim
+    - htop
+    - net-tools
+    - openssh-server
+    - git
+    - python3-pip
+    - gnupg2
+    - lsb-release
+    - apt-transport-https
+    - ca-certificates
+    - software-properties-common
+
+  # Post-install automation
+  late-commands:
+    # Update hosts file
+    - |
+      cat >> /target/etc/hosts << 'HOSTS'
+
+      # Cold Storage HA Cluster
+      192.168.15.101 cold-node-1
+      192.168.15.102 cold-node-2
+      192.168.15.103 cold-node-3
+      192.168.15.50  truenas
+      192.168.15.200 postgres-vip
+      192.168.15.100 k3s-vip
+      HOSTS
+
+    # Create setup scripts directory
+    - curtin in-target -- mkdir -p /opt/cold-setup
+
+    # Create PostgreSQL install script
+    - |
+      cat > /target/opt/cold-setup/01-install-postgresql.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing PostgreSQL 17..."
+      sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      apt update
+      apt install -y postgresql-17 postgresql-contrib-17
+      systemctl stop postgresql
+      systemctl disable postgresql
+      echo "PostgreSQL 17 installed (Patroni will manage it)"
+      SCRIPT
+
+    # Create Patroni install script
+    - |
+      cat > /target/opt/cold-setup/02-install-patroni.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing Patroni and etcd..."
+      apt install -y python3-psycopg2 etcd
+      pip3 install patroni[etcd]
+      systemctl enable etcd
+      echo "Patroni and etcd installed"
+      SCRIPT
+
+    # Create Keepalived install script
+    - |
+      cat > /target/opt/cold-setup/03-install-keepalived.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing Keepalived..."
+      apt install -y keepalived
+      systemctl enable keepalived
+      echo "Keepalived installed"
+      SCRIPT
+
+    # Create Redis install script (Node 1 only)
+    - |
+      cat > /target/opt/cold-setup/04-install-redis.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "Installing Redis..."
+      apt install -y redis-server
+      systemctl enable redis-server
+      systemctl start redis-server
+      echo "Redis installed and running"
+      SCRIPT
+
+    # Create K3s setup script
+    - |
+      cat > /target/opt/cold-setup/05-k3s-setup.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      NODE_NUMBER=1
+      NODE1_IP="192.168.15.101"
+
+      echo "Initializing K3s cluster on Node 1..."
+      curl -sfL https://get.k3s.io | sh -s - server \
+        --cluster-init \
+        --disable traefik \
+        --disable servicelb \
+        --tls-san ${NODE1_IP} \
+        --tls-san 192.168.15.100 \
+        --write-kubeconfig-mode 644
+
+      sleep 30
+
+      K3S_TOKEN=$(cat /var/lib/rancher/k3s/server/node-token)
+      echo "============================================"
+      echo "K3s Token (use for nodes 2 & 3):"
+      echo "$K3S_TOKEN"
+      echo "============================================"
+      echo "$K3S_TOKEN" > /opt/cold-setup/k3s-token.txt
+
+      mkdir -p /root/.kube
+      cp /etc/rancher/k3s/k3s.yaml /root/.kube/config
+      systemctl enable k3s
+      echo "K3s initialized on Node 1"
+      SCRIPT
+
+    # Create master setup script
+    - |
+      cat > /target/opt/cold-setup/setup-all.sh << 'SCRIPT'
+      #!/bin/bash
+      set -e
+      echo "======================================"
+      echo "Cold Storage HA - Node 1 Full Setup"
+      echo "======================================"
+
+      cd /opt/cold-setup
+
+      echo "[1/5] Installing PostgreSQL..."
+      ./01-install-postgresql.sh
+
+      echo "[2/5] Installing Patroni..."
+      ./02-install-patroni.sh
+
+      echo "[3/5] Installing Keepalived..."
+      ./03-install-keepalived.sh
+
+      echo "[4/5] Installing Redis (Node 1 only)..."
+      ./04-install-redis.sh
+
+      echo "[5/5] Setting up K3s..."
+      ./05-k3s-setup.sh
+
+      echo "======================================"
+      echo "Node 1 setup complete!"
+      echo "K3s token saved to: /opt/cold-setup/k3s-token.txt"
+      echo "======================================"
+      SCRIPT
+
+    # Make scripts executable
+    - curtin in-target -- chmod +x /opt/cold-setup/*.sh
+
+    # Enable SSH
+    - curtin in-target -- systemctl enable ssh
+
+  # Reboot after install
+  shutdown: reboot
