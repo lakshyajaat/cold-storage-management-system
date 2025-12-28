@@ -230,6 +230,22 @@
             </div>
         </div>
 
+        <!-- Today's Collection Card -->
+        <div class="neu-border bg-gradient-to-br from-lime-400 to-lime-600 text-white p-2 md:p-4 mb-3 md:mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 md:gap-4">
+                    <i class="bi bi-calendar-check text-2xl md:text-4xl"></i>
+                    <div>
+                        <p class="text-xs md:text-sm opacity-90">Today's Collection (by me)</p>
+                        <p class="text-xl md:text-3xl font-bold" id="todaysCollection">₹0</p>
+                    </div>
+                </div>
+                <div class="text-right hidden md:block">
+                    <p class="text-xs opacity-75" id="todaysDate"></p>
+                </div>
+            </div>
+        </div>
+
         <!-- Search Bar -->
         <div class="neu-border bg-white p-2 md:p-4 mb-3 md:mb-6">
             <div class="flex flex-col md:flex-row gap-2 md:gap-4">
@@ -513,6 +529,30 @@
 
                 displayCustomerAccounts(allCustomerAccounts);
                 updateSummaryFromServer(summary);
+
+                // Fetch payments and calculate today's collection
+                try {
+                    const paymentsRes = await fetch('/api/rent-payments', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (paymentsRes.ok) {
+                        const payments = await paymentsRes.json();
+                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                        const user = decodeToken();
+                        const userId = user ? user.user_id : null;
+
+                        // Calculate today's collection by current user
+                        const todaysCollection = payments.filter(p => {
+                            const paymentDate = new Date(p.payment_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                            return paymentDate === today && p.processed_by_user_id === userId;
+                        }).reduce((sum, p) => sum + (p.amount_paid || 0), 0);
+
+                        document.getElementById('todaysCollection').textContent = '₹' + todaysCollection.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('todaysDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
+                    }
+                } catch (paymentError) {
+                    console.error('Error loading payments for today collection:', paymentError);
+                }
 
             } catch (error) {
                 console.error('Error loading customer accounts:', error);

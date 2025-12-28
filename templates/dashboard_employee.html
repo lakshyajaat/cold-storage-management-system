@@ -186,14 +186,18 @@
         <!-- Today's Summary -->
         <div class="neu-border bg-white p-3 md:p-6">
             <h3 class="text-lg md:text-2xl font-bold mb-3 md:mb-4" data-i18n="todays_summary">Today's Summary</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
                 <div class="p-2 md:p-4 bg-blue-50 border-2 border-black">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="my_entries_today">My Entries Today</p>
                     <p id="myEntriesToday" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
                 <div class="p-2 md:p-4 bg-green-50 border-2 border-black">
-                    <p class="text-xs md:text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
-                    <p id="totalEntries" class="text-xl md:text-3xl font-bold">...</p>
+                    <p class="text-xs md:text-sm text-gray-600">My Room Entries</p>
+                    <p id="myRoomEntriesToday" class="text-xl md:text-3xl font-bold">...</p>
+                </div>
+                <div class="p-2 md:p-4 bg-yellow-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600">Payments Collected</p>
+                    <p id="myPaymentsToday" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
                 <div class="p-2 md:p-4 bg-purple-50 border-2 border-black">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
@@ -202,6 +206,10 @@
                 <div class="p-2 md:p-4 bg-orange-50 border-2 border-black">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_bags">Today's Bags</p>
                     <p id="totalBags" class="text-xl md:text-3xl font-bold">...</p>
+                </div>
+                <div class="p-2 md:p-4 bg-gray-50 border-2 border-black">
+                    <p class="text-xs md:text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
+                    <p id="totalEntries" class="text-xl md:text-3xl font-bold">...</p>
                 </div>
             </div>
         </div>
@@ -273,14 +281,16 @@
                 const userStr = localStorage.getItem('user');
                 const currentUser = JSON.parse(userStr);
 
-                // Fetch data in parallel
-                const [entriesRes, roomEntriesRes] = await Promise.all([
+                // Fetch data in parallel (including payments)
+                const [entriesRes, roomEntriesRes, paymentsRes] = await Promise.all([
                     fetch('/api/entries', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/room-entries', { headers: { 'Authorization': `Bearer ${token}` } })
+                    fetch('/api/room-entries', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/rent-payments', { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
 
                 const entries = await entriesRes.json();
                 const roomEntries = await roomEntriesRes.json();
+                const payments = paymentsRes.ok ? await paymentsRes.json() : [];
 
                 // Calculate today's date (using IST timezone)
                 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -291,9 +301,19 @@
                     return entryDate === today && e.created_by_user_id === currentUser.id;
                 });
 
-                console.log('Debug - User ID:', currentUser.id, 'Today:', today, 'My entries count:', myEntriesToday.length);
+                // Filter room entries created by current employee today
+                const myRoomEntriesToday = roomEntries.filter(r => {
+                    const roomDate = new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                    return roomDate === today && r.created_by_user_id === currentUser.id;
+                });
 
-                // Filter today's room entries
+                // Calculate payments collected by current employee today
+                const myPaymentsToday = payments.filter(p => {
+                    const paymentDate = new Date(p.payment_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                    return paymentDate === today && p.processed_by_user_id === currentUser.id;
+                }).reduce((sum, p) => sum + (p.amount_paid || 0), 0);
+
+                // Filter today's room entries (all employees)
                 const todayRoomEntries = roomEntries.filter(r => {
                     const roomDate = new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
                     return roomDate === today;
@@ -304,6 +324,8 @@
 
                 // Update UI
                 document.getElementById('myEntriesToday').textContent = myEntriesToday.length;
+                document.getElementById('myRoomEntriesToday').textContent = myRoomEntriesToday.length;
+                document.getElementById('myPaymentsToday').textContent = '₹' + myPaymentsToday.toLocaleString('en-IN');
                 document.getElementById('totalEntries').textContent = entries.length || 0;
                 document.getElementById('totalRoomEntries').textContent = todayRoomEntries.length || 0;
                 document.getElementById('totalBags').textContent = totalBags.toLocaleString();
@@ -311,7 +333,7 @@
             } catch (error) {
                 console.error('Error loading employee dashboard data:', error);
                 // Set error state
-                ['myEntriesToday', 'totalEntries', 'totalRoomEntries', 'totalBags'].forEach(id => {
+                ['myEntriesToday', 'myRoomEntriesToday', 'myPaymentsToday', 'totalEntries', 'totalRoomEntries', 'totalBags'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.textContent = i18n.t('error', 'Error');
                 });
