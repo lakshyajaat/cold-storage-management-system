@@ -280,6 +280,7 @@
                                 <th class="text-left p-2 font-bold" data-i18n="qty">Req Qty</th>
                                 <th class="text-left p-2 font-bold" data-i18n="picked_up">Picked Up</th>
                                 <th class="text-left p-2 font-bold" data-i18n="status">Status</th>
+                                <th class="text-left p-2 font-bold">Issued By</th>
                                 <th class="text-left p-2 font-bold" data-i18n="expires_in">Expires In</th>
                                 <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
                                 <th class="text-left p-2 font-bold" data-i18n="action">Action</th>
@@ -287,7 +288,7 @@
                         </thead>
                         <tbody id="gatePassesTableBody">
                             <tr>
-                                <td colspan="9" class="text-center p-4 text-gray-500" data-i18n="loading_gate_passes">Loading gate passes...</td>
+                                <td colspan="10" class="text-center p-4 text-gray-500" data-i18n="loading_gate_passes">Loading gate passes...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1375,6 +1376,12 @@
                 const pickedUp = gp.total_picked_up || 0;
                 const pickedUpColor = pickedUp > 0 ? 'text-red-600 font-bold' : 'text-gray-400';
 
+                // Get issued by name
+                let issuedBy = gp.issued_by_name || '-';
+                if (gp.request_source === 'customer_portal') {
+                    issuedBy = 'Customer Portal';
+                }
+
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="p-2 font-bold ${truckColor}">${gp.thock_number}</td>
@@ -1383,6 +1390,7 @@
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
                         <td class="p-2 ${pickedUpColor}">${pickedUp > 0 ? pickedUp : '-'}</td>
                         <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${gp.status.toUpperCase()}</span></td>
+                        <td class="p-2 text-xs font-semibold">${issuedBy}</td>
                         <td class="p-2 text-xs ${remaining.color}">${remaining.text}</td>
                         <td class="p-2 text-xs">${formattedDate}</td>
                         <td class="p-2">${actionButtons}</td>
