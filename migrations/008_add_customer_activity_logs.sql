@@ -19,12 +19,15 @@ CREATE INDEX IF NOT EXISTS idx_customer_activity_logs_action ON customer_activit
 CREATE INDEX IF NOT EXISTS idx_customer_activity_logs_created_at ON customer_activity_logs(created_at DESC);
 
 -- Insert default SMS rate limiter settings if they don't exist
+-- All limits set to 0 = disabled by default
 INSERT INTO system_settings (setting_key, setting_value, description, updated_at)
 VALUES
-    ('sms_otp_cooldown_minutes', '2', 'Cooldown period between OTP requests (minutes)', CURRENT_TIMESTAMP),
-    ('sms_max_otp_per_hour', '3', 'Maximum OTP requests per phone number per hour', CURRENT_TIMESTAMP),
-    ('sms_max_otp_per_day', '10', 'Maximum OTP requests per phone number per day', CURRENT_TIMESTAMP),
-    ('sms_max_otp_per_ip_hour', '10', 'Maximum OTP requests per IP address per hour', CURRENT_TIMESTAMP),
-    ('sms_max_otp_per_ip_day', '50', 'Maximum OTP requests per IP address per day', CURRENT_TIMESTAMP),
-    ('sms_max_daily_total', '1000', 'Maximum total SMS messages per day (budget limit)', CURRENT_TIMESTAMP)
+    ('sms_otp_cooldown_minutes', '0', 'Cooldown between OTP requests in minutes (0 = disabled)', CURRENT_TIMESTAMP),
+    ('sms_max_otp_per_window', '0', 'Max OTP requests per phone in window (0 = unlimited)', CURRENT_TIMESTAMP),
+    ('sms_otp_window_minutes', '60', 'Time window for max OTP limit in minutes', CURRENT_TIMESTAMP),
+    ('sms_max_otp_per_day', '0', 'Max OTP requests per phone per day (0 = unlimited)', CURRENT_TIMESTAMP),
+    ('sms_max_otp_per_ip_window', '0', 'Max OTP requests per IP in window (0 = unlimited)', CURRENT_TIMESTAMP),
+    ('sms_otp_ip_window_minutes', '60', 'Time window for IP limit in minutes', CURRENT_TIMESTAMP),
+    ('sms_max_otp_per_ip_day', '0', 'Max OTP requests per IP per day (0 = unlimited)', CURRENT_TIMESTAMP),
+    ('sms_max_daily_total', '0', 'Total SMS budget per day (0 = unlimited)', CURRENT_TIMESTAMP)
 ON CONFLICT (setting_key) DO NOTHING;

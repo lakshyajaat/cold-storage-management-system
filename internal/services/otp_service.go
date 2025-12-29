@@ -15,26 +15,31 @@ import (
 )
 
 // Default rate limiting values (can be overridden via system settings)
+// Set any value to 0 to disable that limit
 const (
 	OTPLength        = 6
 	OTPExpiryMinutes = 5
 	MaxOTPAttempts   = 3
 
-	// Default rate limits (configurable via system settings)
-	DefaultOTPCooldownMinutes = 2
-	DefaultMaxOTPPerHour      = 3
-	DefaultMaxOTPPerDay       = 10
-	DefaultMaxOTPPerIPHour    = 10
-	DefaultMaxOTPPerIPDay     = 50
-	DefaultMaxDailySMS        = 1000
+	// Default rate limits (configurable via system settings, 0 = disabled)
+	DefaultOTPCooldownMinutes = 0  // Disabled by default
+	DefaultMaxOTPPerHour      = 0  // Disabled by default
+	DefaultOTPWindowMinutes   = 60 // Window size in minutes
+	DefaultMaxOTPPerDay       = 0  // Disabled by default
+	DefaultMaxOTPPerIPHour    = 0  // Disabled by default
+	DefaultOTPIPWindowMinutes = 60 // IP window size in minutes
+	DefaultMaxOTPPerIPDay     = 0  // Disabled by default
+	DefaultMaxDailySMS        = 0  // Disabled by default (no budget limit)
 )
 
 // Rate limit setting keys
 const (
 	SettingOTPCooldownMinutes = "sms_otp_cooldown_minutes"
-	SettingMaxOTPPerHour      = "sms_max_otp_per_hour"
+	SettingMaxOTPPerHour      = "sms_max_otp_per_window"
+	SettingOTPWindowMinutes   = "sms_otp_window_minutes"
 	SettingMaxOTPPerDay       = "sms_max_otp_per_day"
-	SettingMaxOTPPerIPHour    = "sms_max_otp_per_ip_hour"
+	SettingMaxOTPPerIPHour    = "sms_max_otp_per_ip_window"
+	SettingOTPIPWindowMinutes = "sms_otp_ip_window_minutes"
 	SettingMaxOTPPerIPDay     = "sms_max_otp_per_ip_day"
 	SettingMaxDailySMS        = "sms_max_daily_total"
 )
@@ -117,82 +122,102 @@ func (s *OTPService) GenerateOTP() string {
 }
 
 // CanRequestOTP checks if a phone number can request an OTP (rate limiting)
+// Set any limit to 0 to disable that specific check
 func (s *OTPService) CanRequestOTP(ctx context.Context, phone string) error {
-	// Get configurable rate limits
+	// Get configurable rate limits (0 = disabled/unlimited)
 	cooldownMinutes := s.getRateLimitSetting(ctx, SettingOTPCooldownMinutes, DefaultOTPCooldownMinutes)
-	maxOTPPerHour := s.getRateLimitSetting(ctx, SettingMaxOTPPerHour, DefaultMaxOTPPerHour)
+	maxOTPPerWindow := s.getRateLimitSetting(ctx, SettingMaxOTPPerHour, DefaultMaxOTPPerHour)
+	windowMinutes := s.getRateLimitSetting(ctx, SettingOTPWindowMinutes, DefaultOTPWindowMinutes)
 	maxOTPPerDay := s.getRateLimitSetting(ctx, SettingMaxOTPPerDay, DefaultMaxOTPPerDay)
 
-	// Check cooldown period
-	recentCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, time.Duration(cooldownMinutes)*time.Minute)
-	if err != nil {
-		return fmt.Errorf("failed to check recent requests: %w", err)
+	// Check cooldown period (skip if cooldown is 0)
+	if cooldownMinutes > 0 {
+		recentCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, time.Duration(cooldownMinutes)*time.Minute)
+		if err != nil {
+			return fmt.Errorf("failed to check recent requests: %w", err)
+		}
+
+		if recentCount > 0 {
+			return fmt.Errorf("please wait %d minutes before requesting another OTP", cooldownMinutes)
+		}
 	}
 
-	if recentCount > 0 {
-		return fmt.Errorf("please wait %d minutes before requesting another OTP", cooldownMinutes)
+	// Check window limit (skip if maxOTPPerWindow is 0)
+	if maxOTPPerWindow > 0 && windowMinutes > 0 {
+		windowCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, time.Duration(windowMinutes)*time.Minute)
+		if err != nil {
+			return fmt.Errorf("failed to check window limit: %w", err)
+		}
+
+		if windowCount >= maxOTPPerWindow {
+			return fmt.Errorf("maximum OTP requests exceeded. Please try again after %d minutes", windowMinutes)
+		}
 	}
 
-	// Check hourly limit
-	hourlyCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, 1*time.Hour)
-	if err != nil {
-		return fmt.Errorf("failed to check hourly limit: %w", err)
-	}
+	// Check daily limit (skip if maxOTPPerDay is 0)
+	if maxOTPPerDay > 0 {
+		dailyCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, 24*time.Hour)
+		if err != nil {
+			return fmt.Errorf("failed to check daily limit: %w", err)
+		}
 
-	if hourlyCount >= maxOTPPerHour {
-		return fmt.Errorf("maximum OTP requests exceeded. Please try again after 1 hour")
-	}
-
-	// Check daily limit
-	dailyCount, err := s.OTPRepo.CountRecentRequests(ctx, phone, 24*time.Hour)
-	if err != nil {
-		return fmt.Errorf("failed to check daily limit: %w", err)
-	}
-
-	if dailyCount >= maxOTPPerDay {
-		return fmt.Errorf("maximum daily OTP requests exceeded. Please try again tomorrow")
+		if dailyCount >= maxOTPPerDay {
+			return fmt.Errorf("maximum daily OTP requests exceeded. Please try again tomorrow")
+		}
 	}
 
 	return nil
 }
 
 // CheckIPRateLimit checks if an IP address can request OTPs (prevent automated attacks)
+// Set any limit to 0 to disable that specific check
 func (s *OTPService) CheckIPRateLimit(ctx context.Context, ipAddress string) error {
 	if ipAddress == "" {
 		return nil // Skip if IP not available
 	}
 
-	// Get configurable rate limits
-	maxOTPPerIPHour := s.getRateLimitSetting(ctx, SettingMaxOTPPerIPHour, DefaultMaxOTPPerIPHour)
+	// Get configurable rate limits (0 = disabled/unlimited)
+	maxOTPPerIPWindow := s.getRateLimitSetting(ctx, SettingMaxOTPPerIPHour, DefaultMaxOTPPerIPHour)
+	ipWindowMinutes := s.getRateLimitSetting(ctx, SettingOTPIPWindowMinutes, DefaultOTPIPWindowMinutes)
 	maxOTPPerIPDay := s.getRateLimitSetting(ctx, SettingMaxOTPPerIPDay, DefaultMaxOTPPerIPDay)
 
-	// Check hourly limit per IP
-	hourlyCount, err := s.OTPRepo.CountRequestsByIP(ctx, ipAddress, 1*time.Hour)
-	if err != nil {
-		return fmt.Errorf("failed to check IP hourly limit: %w", err)
+	// Check window limit per IP (skip if disabled)
+	if maxOTPPerIPWindow > 0 && ipWindowMinutes > 0 {
+		windowCount, err := s.OTPRepo.CountRequestsByIP(ctx, ipAddress, time.Duration(ipWindowMinutes)*time.Minute)
+		if err != nil {
+			return fmt.Errorf("failed to check IP window limit: %w", err)
+		}
+
+		if windowCount >= maxOTPPerIPWindow {
+			return fmt.Errorf("too many requests from your network. Please try again after %d minutes", ipWindowMinutes)
+		}
 	}
 
-	if hourlyCount >= maxOTPPerIPHour {
-		return fmt.Errorf("too many requests from your network. Please try again later")
-	}
+	// Check daily limit per IP (skip if disabled)
+	if maxOTPPerIPDay > 0 {
+		dailyCount, err := s.OTPRepo.CountRequestsByIP(ctx, ipAddress, 24*time.Hour)
+		if err != nil {
+			return fmt.Errorf("failed to check IP daily limit: %w", err)
+		}
 
-	// Check daily limit per IP
-	dailyCount, err := s.OTPRepo.CountRequestsByIP(ctx, ipAddress, 24*time.Hour)
-	if err != nil {
-		return fmt.Errorf("failed to check IP daily limit: %w", err)
-	}
-
-	if dailyCount >= maxOTPPerIPDay {
-		return fmt.Errorf("too many requests from your network. Please try again tomorrow")
+		if dailyCount >= maxOTPPerIPDay {
+			return fmt.Errorf("too many requests from your network. Please try again tomorrow")
+		}
 	}
 
 	return nil
 }
 
 // CheckDailyBudget checks if daily SMS budget has been exceeded
+// Set to 0 to disable budget limit
 func (s *OTPService) CheckDailyBudget(ctx context.Context) error {
-	// Get configurable daily limit
+	// Get configurable daily limit (0 = unlimited)
 	maxDailySMS := s.getRateLimitSetting(ctx, SettingMaxDailySMS, DefaultMaxDailySMS)
+
+	// Skip if budget limit is disabled
+	if maxDailySMS <= 0 {
+		return nil
+	}
 
 	// Count total OTPs sent today
 	todayCount, err := s.OTPRepo.CountRecentRequests(ctx, "", 24*time.Hour)
@@ -219,9 +244,11 @@ func (s *OTPService) CheckDailyBudget(ctx context.Context) error {
 func (s *OTPService) GetRateLimitSettings(ctx context.Context) map[string]int {
 	return map[string]int{
 		"cooldown_minutes":    s.getRateLimitSetting(ctx, SettingOTPCooldownMinutes, DefaultOTPCooldownMinutes),
-		"max_per_hour":        s.getRateLimitSetting(ctx, SettingMaxOTPPerHour, DefaultMaxOTPPerHour),
+		"max_per_window":      s.getRateLimitSetting(ctx, SettingMaxOTPPerHour, DefaultMaxOTPPerHour),
+		"window_minutes":      s.getRateLimitSetting(ctx, SettingOTPWindowMinutes, DefaultOTPWindowMinutes),
 		"max_per_day":         s.getRateLimitSetting(ctx, SettingMaxOTPPerDay, DefaultMaxOTPPerDay),
-		"max_per_ip_hour":     s.getRateLimitSetting(ctx, SettingMaxOTPPerIPHour, DefaultMaxOTPPerIPHour),
+		"max_per_ip_window":   s.getRateLimitSetting(ctx, SettingMaxOTPPerIPHour, DefaultMaxOTPPerIPHour),
+		"ip_window_minutes":   s.getRateLimitSetting(ctx, SettingOTPIPWindowMinutes, DefaultOTPIPWindowMinutes),
 		"max_per_ip_day":      s.getRateLimitSetting(ctx, SettingMaxOTPPerIPDay, DefaultMaxOTPPerIPDay),
 		"max_daily_total":     s.getRateLimitSetting(ctx, SettingMaxDailySMS, DefaultMaxDailySMS),
 	}

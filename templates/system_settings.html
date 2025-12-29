@@ -224,45 +224,63 @@
             <div class="mb-6 p-4 bg-teal-50 neu-border">
                 <p class="text-sm text-teal-800">
                     <i class="bi bi-info-circle"></i>
-                    <strong>Note:</strong> Configure rate limits for customer OTP SMS to prevent abuse and manage costs.
+                    <strong>Note:</strong> Configure rate limits for customer OTP SMS. <strong>Set any value to 0 to disable that limit.</strong>
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Cooldown Minutes -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-hourglass-split"></i> Cooldown Period (minutes)
+                        <i class="bi bi-hourglass-split"></i> Cooldown (minutes)
                     </label>
-                    <input type="number" id="sms_cooldown" min="1" max="10" class="w-full neu-input" placeholder="2">
-                    <p class="text-xs text-gray-500 mt-1">Time between OTP requests per phone</p>
+                    <input type="number" id="sms_cooldown" min="0" max="60" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Wait time between OTP requests (0 = no wait)</p>
                 </div>
 
-                <!-- Max OTP per Hour -->
+                <!-- Max OTP per Window -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-clock"></i> Max OTP per Hour (per phone)
+                        <i class="bi bi-clock"></i> Max OTP per Window
                     </label>
-                    <input type="number" id="sms_max_per_hour" min="1" max="20" class="w-full neu-input" placeholder="3">
-                    <p class="text-xs text-gray-500 mt-1">Maximum OTPs per phone per hour</p>
+                    <input type="number" id="sms_max_per_window" min="0" max="100" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Max OTPs per phone in window (0 = unlimited)</p>
+                </div>
+
+                <!-- Window Minutes -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="bi bi-stopwatch"></i> Window Size (minutes)
+                    </label>
+                    <input type="number" id="sms_window_minutes" min="1" max="1440" class="w-full neu-input" placeholder="60">
+                    <p class="text-xs text-gray-500 mt-1">Time window for max OTP limit</p>
                 </div>
 
                 <!-- Max OTP per Day -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-calendar-day"></i> Max OTP per Day (per phone)
+                        <i class="bi bi-calendar-day"></i> Max OTP per Day
                     </label>
-                    <input type="number" id="sms_max_per_day" min="1" max="50" class="w-full neu-input" placeholder="10">
-                    <p class="text-xs text-gray-500 mt-1">Maximum OTPs per phone per day</p>
+                    <input type="number" id="sms_max_per_day" min="0" max="100" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Max OTPs per phone per day (0 = unlimited)</p>
                 </div>
 
-                <!-- Max OTP per IP per Hour -->
+                <!-- Max OTP per IP per Window -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-router"></i> Max OTP per IP/Hour
+                        <i class="bi bi-router"></i> Max OTP per IP/Window
                     </label>
-                    <input type="number" id="sms_max_per_ip_hour" min="5" max="100" class="w-full neu-input" placeholder="10">
-                    <p class="text-xs text-gray-500 mt-1">Prevent automated attacks from single IP</p>
+                    <input type="number" id="sms_max_per_ip_window" min="0" max="500" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Anti-abuse: limit per IP (0 = unlimited)</p>
+                </div>
+
+                <!-- IP Window Minutes -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="bi bi-stopwatch-fill"></i> IP Window (minutes)
+                    </label>
+                    <input type="number" id="sms_ip_window_minutes" min="1" max="1440" class="w-full neu-input" placeholder="60">
+                    <p class="text-xs text-gray-500 mt-1">Time window for IP limit</p>
                 </div>
 
                 <!-- Max OTP per IP per Day -->
@@ -270,23 +288,26 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         <i class="bi bi-router-fill"></i> Max OTP per IP/Day
                     </label>
-                    <input type="number" id="sms_max_per_ip_day" min="10" max="500" class="w-full neu-input" placeholder="50">
-                    <p class="text-xs text-gray-500 mt-1">Daily limit per IP address</p>
+                    <input type="number" id="sms_max_per_ip_day" min="0" max="1000" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Daily limit per IP (0 = unlimited)</p>
                 </div>
 
                 <!-- Daily SMS Budget -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-cash-stack"></i> Daily SMS Budget (total)
+                        <i class="bi bi-cash-stack"></i> Daily SMS Budget
                     </label>
-                    <input type="number" id="sms_daily_budget" min="100" max="10000" class="w-full neu-input" placeholder="1000">
-                    <p class="text-xs text-gray-500 mt-1">Total SMS allowed per day (cost control)</p>
+                    <input type="number" id="sms_daily_budget" min="0" max="50000" class="w-full neu-input" placeholder="0">
+                    <p class="text-xs text-gray-500 mt-1">Total SMS/day for cost control (0 = unlimited)</p>
                 </div>
             </div>
 
-            <div class="mt-6">
+            <div class="mt-6 flex gap-4">
                 <button onclick="updateSMSRateLimits()" class="neu-button bg-teal-500 text-white">
                     <i class="bi bi-check-circle"></i> Save Rate Limits
+                </button>
+                <button onclick="disableAllLimits()" class="neu-button bg-gray-500 text-white">
+                    <i class="bi bi-x-circle"></i> Disable All Limits
                 </button>
             </div>
 
@@ -823,20 +844,24 @@
         // SMS Rate Limiter Functions
         const smsSettingKeys = {
             'sms_cooldown': 'sms_otp_cooldown_minutes',
-            'sms_max_per_hour': 'sms_max_otp_per_hour',
+            'sms_max_per_window': 'sms_max_otp_per_window',
+            'sms_window_minutes': 'sms_otp_window_minutes',
             'sms_max_per_day': 'sms_max_otp_per_day',
-            'sms_max_per_ip_hour': 'sms_max_otp_per_ip_hour',
+            'sms_max_per_ip_window': 'sms_max_otp_per_ip_window',
+            'sms_ip_window_minutes': 'sms_otp_ip_window_minutes',
             'sms_max_per_ip_day': 'sms_max_otp_per_ip_day',
             'sms_daily_budget': 'sms_max_daily_total'
         };
 
         const smsDefaults = {
-            'sms_cooldown': 2,
-            'sms_max_per_hour': 3,
-            'sms_max_per_day': 10,
-            'sms_max_per_ip_hour': 10,
-            'sms_max_per_ip_day': 50,
-            'sms_daily_budget': 1000
+            'sms_cooldown': 0,
+            'sms_max_per_window': 0,
+            'sms_window_minutes': 60,
+            'sms_max_per_day': 0,
+            'sms_max_per_ip_window': 0,
+            'sms_ip_window_minutes': 60,
+            'sms_max_per_ip_day': 0,
+            'sms_daily_budget': 0
         };
 
         async function loadSMSRateLimits() {
@@ -854,7 +879,7 @@
                     for (const [inputId, settingKey] of Object.entries(smsSettingKeys)) {
                         const input = document.getElementById(inputId);
                         if (input) {
-                            input.value = settingsMap[settingKey] || smsDefaults[inputId];
+                            input.value = settingsMap[settingKey] !== undefined ? settingsMap[settingKey] : smsDefaults[inputId];
                         }
                     }
                 }
@@ -871,7 +896,7 @@
                 // Update each setting
                 for (const [inputId, settingKey] of Object.entries(smsSettingKeys)) {
                     const input = document.getElementById(inputId);
-                    if (input && input.value) {
+                    if (input && input.value !== '') {
                         await fetch(`/api/settings/${settingKey}`, {
                             method: 'PUT',
                             headers: {
@@ -890,6 +915,22 @@
                 document.getElementById('smsErrorText').textContent = error.message;
                 document.getElementById('smsErrorMessage').classList.remove('hidden');
             }
+        }
+
+        async function disableAllLimits() {
+            // Set all limit fields to 0 (disabled)
+            document.getElementById('sms_cooldown').value = 0;
+            document.getElementById('sms_max_per_window').value = 0;
+            document.getElementById('sms_max_per_day').value = 0;
+            document.getElementById('sms_max_per_ip_window').value = 0;
+            document.getElementById('sms_max_per_ip_day').value = 0;
+            document.getElementById('sms_daily_budget').value = 0;
+            // Keep window sizes at default
+            document.getElementById('sms_window_minutes').value = 60;
+            document.getElementById('sms_ip_window_minutes').value = 60;
+
+            // Save the changes
+            await updateSMSRateLimits();
         }
 
         async function loadSMSStats() {
