@@ -1770,8 +1770,20 @@
             }
         }
 
+        // Store debt modal data for request
+        let debtModalData = null;
+
         // Show debt approval modal
         function showDebtModal(customerName, customerPhone, thockNumber, requestedQty, balanceAmount) {
+            // Store data for later use in requestDebtApproval
+            debtModalData = {
+                customerName: customerName,
+                customerPhone: customerPhone,
+                thockNumber: thockNumber,
+                requestedQty: requestedQty,
+                balanceAmount: balanceAmount
+            };
+
             document.getElementById('debtAmountDisplay').textContent = '₹' + balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 });
             document.getElementById('debtCustomerName').textContent = customerName;
             document.getElementById('debtCustomerPhone').textContent = customerPhone;
@@ -1789,14 +1801,15 @@
         function closeDebtModal() {
             document.getElementById('debtApprovalModal').classList.add('hidden');
             pendingDebtData = null;
+            debtModalData = null;
         }
 
         // Request debt approval from admin
         async function requestDebtApproval() {
-            const phone = document.getElementById('customerPhone').value;
-            const customerName = document.getElementById('customerName').textContent;
-            const thockNumber = document.getElementById('thockNumber').value.trim();
-            const requestedQty = parseInt(document.getElementById('requestedQuantity').value) || 0;
+            if (!debtModalData) {
+                alert('Error: No debt request data available');
+                return;
+            }
 
             const btn = document.getElementById('requestDebtBtn');
             btn.disabled = true;
@@ -1810,12 +1823,12 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        customer_phone: phone,
-                        customer_name: customerName,
+                        customer_phone: debtModalData.customerPhone,
+                        customer_name: debtModalData.customerName,
                         customer_so: '', // Can be added later
-                        thock_number: thockNumber,
-                        requested_quantity: requestedQty,
-                        current_balance: balanceDue
+                        thock_number: debtModalData.thockNumber,
+                        requested_quantity: debtModalData.requestedQty,
+                        current_balance: debtModalData.balanceAmount
                     })
                 });
 
