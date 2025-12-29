@@ -320,19 +320,20 @@ func (h *DebtHandler) CheckDebtApproval(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetAllRequests returns all debt requests with optional filters (admin only)
+// GetAllRequests returns all debt requests with optional filters (admin/accountant)
 // GET /api/debt-requests
 func (h *DebtHandler) GetAllRequests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Verify admin access
+	// Verify admin or accountant access
 	role, ok := middleware.GetRoleFromContext(ctx)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if role != "admin" {
-		http.Error(w, "Forbidden - admin access required", http.StatusForbidden)
+	hasAccountantAccess, _ := ctx.Value(middleware.HasAccountantAccessKey).(bool)
+	if role != "admin" && role != "accountant" && !hasAccountantAccess {
+		http.Error(w, "Forbidden - admin or accountant access required", http.StatusForbidden)
 		return
 	}
 
