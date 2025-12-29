@@ -237,6 +237,7 @@
         let allRequests = []; // Pending requests
         let allHistoryRequests = []; // All requests (pending, approved, rejected)
         let creditOutItems = []; // Items taken out via admin approval (used debt requests)
+        let rentPerItem = 160; // Default, will be updated from accounts summary
         let currentRequestId = null;
         let currentTab = 'debtors';
 
@@ -292,6 +293,10 @@
                 }
 
                 const summary = await response.json();
+                // Update rent per item from summary
+                if (summary.rent_per_item) {
+                    rentPerItem = summary.rent_per_item;
+                }
                 // Filter customers with positive balance (owe money) and transform to expected format
                 allDebtors = (summary.customers || [])
                     .filter(c => c.balance > 0)
@@ -417,9 +422,9 @@
                 return;
             }
 
-            // Calculate total items and balance for credit out
+            // Calculate total items and credit value (items × rent per item)
             const totalItems = items.reduce((sum, r) => sum + (r.requested_quantity || 0), 0);
-            const totalBalance = items.reduce((sum, r) => sum + (r.current_balance || 0), 0);
+            const totalCreditValue = totalItems * rentPerItem;
 
             container.innerHTML = `
                 <div class="neu-border bg-orange-100 p-4 mb-4">
@@ -429,12 +434,14 @@
                             <p class="text-2xl font-bold text-orange-800">${totalItems} items</p>
                         </div>
                         <div>
-                            <p class="text-sm text-orange-700">Total Unpaid Balance</p>
-                            <p class="text-2xl font-bold text-red-600">₹${formatNumber(totalBalance)}</p>
+                            <p class="text-sm text-orange-700">Total Credit Value</p>
+                            <p class="text-2xl font-bold text-red-600">₹${formatNumber(totalCreditValue)}</p>
                         </div>
                     </div>
                 </div>
-                ${items.map(item => `
+                ${items.map(item => {
+                    const itemCreditValue = (item.requested_quantity || 0) * rentPerItem;
+                    return `
                     <div class="debtor-card p-4 border-l-4 border-red-500">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div class="flex-1">
@@ -453,8 +460,8 @@
                                 <p class="text-sm text-gray-500">items</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-xl font-bold text-red-600">₹${formatNumber(item.current_balance)}</p>
-                                <p class="text-sm text-gray-500">balance due</p>
+                                <p class="text-xl font-bold text-red-600">₹${formatNumber(itemCreditValue)}</p>
+                                <p class="text-sm text-gray-500">credit value</p>
                                 <span class="badge bg-red-200 text-red-800">📦 TAKEN OUT</span>
                             </div>
                             <div class="flex gap-2">
@@ -464,7 +471,7 @@
                             </div>
                         </div>
                     </div>
-                `).join('')}
+                `}).join('')}
             `;
         }
 
