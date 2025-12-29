@@ -918,7 +918,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                let availableInventory;
+                let availableInventory = 0;
                 let allRoomEntries = [];
                 if (response.ok) {
                     allRoomEntries = await response.json();
@@ -929,11 +929,6 @@
                             re.thock_number === selectedThockEntry.thock_number
                         );
                         availableInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
-
-                        // Fallback: if no room entries, use expected_quantity (items not placed yet)
-                        if (availableInventory === 0 && truckRoomEntries.length === 0) {
-                            availableInventory = selectedThockEntry.expected_quantity || 0;
-                        }
                     } else {
                         // No truck selected - sum all room entries for customer's trucks
                         const thockNumbers = customerEntries.map(e => e.thock_number);
@@ -941,16 +936,10 @@
                             thockNumbers.includes(re.thock_number)
                         );
                         availableInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
-
-                        // Fallback: if no room entries, use sum of expected_quantity
-                        if (availableInventory === 0 && customerRoomEntries.length === 0) {
-                            availableInventory = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
-                        }
                     }
                 } else {
-                    // API failed - use expected_quantity as fallback
-                    console.error('Room entries API failed in updateAvailabilityDisplay');
-                    availableInventory = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
+                    console.error('Room entries API failed');
+                    availableInventory = 0;
                 }
 
                 // Update inventory display
@@ -960,15 +949,10 @@
                 // Calculate total expected items for this customer (customerEntries already defined above)
                 const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
 
-                // Calculate total current inventory across all customer's thoks (reuse already fetched data)
+                // Calculate total current inventory across all customer's thoks (only items in rooms)
                 const allThockNumbers = customerEntries.map(e => e.thock_number);
                 const allCustomerRoomEntries = allRoomEntries.filter(re => allThockNumbers.includes(re.thock_number));
-                let totalCurrentInventory = allCustomerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
-
-                // Fallback: if no room entries, assume all items still in storage
-                if (totalCurrentInventory === 0 && allCustomerRoomEntries.length === 0) {
-                    totalCurrentInventory = totalExpectedItems;
-                }
+                const totalCurrentInventory = allCustomerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                 const itemsAlreadyTakenOut = totalExpectedItems - totalCurrentInventory;
 
                 // Calculate rent per item and items paid for
