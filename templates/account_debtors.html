@@ -156,6 +156,9 @@
             <button onclick="showTab('debtors')" class="neu-button bg-blue-500 text-white" id="tabDebtors">
                 <i class="bi bi-people"></i> Debtors List
             </button>
+            <button onclick="showTab('creditOut')" class="neu-button bg-gray-200" id="tabCreditOut">
+                <i class="bi bi-box-arrow-right"></i> Items Out on Credit (<span id="creditOutCount">0</span>)
+            </button>
             <button onclick="showTab('requests')" class="neu-button bg-gray-200" id="tabRequests">
                 <i class="bi bi-hourglass-split"></i> Pending Requests
             </button>
@@ -179,6 +182,14 @@
             <div class="text-center py-12">
                 <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
                 <p class="text-gray-600 mt-4">Loading debtors...</p>
+            </div>
+        </div>
+
+        <!-- Items Out on Credit (via Admin Approval) -->
+        <div id="creditOutContainer" class="hidden">
+            <div class="text-center py-12">
+                <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
+                <p class="text-gray-600 mt-4">Loading credit items...</p>
             </div>
         </div>
 
@@ -225,6 +236,7 @@
         let allDebtors = [];
         let allRequests = []; // Pending requests
         let allHistoryRequests = []; // All requests (pending, approved, rejected)
+        let creditOutItems = []; // Items taken out via admin approval (used debt requests)
         let currentRequestId = null;
         let currentTab = 'debtors';
 
@@ -264,7 +276,7 @@
 
         // Load all data
         async function loadData() {
-            await Promise.all([loadDebtors(), loadPendingRequests(), loadAllRequests()]);
+            await Promise.all([loadDebtors(), loadPendingRequests(), loadAllRequests(), loadCreditOut()]);
         }
 
         // Load debtors from accounts summary (rent system balances)
@@ -358,6 +370,100 @@
                     </div>
                 `;
             }
+        }
+
+        // Load items taken out via admin approval (used debt requests)
+        async function loadCreditOut() {
+            try {
+                const response = await fetch('/api/debt-requests', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) window.location.href = '/login';
+                    throw new Error('Failed to load credit items');
+                }
+
+                const allReqs = await response.json() || [];
+                // Filter for used/approved requests (items taken out on credit)
+                creditOutItems = allReqs.filter(r => r.status === 'used' || r.status === 'approved');
+                renderCreditOut(creditOutItems);
+                document.getElementById('creditOutCount').textContent = creditOutItems.length;
+
+            } catch (error) {
+                console.error('Error loading credit out items:', error);
+                document.getElementById('creditOutContainer').innerHTML = `
+                    <div class="neu-border bg-white p-8 text-center text-red-500">
+                        <i class="bi bi-exclamation-triangle text-4xl"></i>
+                        <p class="mt-2">Error loading credit items</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render items taken out on credit
+        function renderCreditOut(items) {
+            const container = document.getElementById('creditOutContainer');
+
+            if (!items || items.length === 0) {
+                container.innerHTML = `
+                    <div class="neu-border bg-white p-8 text-center">
+                        <i class="bi bi-check-circle text-6xl text-green-500"></i>
+                        <p class="text-gray-600 mt-4">No items taken out on credit</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate total items and balance for credit out
+            const totalItems = items.reduce((sum, r) => sum + (r.requested_quantity || 0), 0);
+            const totalBalance = items.reduce((sum, r) => sum + (r.current_balance || 0), 0);
+
+            container.innerHTML = `
+                <div class="neu-border bg-orange-100 p-4 mb-4">
+                    <div class="flex flex-wrap gap-6">
+                        <div>
+                            <p class="text-sm text-orange-700">Total Items Out on Credit</p>
+                            <p class="text-2xl font-bold text-orange-800">${totalItems} items</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-orange-700">Total Unpaid Balance</p>
+                            <p class="text-2xl font-bold text-red-600">₹${formatNumber(totalBalance)}</p>
+                        </div>
+                    </div>
+                </div>
+                ${items.map(item => `
+                    <div class="debtor-card p-4 border-l-4 ${item.status === 'used' ? 'border-red-500' : 'border-orange-500'}">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold">${escapeHtml(item.customer_name)}</h3>
+                                <p class="text-sm text-gray-600">${item.customer_so ? 'S/O ' + escapeHtml(item.customer_so) : ''}</p>
+                                <p class="text-sm text-gray-500">
+                                    <i class="bi bi-telephone"></i> ${escapeHtml(item.customer_phone)}
+                                    | <i class="bi bi-truck"></i> ${escapeHtml(item.thock_number)}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Approved by: ${escapeHtml(item.approved_by_name || '-')} | ${formatDate(item.approved_at)}
+                                </p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-3xl font-bold text-orange-600">${item.requested_quantity}</p>
+                                <p class="text-sm text-gray-500">items</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xl font-bold text-red-600">₹${formatNumber(item.current_balance)}</p>
+                                <p class="text-sm text-gray-500">balance due</p>
+                                <span class="badge ${item.status === 'used' ? 'bg-red-200 text-red-800' : 'badge-approved'}">${item.status === 'used' ? '📦 TAKEN OUT' : '✅ APPROVED'}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="/rent-management?phone=${encodeURIComponent(item.customer_phone)}" class="neu-button bg-blue-500 text-white text-sm">
+                                    <i class="bi bi-cash-stack"></i> Collect
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
         }
 
         // Render all requests with status
@@ -507,12 +613,17 @@
         function showTab(tab) {
             currentTab = tab;
             document.getElementById('debtorsContainer').classList.toggle('hidden', tab !== 'debtors');
+            document.getElementById('creditOutContainer').classList.toggle('hidden', tab !== 'creditOut');
             document.getElementById('requestsContainer').classList.toggle('hidden', tab !== 'requests');
             document.getElementById('allRequestsContainer').classList.toggle('hidden', tab !== 'allRequests');
 
             document.getElementById('tabDebtors').classList.toggle('bg-blue-500', tab === 'debtors');
             document.getElementById('tabDebtors').classList.toggle('text-white', tab === 'debtors');
             document.getElementById('tabDebtors').classList.toggle('bg-gray-200', tab !== 'debtors');
+
+            document.getElementById('tabCreditOut').classList.toggle('bg-orange-500', tab === 'creditOut');
+            document.getElementById('tabCreditOut').classList.toggle('text-white', tab === 'creditOut');
+            document.getElementById('tabCreditOut').classList.toggle('bg-gray-200', tab !== 'creditOut');
 
             document.getElementById('tabRequests').classList.toggle('bg-blue-500', tab === 'requests');
             document.getElementById('tabRequests').classList.toggle('text-white', tab === 'requests');
@@ -533,6 +644,13 @@
                     d.customer_phone.includes(search)
                 );
                 renderDebtors(filtered);
+            } else if (currentTab === 'creditOut') {
+                const filtered = creditOutItems.filter(r =>
+                    r.customer_name.toLowerCase().includes(search) ||
+                    r.customer_phone.includes(search) ||
+                    r.thock_number.toLowerCase().includes(search)
+                );
+                renderCreditOut(filtered);
             } else if (currentTab === 'requests') {
                 const filtered = allRequests.filter(r =>
                     r.customer_name.toLowerCase().includes(search) ||
