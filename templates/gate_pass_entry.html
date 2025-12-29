@@ -224,6 +224,9 @@
                                 <p class="text-xs text-gray-600">
                                     💰 <span data-i18n="can_take_out_payment">Can take out (based on payment):</span> <span id="paymentAllowedQuantity" class="font-bold text-green-600">-</span> <span data-i18n="items">items</span>
                                 </p>
+                                <p id="debtRequestStatus" class="text-xs hidden">
+                                    <!-- Debt request status will be shown here -->
+                                </p>
                             </div>
                         </div>
 
@@ -614,6 +617,9 @@
 
             // Load customer payments to calculate payment-based availability
             await loadCustomerPayments(customer.phone);
+
+            // Check and display debt request status for this customer
+            await checkAndDisplayDebtRequestStatus(customer.phone);
         }
 
         // Calculate available inventory for customer (from current room_entries)
@@ -1767,6 +1773,49 @@
             } catch (error) {
                 console.error('Error checking debt approval:', error);
                 return null;
+            }
+        }
+
+        // Check and display debt request status for customer
+        async function checkAndDisplayDebtRequestStatus(phone) {
+            const statusEl = document.getElementById('debtRequestStatus');
+            statusEl.classList.add('hidden');
+            statusEl.innerHTML = '';
+
+            try {
+                // Fetch all debt requests for this customer
+                const response = await fetch(`/api/debt-requests/customer?phone=${encodeURIComponent(phone)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) return;
+
+                const requests = await response.json();
+                if (!requests || requests.length === 0) return;
+
+                // Show the most recent request status
+                const latestRequest = requests[0]; // API returns sorted by date DESC
+                let statusHtml = '';
+                let statusClass = '';
+
+                if (latestRequest.status === 'pending') {
+                    statusHtml = `⏳ <span class="font-bold text-yellow-600">Debt Request Pending</span> - Waiting for admin approval (${latestRequest.requested_quantity} items)`;
+                    statusClass = 'text-yellow-600';
+                } else if (latestRequest.status === 'approved') {
+                    statusHtml = `✅ <span class="font-bold text-green-600">Debt Request Approved</span> - Can take ${latestRequest.requested_quantity} items (Thock: ${latestRequest.thock_number})`;
+                    statusClass = 'text-green-600';
+                } else if (latestRequest.status === 'rejected') {
+                    statusHtml = `❌ <span class="font-bold text-red-600">Debt Request Rejected</span> - ${latestRequest.rejection_reason || 'No reason provided'}`;
+                    statusClass = 'text-red-600';
+                }
+
+                if (statusHtml) {
+                    statusEl.innerHTML = statusHtml;
+                    statusEl.className = `text-xs ${statusClass}`;
+                    statusEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error checking debt request status:', error);
             }
         }
 

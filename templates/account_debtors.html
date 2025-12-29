@@ -152,12 +152,15 @@
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-2 mb-6">
+        <div class="flex flex-wrap gap-2 mb-6">
             <button onclick="showTab('debtors')" class="neu-button bg-blue-500 text-white" id="tabDebtors">
                 <i class="bi bi-people"></i> Debtors List
             </button>
             <button onclick="showTab('requests')" class="neu-button bg-gray-200" id="tabRequests">
-                <i class="bi bi-hourglass-split"></i> Pending Debt Requests
+                <i class="bi bi-hourglass-split"></i> Pending Requests
+            </button>
+            <button onclick="showTab('allRequests')" class="neu-button bg-gray-200" id="tabAllRequests">
+                <i class="bi bi-list-check"></i> All Requests
             </button>
         </div>
 
@@ -186,6 +189,14 @@
                 <p class="text-gray-600 mt-4">Loading pending requests...</p>
             </div>
         </div>
+
+        <!-- All Requests (with status) -->
+        <div id="allRequestsContainer" class="hidden">
+            <div class="text-center py-12">
+                <i class="bi bi-hourglass-split text-6xl text-gray-400"></i>
+                <p class="text-gray-600 mt-4">Loading all requests...</p>
+            </div>
+        </div>
     </div>
 
     <!-- Approve/Reject Modal -->
@@ -212,7 +223,8 @@
     <script>
         const token = localStorage.getItem('token');
         let allDebtors = [];
-        let allRequests = [];
+        let allRequests = []; // Pending requests
+        let allHistoryRequests = []; // All requests (pending, approved, rejected)
         let currentRequestId = null;
         let currentTab = 'debtors';
 
@@ -252,7 +264,7 @@
 
         // Load all data
         async function loadData() {
-            await Promise.all([loadDebtors(), loadPendingRequests()]);
+            await Promise.all([loadDebtors(), loadPendingRequests(), loadAllRequests()]);
         }
 
         // Load debtors
@@ -308,6 +320,86 @@
                     </div>
                 `;
             }
+        }
+
+        // Load all debt requests (pending, approved, rejected)
+        async function loadAllRequests() {
+            try {
+                const response = await fetch('/api/debt-requests', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) window.location.href = '/login';
+                    throw new Error('Failed to load all requests');
+                }
+
+                allHistoryRequests = await response.json() || [];
+                renderAllRequests(allHistoryRequests);
+
+            } catch (error) {
+                console.error('Error loading all requests:', error);
+                document.getElementById('allRequestsContainer').innerHTML = `
+                    <div class="neu-border bg-white p-8 text-center text-red-500">
+                        <i class="bi bi-exclamation-triangle text-4xl"></i>
+                        <p class="mt-2">Error loading requests history</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render all requests with status
+        function renderAllRequests(requests) {
+            const container = document.getElementById('allRequestsContainer');
+
+            if (!requests || requests.length === 0) {
+                container.innerHTML = `
+                    <div class="neu-border bg-white p-8 text-center">
+                        <i class="bi bi-inbox text-6xl text-gray-400"></i>
+                        <p class="text-gray-600 mt-4">No debt requests found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = requests.map(req => {
+                let statusBadge = '';
+                let statusColor = '';
+                if (req.status === 'pending') {
+                    statusBadge = '<span class="badge badge-pending">⏳ Pending</span>';
+                    statusColor = 'border-l-4 border-yellow-500';
+                } else if (req.status === 'approved') {
+                    statusBadge = '<span class="badge badge-approved">✅ Approved</span>';
+                    statusColor = 'border-l-4 border-green-500';
+                } else if (req.status === 'rejected') {
+                    statusBadge = '<span class="badge badge-rejected">❌ Rejected</span>';
+                    statusColor = 'border-l-4 border-red-500';
+                }
+
+                return `
+                <div class="debtor-card p-4 ${statusColor}">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold">${escapeHtml(req.customer_name)}</h3>
+                            <p class="text-sm text-gray-600">${req.customer_so ? 'S/O ' + escapeHtml(req.customer_so) : ''}</p>
+                            <p class="text-sm text-gray-500">
+                                <i class="bi bi-telephone"></i> ${escapeHtml(req.customer_phone)}
+                                | <i class="bi bi-truck"></i> ${escapeHtml(req.thock_number)}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                Requested by: ${escapeHtml(req.requested_by_name)} | ${formatDate(req.created_at)}
+                            </p>
+                            ${req.status === 'rejected' && req.rejection_reason ? `<p class="text-sm text-red-600 mt-1"><i class="bi bi-info-circle"></i> Reason: ${escapeHtml(req.rejection_reason)}</p>` : ''}
+                            ${req.status === 'approved' ? `<p class="text-sm text-green-600 mt-1"><i class="bi bi-check-circle"></i> Approved by: ${escapeHtml(req.approved_by_name || 'Admin')} on ${formatDate(req.updated_at)}</p>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold">Qty: ${req.requested_quantity}</p>
+                            <p class="text-lg font-bold text-red-600">Balance: ₹${formatNumber(req.current_balance)}</p>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
         }
 
         // Render debtors
@@ -404,12 +496,19 @@
             currentTab = tab;
             document.getElementById('debtorsContainer').classList.toggle('hidden', tab !== 'debtors');
             document.getElementById('requestsContainer').classList.toggle('hidden', tab !== 'requests');
+            document.getElementById('allRequestsContainer').classList.toggle('hidden', tab !== 'allRequests');
+
             document.getElementById('tabDebtors').classList.toggle('bg-blue-500', tab === 'debtors');
             document.getElementById('tabDebtors').classList.toggle('text-white', tab === 'debtors');
             document.getElementById('tabDebtors').classList.toggle('bg-gray-200', tab !== 'debtors');
+
             document.getElementById('tabRequests').classList.toggle('bg-blue-500', tab === 'requests');
             document.getElementById('tabRequests').classList.toggle('text-white', tab === 'requests');
             document.getElementById('tabRequests').classList.toggle('bg-gray-200', tab !== 'requests');
+
+            document.getElementById('tabAllRequests').classList.toggle('bg-blue-500', tab === 'allRequests');
+            document.getElementById('tabAllRequests').classList.toggle('text-white', tab === 'allRequests');
+            document.getElementById('tabAllRequests').classList.toggle('bg-gray-200', tab !== 'allRequests');
         }
 
         // Filter results
@@ -422,13 +521,20 @@
                     d.customer_phone.includes(search)
                 );
                 renderDebtors(filtered);
-            } else {
+            } else if (currentTab === 'requests') {
                 const filtered = allRequests.filter(r =>
                     r.customer_name.toLowerCase().includes(search) ||
                     r.customer_phone.includes(search) ||
                     r.thock_number.toLowerCase().includes(search)
                 );
                 renderRequests(filtered);
+            } else if (currentTab === 'allRequests') {
+                const filtered = allHistoryRequests.filter(r =>
+                    r.customer_name.toLowerCase().includes(search) ||
+                    r.customer_phone.includes(search) ||
+                    r.thock_number.toLowerCase().includes(search)
+                );
+                renderAllRequests(filtered);
             }
         }
 
@@ -470,8 +576,12 @@
         async function approveRequest() {
             if (!currentRequestId) return;
 
+            const request = allRequests.find(r => r.id === currentRequestId);
+            if (!request) return;
+
             try {
-                const response = await fetch(`/api/debt-requests/${currentRequestId}/approve`, {
+                // First approve the debt request
+                const approveResponse = await fetch(`/api/debt-requests/${currentRequestId}/approve`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -479,12 +589,36 @@
                     }
                 });
 
-                if (!response.ok) {
-                    const error = await response.text();
+                if (!approveResponse.ok) {
+                    const error = await approveResponse.text();
                     throw new Error(error);
                 }
 
-                alert('Debt request approved!');
+                // Then create a gate pass for the approved request
+                const gatePassResponse = await fetch('/api/gate-passes', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        customer_phone: request.customer_phone,
+                        thock_number: request.thock_number,
+                        quantity: request.requested_quantity,
+                        remarks: `Debt Approval #${currentRequestId} | Recipient: ${request.customer_name}`,
+                        debt_request_id: currentRequestId
+                    })
+                });
+
+                if (!gatePassResponse.ok) {
+                    const error = await gatePassResponse.text();
+                    console.error('Gate pass creation failed:', error);
+                    alert('Debt request approved! Note: Gate pass creation failed - employee can create it manually.');
+                } else {
+                    const gatePass = await gatePassResponse.json();
+                    alert(`Debt request approved and Gate Pass #${gatePass.id} created successfully!`);
+                }
+
                 closeModal();
                 loadData();
 
