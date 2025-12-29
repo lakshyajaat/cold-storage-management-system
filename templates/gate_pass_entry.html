@@ -922,12 +922,15 @@
                 let allRoomEntries = [];
                 if (response.ok) {
                     allRoomEntries = await response.json();
+                    console.log('All room entries:', allRoomEntries.length);
+                    console.log('Customer entries:', customerEntries.map(e => e.thock_number));
 
                     if (selectedThockEntry) {
                         // Specific truck selected - sum room entries for this truck only
                         const truckRoomEntries = allRoomEntries.filter(re =>
                             re.thock_number === selectedThockEntry.thock_number
                         );
+                        console.log('Selected thock:', selectedThockEntry.thock_number, 'Room entries found:', truckRoomEntries.length);
                         availableInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                     } else {
                         // No truck selected - sum all room entries for customer's trucks
@@ -935,6 +938,7 @@
                         const customerRoomEntries = allRoomEntries.filter(re =>
                             thockNumbers.includes(re.thock_number)
                         );
+                        console.log('Customer thocks:', thockNumbers, 'Room entries found:', customerRoomEntries.length);
                         availableInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                     }
                 } else {
