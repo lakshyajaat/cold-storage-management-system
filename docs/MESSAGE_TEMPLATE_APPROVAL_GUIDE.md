@@ -139,6 +139,51 @@ Dear {#var#}, {#var#}. Visit Cold Storage for best rates. Contact: {#var#}. Repl
 
 ---
 
+#### Template 8: Boli Notification (Hindi) - Buyer Arrival
+```
+Template Name: cold_storage_boli_hindi
+Type: Transactional (Service Explicit)
+Header: COLDST
+Content Type: Unicode (for Hindi)
+
+Message:
+{#var#} जी, आज कोल्ड स्टोरेज में {#var#} की बोली लगने वाली है। कृपया अपना माल बेचने हेतु संपर्क करें। धन्यवाद! - COLDST
+```
+**Character Count**: ~95 (Hindi Unicode)
+
+**Translation**: "[Name] ji, today [Item/Buyer name] auction is happening at Cold Storage. Please contact to sell your goods. Thank you!"
+
+---
+
+#### Template 9: Boli Notification (English) - Buyer Arrival
+```
+Template Name: cold_storage_boli_english
+Type: Transactional (Service Explicit)
+Header: COLDST
+
+Message:
+Dear {#var#}, buyers are available today at Cold Storage for {#var#}. Contact us to sell your items at best rates. - COLDST
+```
+**Character Count**: 112
+
+---
+
+#### Template 10: Boli Rate Update (Hindi)
+```
+Template Name: cold_storage_boli_rate_hindi
+Type: Transactional (Service Explicit)
+Header: COLDST
+Content Type: Unicode
+
+Message:
+{#var#} जी, आज का भाव: {#var#} Rs.{#var#}/क्विंटल। बेचने हेतु कोल्ड स्टोरेज पर संपर्क करें। - COLDST
+```
+**Character Count**: ~85
+
+**Translation**: "[Name] ji, today's rate: [Item] Rs.[Rate]/quintal. Contact Cold Storage to sell."
+
+---
+
 ### Template Approval Checklist
 
 Before submitting, verify:
@@ -341,6 +386,101 @@ Footer: Cold Storage Management
 Buttons:
 - Quick Reply: "Learn More"
 - Quick Reply: "Not Interested"
+```
+
+---
+
+#### Template 8: Boli Notification (Hindi) - Buyer Arrival
+```
+Template Name: boli_notification_hindi
+Category: Utility
+Language: Hindi (hi)
+
+Body:
+🔔 *बोली सूचना*
+
+{{1}} जी,
+
+आज कोल्ड स्टोरेज में *{{2}}* की बोली लगने वाली है।
+
+💰 अनुमानित भाव: Rs.{{3}}/क्विंटल
+
+कृपया अपना माल बेचने हेतु संपर्क करें।
+
+Footer: कोल्ड स्टोरेज प्रबंधन
+
+Buttons:
+- Call to Action: "अभी कॉल करें" → phone_number
+- Quick Reply: "रुचि नहीं"
+```
+
+---
+
+#### Template 9: Boli Notification (English)
+```
+Template Name: boli_notification_english
+Category: Utility
+Language: English (en)
+
+Body:
+🔔 *Buyer Alert*
+
+Dear {{1}},
+
+Buyers are available today at Cold Storage for *{{2}}*.
+
+💰 Expected Rate: Rs.{{3}}/quintal
+
+Contact us now to sell your items at the best rates!
+
+Footer: Cold Storage Management
+
+Buttons:
+- Call to Action: "Call Now" → phone_number
+- Quick Reply: "Not Interested"
+```
+
+---
+
+#### Template 10: Boli Rate Update (Hindi)
+```
+Template Name: boli_rate_update
+Category: Utility
+Language: Hindi (hi)
+
+Body:
+📊 *आज का भाव*
+
+{{1}} जी,
+
+आज का बाजार भाव:
+• {{2}}: Rs.{{3}}/क्विंटल
+
+बेचने के लिए कोल्ड स्टोरेज पर संपर्क करें।
+
+Footer: कोल्ड स्टोरेज प्रबंधन
+```
+
+---
+
+#### Template 11: Boli Complete Notification
+```
+Template Name: boli_complete
+Category: Utility
+Language: Hindi (hi)
+
+Body:
+✅ *बोली पूर्ण*
+
+{{1}} जी,
+
+आपका {{2}} क्विंटल {{3}} बिक गया है।
+
+💰 कुल राशि: Rs.{{4}}
+
+धन्यवाद!
+
+Footer: कोल्ड स्टोरेज प्रबंधन
 ```
 
 ---

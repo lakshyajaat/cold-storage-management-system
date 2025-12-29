@@ -28,6 +28,9 @@ const (
 	SMSTypePaymentReminder  = "payment_reminder"
 	SMSTypePromotional      = "promotional"
 	SMSTypeBulk             = "bulk"
+	SMSTypeBoli             = "boli"          // Buyer arrival notification
+	SMSTypeBoliRate         = "boli_rate"     // Rate update notification
+	SMSTypeBoliComplete     = "boli_complete" // Sale complete notification
 )
 
 // SMS status types
