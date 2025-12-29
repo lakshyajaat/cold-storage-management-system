@@ -233,6 +233,34 @@
             </div>
         </div>
 
+        <!-- Credit Out Summary Card -->
+        <div class="neu-border bg-gradient-to-br from-orange-400 to-orange-600 text-white p-2 md:p-4 mb-3 md:mb-6 cursor-pointer" onclick="toggleCreditOutSection()">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 md:gap-4">
+                    <i class="bi bi-box-arrow-up-right text-2xl md:text-4xl"></i>
+                    <div>
+                        <p class="text-xs md:text-sm opacity-90">Items Out on Credit</p>
+                        <p class="text-xl md:text-3xl font-bold"><span id="creditOutItems">0</span> items | ₹<span id="creditOutValue">0</span></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <i class="bi bi-chevron-down text-xl md:text-2xl" id="creditOutChevron"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credit Out Details Section (Hidden by default) -->
+        <div id="creditOutSection" class="hidden mb-3 md:mb-6">
+            <div class="neu-border bg-white p-3 md:p-4">
+                <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                    <i class="bi bi-box-arrow-up-right text-orange-500"></i> Items Taken Out on Credit
+                </h3>
+                <div id="creditOutList">
+                    <p class="text-gray-500 text-center py-4">Loading...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Today's Collection Card -->
         <div class="neu-border bg-gradient-to-br from-lime-400 to-lime-600 text-white p-2 md:p-4 mb-3 md:mb-6">
             <div class="flex items-center justify-between">
@@ -501,6 +529,91 @@
         let currentPaymentCustomer = null;
         let rentPerItem = 0;
         let canManageEntries = false; // Permission flag for entry reassignment and customer merge
+        let creditOutItems = []; // Items taken out via admin approval
+
+        // Toggle credit out section visibility
+        function toggleCreditOutSection() {
+            const section = document.getElementById('creditOutSection');
+            const chevron = document.getElementById('creditOutChevron');
+            section.classList.toggle('hidden');
+            chevron.classList.toggle('bi-chevron-down');
+            chevron.classList.toggle('bi-chevron-up');
+        }
+
+        // Load items taken out on credit
+        async function loadCreditOutItems() {
+            try {
+                const response = await fetch('/api/debt-requests', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) return;
+                    throw new Error('Failed to load credit items');
+                }
+
+                const allReqs = await response.json() || [];
+                // Filter for ONLY used requests (items actually taken out on credit)
+                creditOutItems = allReqs.filter(r => r.status === 'used');
+
+                // Calculate totals
+                const totalItems = creditOutItems.reduce((sum, r) => sum + (r.requested_quantity || 0), 0);
+                const totalValue = totalItems * rentPerItem;
+
+                // Update summary card
+                document.getElementById('creditOutItems').textContent = totalItems;
+                document.getElementById('creditOutValue').textContent = totalValue.toLocaleString('en-IN');
+
+                // Render list
+                renderCreditOutList();
+
+            } catch (error) {
+                console.error('Error loading credit out items:', error);
+                document.getElementById('creditOutList').innerHTML = `
+                    <p class="text-red-500 text-center py-4">Error loading credit items</p>
+                `;
+            }
+        }
+
+        // Render credit out items list
+        function renderCreditOutList() {
+            const container = document.getElementById('creditOutList');
+
+            if (!creditOutItems || creditOutItems.length === 0) {
+                container.innerHTML = `
+                    <p class="text-gray-500 text-center py-4">
+                        <i class="bi bi-check-circle text-green-500 text-2xl"></i><br>
+                        No items taken out on credit
+                    </p>
+                `;
+                return;
+            }
+
+            container.innerHTML = creditOutItems.map(item => {
+                const itemValue = (item.requested_quantity || 0) * rentPerItem;
+                return `
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-3 border-b border-gray-200 last:border-0 gap-2">
+                        <div class="flex-1">
+                            <p class="font-bold">${escapeHtml(item.customer_name)}</p>
+                            <p class="text-sm text-gray-600">
+                                <i class="bi bi-telephone"></i> ${escapeHtml(item.customer_phone)}
+                                | <i class="bi bi-truck"></i> ${escapeHtml(item.thock_number)}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Approved: ${item.approved_at ? new Date(item.approved_at).toLocaleDateString('en-IN') : '-'}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-orange-600">${item.requested_quantity} items</p>
+                            <p class="text-red-600 font-bold">₹${itemValue.toLocaleString('en-IN')}</p>
+                        </div>
+                        <a href="/rent-management?phone=${encodeURIComponent(item.customer_phone)}" class="neu-button bg-blue-500 text-white text-sm px-3 py-1">
+                            <i class="bi bi-cash-stack"></i> Collect
+                        </a>
+                    </div>
+                `;
+            }).join('');
+        }
 
         // Decode JWT to get user info
         function decodeToken() {
@@ -1251,6 +1364,7 @@
                         // Close modal and reload accounts
                         closePaymentModal();
                         loadCustomerAccounts();
+                        loadCreditOutItems();
                     }
                 }, 1000);
 
@@ -1606,7 +1720,8 @@
         window.addEventListener('load', async function() {
             const hasPermission = await checkAccountantPermission();
             if (hasPermission) {
-                loadCustomerAccounts();
+                await loadCustomerAccounts();
+                loadCreditOutItems(); // Load after accounts so rentPerItem is available
             }
         });
     </script>
