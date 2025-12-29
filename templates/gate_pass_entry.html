@@ -767,10 +767,20 @@
             // PROPORTIONAL: Customer can take items based on what they've paid
             // Calculate items paid for
             const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
-            let itemsPaidFor = totalExpectedItems; // Default to all if no rent
-            if (totalRentOwed > 0 && totalExpectedItems > 0) {
-                const rentPerItem = totalRentOwed / totalExpectedItems;
+
+            // Calculate total rent - if not available, derive from paid + balance
+            let actualTotalRent = totalRentOwed;
+            if (actualTotalRent <= 0 && (totalPaid > 0 || balanceDue > 0)) {
+                actualTotalRent = totalPaid + balanceDue;
+            }
+
+            let itemsPaidFor = 0;
+            if (actualTotalRent > 0 && totalExpectedItems > 0) {
+                const rentPerItem = actualTotalRent / totalExpectedItems;
                 itemsPaidFor = Math.floor(totalPaid / rentPerItem);
+            } else if (balanceDue <= 0) {
+                // No rent at all - can take all
+                itemsPaidFor = totalExpectedItems;
             }
 
             // Allowed = min(items paid for, available inventory)
@@ -977,11 +987,17 @@
                 const totalCurrentInventory = allCustomerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
                 const itemsAlreadyTakenOut = totalExpectedItems - totalCurrentInventory;
 
+                // Calculate total rent - if not available, derive from paid + balance
+                let actualTotalRent = totalRentOwed;
+                if (actualTotalRent <= 0 && (totalPaid > 0 || balanceDue > 0)) {
+                    actualTotalRent = totalPaid + balanceDue;
+                }
+
                 // Calculate rent per item and items paid for
                 let canTakeOut = 0;
                 let itemsPaidFor = 0;
-                if (totalExpectedItems > 0 && totalRentOwed > 0) {
-                    const rentPerItem = totalRentOwed / totalExpectedItems;
+                if (totalExpectedItems > 0 && actualTotalRent > 0) {
+                    const rentPerItem = actualTotalRent / totalExpectedItems;
                     itemsPaidFor = Math.floor(totalPaid / rentPerItem);
                     // Can take out = MIN(available inventory, items paid for - items already taken out)
                     const paidAllowance = Math.max(0, itemsPaidFor - itemsAlreadyTakenOut);
@@ -1071,7 +1087,7 @@
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
-            // CORRECT: Use balance to determine if customer can take items
+            // Check inventory limit
             if (requestedQty > totalInInventory) {
                 if (selectedThockEntry) {
                     alert(i18n.t('error', 'Error') + ': ' + i18n.t('truck_has_only_items', 'Truck {truck} has only {qty} items!').replace('{truck}', selectedThockEntry.thock_number).replace('{qty}', totalInInventory));
@@ -1081,8 +1097,26 @@
                 return;
             }
 
-            // If customer has outstanding balance, check for debt approval
-            if (balanceDue > 0) {
+            // PROPORTIONAL: Calculate how many items customer has paid for
+            const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
+
+            // Calculate total rent - if not available, derive from paid + balance
+            let actualTotalRent = totalRentOwed;
+            if (actualTotalRent <= 0 && (totalPaid > 0 || balanceDue > 0)) {
+                actualTotalRent = totalPaid + balanceDue;
+            }
+
+            let itemsPaidFor = 0;
+            if (actualTotalRent > 0 && totalExpectedItems > 0) {
+                const rentPerItem = actualTotalRent / totalExpectedItems;
+                itemsPaidFor = Math.floor(totalPaid / rentPerItem);
+            } else if (balanceDue <= 0) {
+                // No rent at all - can take all
+                itemsPaidFor = totalExpectedItems;
+            }
+
+            // If customer requesting MORE than what they've paid for, require debt approval
+            if (requestedQty > itemsPaidFor) {
                 const phone = document.getElementById('customerPhone').value;
                 const thockNumber = document.getElementById('thockNumber').value.trim();
                 const customerName = document.getElementById('customerName').textContent;
@@ -1106,6 +1140,7 @@
                     return;
                 }
             }
+            // If requesting <= items paid for, proceed without debt approval
 
             const recipientName = document.getElementById('recipientName').value.trim();
             const remarks = document.getElementById('remarks').value.trim();
