@@ -18,8 +18,6 @@
             color: white;
             border-radius: 8px;
         }
-    </style>
-    <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -67,6 +65,11 @@
         .neu-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
+        }
+        .neu-button-secondary {
+            background: linear-gradient(145deg, #e0e0e0, #f5f5f5);
+            color: #333;
         }
         .error-message {
             background: #fee;
@@ -84,6 +87,19 @@
             margin-bottom: 16px;
             display: none;
         }
+        .otp-input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .hidden { display: none; }
+        .countdown {
+            color: #666;
+            font-size: 14px;
+        }
     </style>
     <script src="/static/js/theme.js"></script>
 </head>
@@ -95,12 +111,10 @@
             <option value="en">EN</option>
             <option value="hi">हिं</option>
         </select>
-                <!-- Theme Toggle -->
-                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-3 py-2" title="Toggle Dark Mode">
-                    <i class="bi bi-moon-fill theme-icon-moon"></i>
-                    <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
-                </button>
-                <!-- Fullscreen Toggle (Tablets) -->
+        <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-3 py-2" title="Toggle Dark Mode">
+            <i class="bi bi-moon-fill theme-icon-moon"></i>
+            <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
+        </button>
     </div>
 
     <div class="neu-card w-full max-w-md p-6 md:p-8">
@@ -112,51 +126,74 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
 
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="mb-6">
-                <label class="block text-gray-700 font-semibold mb-2" data-i18n="phone_number">Phone Number</label>
-                <input
-                    type="tel"
-                    id="phone"
-                    class="neu-input"
-                    data-i18n-placeholder="enter_phone"
-                    placeholder="Enter your phone number"
-                    pattern="[0-9]{10}"
-                    maxlength="10"
-                    required
-                />
-                <p class="text-sm text-gray-500 mt-1" data-i18n="enter_10_digit">Enter 10-digit mobile number</p>
-            </div>
+        <!-- Step 1: Phone Number -->
+        <div id="step1">
+            <form id="phoneForm" onsubmit="handleSendOTP(event)">
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2" data-i18n="phone_number">Phone Number</label>
+                    <input
+                        type="tel"
+                        id="phone"
+                        class="neu-input"
+                        data-i18n-placeholder="enter_phone"
+                        placeholder="Enter your phone number"
+                        pattern="[0-9]{10}"
+                        maxlength="10"
+                        required
+                    />
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="enter_10_digit">Enter 10-digit mobile number</p>
+                </div>
 
-            <div class="mb-6">
-                <label class="block text-gray-700 font-semibold mb-2" data-i18n="truck_number">Truck Number</label>
-                <input
-                    type="text"
-                    id="thockNumber"
-                    class="neu-input"
-                    placeholder="e.g., 609/200 or SEED-001"
-                    required
-                />
-                <p class="text-sm text-gray-500 mt-1" data-i18n="enter_any_truck">Enter any of your truck numbers</p>
-            </div>
+                <button type="submit" class="neu-button" id="sendOtpBtn" data-i18n="send_otp">
+                    Send OTP
+                </button>
+            </form>
+        </div>
 
-            <div class="mb-6">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="rememberMe" class="mr-2 w-4 h-4">
-                    <span class="text-gray-700" data-i18n="remember_30_days">Remember me for 30 days</span>
-                </label>
-            </div>
+        <!-- Step 2: OTP Verification -->
+        <div id="step2" class="hidden">
+            <form id="otpForm" onsubmit="handleVerifyOTP(event)">
+                <div class="mb-4 text-center">
+                    <p class="text-gray-600 mb-2" data-i18n="otp_sent_to">OTP sent to</p>
+                    <p class="font-bold text-lg" id="displayPhone"></p>
+                    <button type="button" onclick="goBackToPhone()" class="text-purple-600 text-sm underline mt-1" data-i18n="change_number">Change number</button>
+                </div>
 
-            <button type="submit" class="neu-button" id="loginBtn" data-i18n="login">
-                Login
-            </button>
-        </form>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2 text-center" data-i18n="enter_otp">Enter OTP</label>
+                    <div class="flex justify-center mb-2">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp1" oninput="moveToNext(1)" onkeydown="handleBackspace(event, 1)">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp2" oninput="moveToNext(2)" onkeydown="handleBackspace(event, 2)">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp3" oninput="moveToNext(3)" onkeydown="handleBackspace(event, 3)">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp4" oninput="moveToNext(4)" onkeydown="handleBackspace(event, 4)">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp5" oninput="moveToNext(5)" onkeydown="handleBackspace(event, 5)">
+                        <input type="text" maxlength="1" class="neu-input otp-input" id="otp6" oninput="moveToNext(6)" onkeydown="handleBackspace(event, 6)">
+                    </div>
+                    <p class="text-sm text-gray-500 text-center" data-i18n="otp_valid_5_min">OTP is valid for 5 minutes</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="flex items-center cursor-pointer justify-center">
+                        <input type="checkbox" id="rememberMe" class="mr-2 w-4 h-4">
+                        <span class="text-gray-700" data-i18n="remember_30_days">Remember me for 30 days</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="neu-button mb-3" id="verifyOtpBtn" data-i18n="verify_login">
+                    Verify & Login
+                </button>
+
+                <div class="text-center">
+                    <p id="resendCountdown" class="countdown"></p>
+                    <button type="button" id="resendBtn" onclick="handleResendOTP()" class="text-purple-600 underline hidden" data-i18n="resend_otp">
+                        Resend OTP
+                    </button>
+                </div>
+            </form>
+        </div>
 
         <div class="mt-6 text-center text-sm text-gray-600">
             <p data-i18n="contact_support">Having trouble? Contact support</p>
-            <p class="mt-2 text-xs text-gray-500" data-i18n="otp_note">
-                Note: OTP authentication will be available soon
-            </p>
         </div>
     </div>
 
@@ -164,7 +201,10 @@
     <script src="/static/js/i18n.js"></script>
 
     <script>
-        // Check if already logged in (via session cookie)
+        let countdownInterval;
+        let savedPhone = '';
+
+        // Check if already logged in
         window.addEventListener('load', async function() {
             try {
                 const response = await fetch('/auth/validate-session', {
@@ -174,78 +214,229 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.valid) {
-                        // Already logged in, redirect to dashboard
                         localStorage.setItem('customer_token', data.token);
                         localStorage.setItem('customer_info', JSON.stringify(data.customer));
                         window.location.href = '/dashboard';
                     }
                 }
             } catch (error) {
-                // Not logged in, continue with login page
                 console.log('No active session');
             }
         });
 
-        async function handleLogin(event) {
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function moveToNext(current) {
+            const input = document.getElementById('otp' + current);
+            if (input.value.length === 1 && current < 6) {
+                document.getElementById('otp' + (current + 1)).focus();
+            }
+        }
+
+        function handleBackspace(event, current) {
+            if (event.key === 'Backspace' && current > 1) {
+                const input = document.getElementById('otp' + current);
+                if (input.value.length === 0) {
+                    document.getElementById('otp' + (current - 1)).focus();
+                }
+            }
+        }
+
+        function getOTP() {
+            let otp = '';
+            for (let i = 1; i <= 6; i++) {
+                otp += document.getElementById('otp' + i).value;
+            }
+            return otp;
+        }
+
+        function clearOTP() {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('otp' + i).value = '';
+            }
+            document.getElementById('otp1').focus();
+        }
+
+        function startCountdown(seconds) {
+            const countdownEl = document.getElementById('resendCountdown');
+            const resendBtn = document.getElementById('resendBtn');
+
+            resendBtn.classList.add('hidden');
+            countdownEl.classList.remove('hidden');
+
+            let remaining = seconds;
+            countdownEl.textContent = `Resend OTP in ${remaining}s`;
+
+            countdownInterval = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownEl.classList.add('hidden');
+                    resendBtn.classList.remove('hidden');
+                } else {
+                    countdownEl.textContent = `Resend OTP in ${remaining}s`;
+                }
+            }, 1000);
+        }
+
+        function goBackToPhone() {
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            hideMessages();
+            clearInterval(countdownInterval);
+        }
+
+        async function handleSendOTP(event) {
             event.preventDefault();
 
             const phone = document.getElementById('phone').value;
-            const thockNumber = document.getElementById('thockNumber').value;
-            const rememberMe = document.getElementById('rememberMe').checked;
-            const loginBtn = document.getElementById('loginBtn');
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
+            const sendOtpBtn = document.getElementById('sendOtpBtn');
 
-            // Hide previous messages
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
-
-            // Disable button
-            loginBtn.disabled = true;
-            loginBtn.textContent = i18n.t('logging_in', 'Logging in...');
+            hideMessages();
+            sendOtpBtn.disabled = true;
+            sendOtpBtn.textContent = i18n ? i18n.t('sending', 'Sending...') : 'Sending...';
 
             try {
-                const response = await fetch('/auth/login', {
+                const response = await fetch('/auth/send-otp', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = { message: text };
+                }
+
+                if (response.ok && data.success) {
+                    savedPhone = phone;
+                    document.getElementById('displayPhone').textContent = '+91 ' + phone;
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    showSuccess(data.message || 'OTP sent successfully!');
+                    startCountdown(120);
+                    document.getElementById('otp1').focus();
+                } else {
+                    showError(data.message || 'Failed to send OTP. Please try again.');
+                }
+            } catch (error) {
+                showError('Network error. Please check your connection.');
+            }
+
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = i18n ? i18n.t('send_otp', 'Send OTP') : 'Send OTP';
+        }
+
+        async function handleResendOTP() {
+            const resendBtn = document.getElementById('resendBtn');
+            resendBtn.disabled = true;
+
+            hideMessages();
+
+            try {
+                const response = await fetch('/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: savedPhone })
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = { message: text };
+                }
+
+                if (response.ok && data.success) {
+                    showSuccess('OTP resent successfully!');
+                    startCountdown(120);
+                    clearOTP();
+                } else {
+                    showError(data.message || 'Failed to resend OTP.');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+
+            resendBtn.disabled = false;
+        }
+
+        async function handleVerifyOTP(event) {
+            event.preventDefault();
+
+            const otp = getOTP();
+            const verifyBtn = document.getElementById('verifyOtpBtn');
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            if (otp.length !== 6) {
+                showError('Please enter the complete 6-digit OTP');
+                return;
+            }
+
+            hideMessages();
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = i18n ? i18n.t('verifying', 'Verifying...') : 'Verifying...';
+
+            try {
+                const response = await fetch('/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({
-                        phone: phone,
-                        thock_number: thockNumber,
+                        phone: savedPhone,
+                        otp: otp,
                         remember_me: rememberMe
                     })
                 });
 
-                const data = await response.json();
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = { message: text };
+                }
 
                 if (response.ok && data.success) {
-                    // Store token and customer info
                     localStorage.setItem('customer_token', data.token);
                     localStorage.setItem('customer_info', JSON.stringify(data.customer));
                     localStorage.setItem('customer_trucks', JSON.stringify(data.trucks));
 
-                    // Show success message
-                    successMessage.textContent = i18n.t('login_success_redirect', 'Login successful! Redirecting...');
-                    successMessage.style.display = 'block';
+                    showSuccess('Login successful! Redirecting...');
 
-                    // Redirect to dashboard
                     setTimeout(() => {
                         window.location.href = '/dashboard';
                     }, 1000);
                 } else {
-                    // Show error message
-                    errorMessage.textContent = data.message || i18n.t('login_failed_check', 'Login failed. Please check your credentials.');
-                    errorMessage.style.display = 'block';
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = i18n.t('login', 'Login');
+                    showError(data.message || 'Invalid OTP. Please try again.');
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
                 }
             } catch (error) {
-                errorMessage.textContent = i18n.t('network_error', 'Network error. Please try again.');
-                errorMessage.style.display = 'block';
-                loginBtn.disabled = false;
-                loginBtn.textContent = i18n.t('login', 'Login');
+                showError('Network error. Please try again.');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
             }
         }
     </script>

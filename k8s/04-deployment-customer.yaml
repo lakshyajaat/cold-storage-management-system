@@ -17,10 +17,11 @@ spec:
       labels:
         app: cold-backend
         mode: customer
+        portal: customer
     spec:
       containers:
       - name: cold-backend
-        image: lakshyajaat/cold-backend:v1.5.176
+        image: lakshyajaat/cold-backend:v1.5.339
         imagePullPolicy: IfNotPresent
         args:
           - "-mode"
@@ -52,13 +53,13 @@ spec:
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: cold-backend-secret
-              key: db-password
+              name: cold-backend-secrets
+              key: DB_PASSWORD
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: cold-backend-secret
-              key: jwt-secret
+              name: cold-backend-secrets
+              key: JWT_SECRET
         - name: METRICS_DB_HOST
           value: "192.168.15.210"
         - name: METRICS_DB_PORT
