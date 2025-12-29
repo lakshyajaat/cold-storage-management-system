@@ -957,19 +957,19 @@
 
                 // Calculate rent per item and items paid for
                 let canTakeOut = 0;
+                let itemsPaidFor = 0;
                 if (totalExpectedItems > 0 && totalRentOwed > 0) {
                     const rentPerItem = totalRentOwed / totalExpectedItems;
-                    const itemsPaidFor = Math.floor(totalPaid / rentPerItem);
+                    itemsPaidFor = Math.floor(totalPaid / rentPerItem);
                     // Can take out = items paid for - items already taken out
-                    const remainingAllowed = Math.max(0, itemsPaidFor - itemsAlreadyTakenOut);
-                    // But limited by available inventory
-                    canTakeOut = Math.min(availableInventory, remainingAllowed);
+                    canTakeOut = Math.max(0, itemsPaidFor - itemsAlreadyTakenOut);
                 } else if (balanceDue <= 0) {
                     // No rent or fully paid - can take all
-                    canTakeOut = availableInventory;
+                    canTakeOut = totalCurrentInventory;
+                    itemsPaidFor = totalExpectedItems;
                 }
 
-                // Update display
+                // Update display - show total items customer can take out (based on payment)
                 const paymentSpan = document.getElementById('paymentAllowedQuantity');
                 if (balanceDue > 0) {
                     paymentSpan.textContent = `${canTakeOut} (₹${balanceDue.toFixed(0)} due)`;
