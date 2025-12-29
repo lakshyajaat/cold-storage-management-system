@@ -622,60 +622,69 @@
             await checkAndDisplayDebtRequestStatus(customer.phone);
         }
 
-        // Calculate available inventory for customer (from current room_entries)
+        // Calculate available inventory for customer (from accounts summary - same as rent management)
         async function calculateAvailableInventory(customerId) {
-            // Get all entries for this customer
-            const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
+            const customerPhone = document.getElementById('customerPhone').value;
 
-            // Get truck numbers for this customer
-            const thockNumbers = customerEntries.map(entry => entry.thock_number);
-
-            // Fetch current room entries to get ACTUAL inventory (reduced after pickups)
             try {
-                const response = await fetch('/api/room-entries', {
+                // Fetch from accounts summary - same source as rent management page
+                const response = await fetch('/api/accounts/summary', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (response.ok) {
-                    const allRoomEntries = await response.json();
+                if (!response.ok) {
+                    throw new Error('Failed to fetch accounts summary');
+                }
 
-                    // CACHE room entries globally for use in validateQuantityAndPayment
-                    cachedRoomEntries = allRoomEntries;
+                const summary = await response.json();
+                const customerAccount = summary.customers.find(c => c.phone === customerPhone);
 
-                    // Filter room entries for this customer's trucks
-                    const customerRoomEntries = allRoomEntries.filter(re =>
-                        thockNumbers.includes(re.thock_number)
-                    );
+                let actualInventory = 0;
 
-                    // Sum up CURRENT quantities (already reduced after pickups)
-                    const totalInInventory = customerRoomEntries.reduce((sum, re) => {
-                        return sum + (re.quantity || 0);
-                    }, 0);
+                if (customerAccount) {
+                    // Use exact same calculation as rent management: totalQuantity - totalOutgoing
+                    const totalQuantity = customerAccount.total_quantity || 0;
+                    const totalOutgoing = customerAccount.total_outgoing || 0;
+                    actualInventory = Math.max(0, totalQuantity - totalOutgoing);
 
-                    // Update the display
-                    const availableSpan = document.getElementById('availableQuantity');
-                    if (totalInInventory > 0) {
-                        availableSpan.textContent = totalInInventory;
-                        availableSpan.classList.remove('text-red-600');
-                        availableSpan.classList.add('text-blue-600');
-                    } else {
-                        availableSpan.textContent = '0';
-                        availableSpan.classList.remove('text-blue-600');
-                        availableSpan.classList.add('text-red-600');
-                    }
+                    // Store thock-level inventory for later use
+                    cachedCustomerInventory = customerAccount;
+
+                    console.log('Inventory from accounts summary:', {
+                        customerPhone,
+                        totalQuantity,
+                        totalOutgoing,
+                        actualInventory
+                    });
+                }
+
+                // Also fetch room entries for cached use
+                const roomResponse = await fetch('/api/room-entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (roomResponse.ok) {
+                    cachedRoomEntries = await roomResponse.json();
+                }
+
+                // Update the display
+                const availableSpan = document.getElementById('availableQuantity');
+                if (actualInventory > 0) {
+                    availableSpan.textContent = actualInventory;
+                    availableSpan.classList.remove('text-red-600');
+                    availableSpan.classList.add('text-blue-600');
                 } else {
-                    // API failed - show 0, NEVER use expected_quantity
-                    console.error('Room entries API returned non-ok status');
-                    cachedRoomEntries = [];
-                    document.getElementById('availableQuantity').textContent = '0';
+                    availableSpan.textContent = '0';
+                    availableSpan.classList.remove('text-blue-600');
+                    availableSpan.classList.add('text-red-600');
                 }
             } catch (error) {
-                console.error('Error fetching room entries:', error);
-                // Error - show 0, NEVER use expected_quantity
+                console.error('Error fetching inventory:', error);
                 cachedRoomEntries = [];
                 document.getElementById('availableQuantity').textContent = '0';
             }
         }
+
+        let cachedCustomerInventory = null; // Store customer inventory data from accounts summary
 
         // Load customer balance from accounts summary (same source as rent management page)
         async function loadCustomerPayments(phone) {
@@ -932,60 +941,55 @@
             updateAvailabilityDisplay();
         }
 
-        // Update availability displays based on selected truck (using current room_entries)
+        // Update availability displays based on selected truck (using accounts summary - same as rent management)
         async function updateAvailabilityDisplay() {
             const customerId = document.getElementById('customerId').value;
             if (!customerId) return;
 
-            // Get customer entries
+            const customerPhone = document.getElementById('customerPhone').value;
             const customerEntries = allEntries.filter(entry => entry.customer_id == customerId);
 
-            // Fetch current room entries to get ACTUAL inventory
             try {
-                const response = await fetch('/api/room-entries', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                // Use cached customer inventory from accounts summary, or fetch if not available
+                let customerAccount = cachedCustomerInventory;
+                if (!customerAccount || customerAccount.phone !== customerPhone) {
+                    const response = await fetch('/api/accounts/summary', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const summary = await response.json();
+                        customerAccount = summary.customers.find(c => c.phone === customerPhone);
+                        cachedCustomerInventory = customerAccount;
+                    }
+                }
 
                 let availableInventory = 0;
-                let allRoomEntries = [];
-                if (response.ok) {
-                    allRoomEntries = await response.json();
-                    console.log('All room entries:', allRoomEntries.length);
-                    console.log('Customer entries:', customerEntries.map(e => e.thock_number));
+                let totalOutgoing = 0;
+                let totalQuantity = 0;
 
-                    if (selectedThockEntry) {
-                        // Specific truck selected - sum room entries for this truck only
-                        const truckRoomEntries = allRoomEntries.filter(re =>
-                            re.thock_number === selectedThockEntry.thock_number
-                        );
-                        console.log('Selected thock:', selectedThockEntry.thock_number, 'Room entries found:', truckRoomEntries.length);
-                        availableInventory = truckRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
+                if (customerAccount) {
+                    totalQuantity = customerAccount.total_quantity || 0;
+                    totalOutgoing = customerAccount.total_outgoing || 0;
+
+                    if (selectedThockEntry && customerAccount.thocks) {
+                        // Specific truck selected - get inventory for that thock only
+                        const thockData = customerAccount.thocks.find(t => t.thock_number === selectedThockEntry.thock_number);
+                        if (thockData) {
+                            const thockQty = thockData.quantity || 0;
+                            const thockOutgoing = thockData.outgoing || 0;
+                            availableInventory = Math.max(0, thockQty - thockOutgoing);
+                        }
                     } else {
-                        // No truck selected - sum all room entries for customer's trucks
-                        const thockNumbers = customerEntries.map(e => e.thock_number);
-                        const customerRoomEntries = allRoomEntries.filter(re =>
-                            thockNumbers.includes(re.thock_number)
-                        );
-                        console.log('Customer thocks:', thockNumbers, 'Room entries found:', customerRoomEntries.length);
-                        availableInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
+                        // All trucks - use total from accounts summary
+                        availableInventory = Math.max(0, totalQuantity - totalOutgoing);
                     }
-                } else {
-                    console.error('Room entries API failed');
-                    availableInventory = 0;
                 }
 
                 // Update inventory display
                 document.getElementById('availableQuantity').textContent = availableInventory;
 
                 // PROPORTIONAL: Customer can take out items based on how much they paid
-                // Calculate total expected items for this customer (customerEntries already defined above)
                 const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
-
-                // Calculate total current inventory across all customer's thoks (only items in rooms)
-                const allThockNumbers = customerEntries.map(e => e.thock_number);
-                const allCustomerRoomEntries = allRoomEntries.filter(re => allThockNumbers.includes(re.thock_number));
-                const totalCurrentInventory = allCustomerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
-                const itemsAlreadyTakenOut = totalExpectedItems - totalCurrentInventory;
 
                 // Use configured rent rate (₹160/item) to calculate items paid for
                 let canTakeOut = 0;
@@ -993,7 +997,7 @@
                 if (customerRentRate > 0) {
                     itemsPaidFor = Math.floor(totalPaid / customerRentRate);
                     // Can take out = MIN(available inventory, items paid for - items already taken out)
-                    const paidAllowance = Math.max(0, itemsPaidFor - itemsAlreadyTakenOut);
+                    const paidAllowance = Math.max(0, itemsPaidFor - totalOutgoing);
                     canTakeOut = Math.min(availableInventory, paidAllowance);
                 } else if (balanceDue <= 0) {
                     // No rent rate configured and no balance - can take all available
@@ -1017,8 +1021,7 @@
                     paymentSpan.classList.add('text-green-600');
                 }
             } catch (error) {
-                console.error('Error fetching room entries:', error);
-                // Error - show 0, NEVER use expected_quantity
+                console.error('Error updating availability display:', error);
                 document.getElementById('availableQuantity').textContent = '0';
             }
         }
