@@ -60,6 +60,11 @@ spec:
             secretKeyRef:
               name: cold-backend-secrets
               key: JWT_SECRET
+        - name: FAST2SMS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cold-backend-secrets
+              key: FAST2SMS_API_KEY
         - name: METRICS_DB_HOST
           value: "192.168.15.210"
         - name: METRICS_DB_PORT

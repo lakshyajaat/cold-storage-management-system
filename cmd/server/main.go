@@ -431,9 +431,16 @@ func main() {
 		// Initialize OTP repository and SMS service
 		otpRepo := repositories.NewOTPRepository(pool)
 
-		// Use MockSMSService for testing (prints OTP to console)
-		// For production, use: smsService := sms.NewFast2SMSService(cfg.SMS.APIKey)
-		smsService := sms.NewMockSMSService()
+		// Use Fast2SMS for production, fallback to MockSMS if API key not set
+		fast2smsAPIKey := os.Getenv("FAST2SMS_API_KEY")
+		var smsService sms.SMSProvider
+		if fast2smsAPIKey != "" {
+			log.Println("Using Fast2SMS for OTP delivery")
+			smsService = sms.NewFast2SMSService(fast2smsAPIKey)
+		} else {
+			log.Println("WARNING: FAST2SMS_API_KEY not set, using MockSMS (OTP will only print to logs)")
+			smsService = sms.NewMockSMSService()
+		}
 
 		// Initialize OTP service
 		otpService := services.NewOTPService(otpRepo, customerRepo, smsService)
