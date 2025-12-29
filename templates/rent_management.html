@@ -851,11 +851,11 @@
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-truck"></i>
-                                        <span>${customer.thocks.length} Thoks</span>
+                                        <span>${new Set(customer.thocks.map(t => t.thock_number)).size} Thoks</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <i class="bi bi-box"></i>
-                                        <span>${customer.totalQuantity} Items</span>
+                                        <span>${customer.totalQuantity - (customer.totalOutgoing || 0)} Items</span>
                                     </div>
                                 </div>
 
@@ -1110,8 +1110,8 @@
 
         function updateSummary() {
             const totalCustomers = allCustomerAccounts.length;
-            const totalThocks = allCustomerAccounts.reduce((sum, c) => sum + c.thocks.length, 0);
-            const totalQty = allCustomerAccounts.reduce((sum, c) => sum + c.totalQuantity, 0);
+            const totalThocks = allCustomerAccounts.reduce((sum, c) => sum + new Set(c.thocks.map(t => t.thock_number)).size, 0);
+            const totalQty = allCustomerAccounts.reduce((sum, c) => sum + (c.totalQuantity - (c.totalOutgoing || 0)), 0);
             const totalOutstanding = allCustomerAccounts.reduce((sum, c) => sum + c.balance, 0);
             const totalCollected = allCustomerAccounts.reduce((sum, c) => sum + c.totalPaid, 0);
 
@@ -1470,7 +1470,7 @@
                         <div onclick="selectCustomerForMerge('${type}', '${c.phone}', '${c.name.replace(/'/g, "\\'")}', '${(c.so || '').replace(/'/g, "\\'")}', '${(c.village || '').replace(/'/g, "\\'")}')"
                              class="p-2 border-b border-gray-200 hover:bg-${type === 'source' ? 'red' : 'green'}-50 cursor-pointer">
                             <p class="font-bold">${capitalizeText(c.name)}</p>
-                            <p class="text-sm text-gray-600">${c.phone}${c.so ? ' • S/O: ' + capitalizeText(c.so) : ''} • ${capitalizeText(c.village || 'N/A')} • ${c.thocks.length} thocks</p>
+                            <p class="text-sm text-gray-600">${c.phone}${c.so ? ' • S/O: ' + capitalizeText(c.so) : ''} • ${capitalizeText(c.village || 'N/A')} • ${new Set(c.thocks.map(t => t.thock_number)).size} thoks</p>
                         </div>
                     `).join('');
                 } catch (error) {
