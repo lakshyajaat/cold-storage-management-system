@@ -267,10 +267,10 @@
             await Promise.all([loadDebtors(), loadPendingRequests(), loadAllRequests()]);
         }
 
-        // Load debtors
+        // Load debtors from accounts summary (rent system balances)
         async function loadDebtors() {
             try {
-                const response = await fetch('/api/ledger/debtors', {
+                const response = await fetch('/api/accounts/summary', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -279,7 +279,19 @@
                     throw new Error('Failed to load debtors');
                 }
 
-                allDebtors = await response.json() || [];
+                const summary = await response.json();
+                // Filter customers with positive balance (owe money) and transform to expected format
+                allDebtors = (summary.customers || [])
+                    .filter(c => c.balance > 0)
+                    .map(c => ({
+                        customer_name: c.name,
+                        customer_phone: c.phone,
+                        customer_so: c.so || '',
+                        current_balance: c.balance,
+                        entry_count: c.thocks ? c.thocks.length : 0
+                    }))
+                    .sort((a, b) => b.current_balance - a.current_balance);
+
                 renderDebtors(allDebtors);
                 updateSummary();
 
