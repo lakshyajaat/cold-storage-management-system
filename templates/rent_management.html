@@ -1063,36 +1063,44 @@
                                         All Thoks for ${capitalizeText(customer.name)}
                                     </h4>
                                     <div class="overflow-auto" style="max-height: 400px;">
-                                    <table class="w-full">
-                                        <thead class="bg-gray-100 border-2 border-black sticky top-0">
-                                            <tr>
-                                                <th class="text-left p-3 font-bold">Thok Number</th>
-                                                <th class="text-left p-3 font-bold">Quantity</th>
-                                                <th class="text-left p-3 font-bold">Rent</th>
-                                                <th class="text-left p-3 font-bold">Date</th>
-                                                ${canManageEntries ? '<th class="text-left p-3 font-bold">Action</th>' : ''}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${customer.thocks.map(thock => {
+                                    ${(() => {
+                                        // Group thocks by family member
+                                        const groupedThocks = {};
+                                        customer.thocks.forEach(thock => {
+                                            const memberName = thock.family_member_name || customer.name;
+                                            if (!groupedThocks[memberName]) {
+                                                groupedThocks[memberName] = [];
+                                            }
+                                            groupedThocks[memberName].push(thock);
+                                        });
+                                        const memberNames = Object.keys(groupedThocks);
+                                        const hasMultipleMembers = memberNames.length > 1;
+
+                                        // Render thocks table (with optional family member headers)
+                                        let tableHtml = '<table class="w-full"><thead class="bg-gray-100 border-2 border-black sticky top-0"><tr><th class="text-left p-3 font-bold">Thok Number</th><th class="text-left p-3 font-bold">Quantity</th><th class="text-left p-3 font-bold">Rent</th><th class="text-left p-3 font-bold">Date</th>' + (canManageEntries ? '<th class="text-left p-3 font-bold">Action</th>' : '') + '</tr></thead><tbody>';
+
+                                        memberNames.forEach(memberName => {
+                                            const memberThocks = groupedThocks[memberName];
+                                            // Add family member header if multiple members
+                                            if (hasMultipleMembers) {
+                                                const memberQty = memberThocks.filter(t => t.type !== 'outgoing').reduce((sum, t) => sum + Math.abs(t.quantity), 0);
+                                                const memberRent = memberThocks.filter(t => t.type !== 'outgoing').reduce((sum, t) => sum + Math.abs(t.rent), 0);
+                                                tableHtml += '<tr class="bg-purple-100 border-t-2 border-purple-400"><td colspan="' + (canManageEntries ? 5 : 4) + '" class="p-2 font-bold text-purple-800"><i class="bi bi-person-fill"></i> ' + capitalizeText(memberName) + ' <span class="text-sm font-normal">(' + memberThocks.length + ' thoks, ' + memberQty + ' qty, ₹' + memberRent.toLocaleString('en-IN', {minimumFractionDigits: 2}) + ')</span></td></tr>';
+                                            }
+
+                                            memberThocks.forEach(thock => {
                                                 const isOutgoing = thock.type === 'outgoing';
                                                 const rowClass = isOutgoing ? 'bg-red-50 border-l-4 border-red-500' : '';
                                                 const thockColorClass = isOutgoing ? 'text-red-700' : getThockColor(thock.thock_number);
                                                 const quantityClass = isOutgoing ? 'text-red-700 font-bold' : '';
                                                 const rentClass = isOutgoing ? 'text-red-700' : '';
                                                 const typeLabel = isOutgoing ? ' ⬅️ OUT' : ' ➡️ IN';
-
-                                                // Use qtyDisplay for incoming entries (shows "23 → 22" if different)
                                                 const displayQty = thock.qtyDisplay || Math.abs(thock.quantity);
-                                                return `
-                                                <tr class="border-b border-gray-200 ${rowClass}">
-                                                    <td class="p-3 font-bold ${thockColorClass}">${thock.thock_number}${typeLabel}</td>
-                                                    <td class="p-3 ${quantityClass}">${displayQty}</td>
-                                                    <td class="p-3 font-bold ${rentClass}">₹${Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                                    <td class="p-3 text-sm">${thock.date}</td>
-                                                    ${canManageEntries ? `<td class="p-3"><button onclick="openReassignModal(${thock.id}, '${thock.thock_number}', '${customer.name.replace(/'/g, "\\'")}', '${customer.phone}')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i> Change</button></td>` : ''}
-                                                </tr>
-                                            `}).join('')}
+                                                tableHtml += '<tr class="border-b border-gray-200 ' + rowClass + '"><td class="p-3 font-bold ' + thockColorClass + '">' + thock.thock_number + typeLabel + '</td><td class="p-3 ' + quantityClass + '">' + displayQty + '</td><td class="p-3 font-bold ' + rentClass + '">₹' + Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</td><td class="p-3 text-sm">' + thock.date + '</td>' + (canManageEntries ? '<td class="p-3"><button onclick="openReassignModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + customer.name.replace(/'/g, "\\'") + '\', \'' + customer.phone + '\')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i> Change</button></td>' : '') + '</tr>';
+                                            });
+                                        });
+                                        return tableHtml;
+                                    })()}
                                             ${seedQuantity > 0 ? `
                                             <tr class="bg-green-50 font-bold border-t-2 border-green-400">
                                                 <td class="p-3 text-green-700">SEED TOTAL</td>

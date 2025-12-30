@@ -52,13 +52,14 @@ type CustomerAccount struct {
 
 // ThockInfo represents a thock entry
 type ThockInfo struct {
-	ID          int     `json:"id"`
-	ThockNumber string  `json:"thock_number"`
-	Quantity    int     `json:"quantity"`
-	QtyDisplay  string  `json:"qty_display,omitempty"`
-	Rent        float64 `json:"rent"`
-	Date        string  `json:"date"`
-	Type        string  `json:"type"` // "incoming" or "outgoing"
+	ID               int     `json:"id"`
+	ThockNumber      string  `json:"thock_number"`
+	FamilyMemberName string  `json:"family_member_name,omitempty"`
+	Quantity         int     `json:"quantity"`
+	QtyDisplay       string  `json:"qty_display,omitempty"`
+	Rent             float64 `json:"rent"`
+	Date             string  `json:"date"`
+	Type             string  `json:"type"` // "incoming" or "outgoing"
 }
 
 // CompletedGatePass represents a completed gate pass with customer info
@@ -294,13 +295,14 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 		}
 
 		customer.Thocks = append(customer.Thocks, ThockInfo{
-			ID:          entry.ID,
-			ThockNumber: entry.ThockNumber,
-			Quantity:    storedQty,
-			QtyDisplay:  qtyDisplay,
-			Rent:        rent,
-			Date:        entry.CreatedAt.Format("02/01/2006"),
-			Type:        "incoming",
+			ID:               entry.ID,
+			ThockNumber:      entry.ThockNumber,
+			FamilyMemberName: entry.FamilyMemberName,
+			Quantity:         storedQty,
+			QtyDisplay:       qtyDisplay,
+			Rent:             rent,
+			Date:             entry.CreatedAt.Format("02/01/2006"),
+			Type:             "incoming",
 		})
 
 		customer.TotalQuantity += storedQty
