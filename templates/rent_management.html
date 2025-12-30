@@ -1303,11 +1303,19 @@
                                         Payment History
                                     </h4>
                                     <div id="paymentHistory${index}" class="space-y-2">
-                                        ${customer.payments && customer.payments.length > 0 ? customer.payments.map((payment, pIdx) => `
-                                            <div class="p-3 bg-green-50 border-2 border-green-200">
+                                        ${customer.payments && customer.payments.length > 0 ? customer.payments.map((payment, pIdx) => {
+                                            const isOnline = payment.notes && payment.notes.toLowerCase().includes('online');
+                                            const methodBadge = isOnline
+                                                ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-cyan-100 text-cyan-800"><i class="bi bi-credit-card"></i> Online</span>'
+                                                : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-600"><i class="bi bi-cash"></i> Cash</span>';
+                                            return `
+                                            <div class="p-3 ${isOnline ? 'bg-cyan-50 border-2 border-cyan-200' : 'bg-green-50 border-2 border-green-200'}">
                                                 <div class="flex justify-between items-start mb-2">
                                                     <div class="flex-1">
-                                                        <p class="font-bold text-green-700">₹${payment.amount_paid.toLocaleString('en-IN', {minimumFractionDigits: 2})}</p>
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <p class="font-bold ${isOnline ? 'text-cyan-700' : 'text-green-700'}">₹${payment.amount_paid.toLocaleString('en-IN', {minimumFractionDigits: 2})}</p>
+                                                            ${methodBadge}
+                                                        </div>
                                                         <p class="text-xs text-gray-600">${new Date(payment.payment_date).toLocaleDateString('en-IN')} ${new Date(payment.payment_date).toLocaleTimeString('en-IN')}</p>
                                                         <p class="text-xs text-blue-600 mt-1 flex items-center gap-1">
                                                             <i class="bi bi-person-badge"></i>
@@ -1320,7 +1328,7 @@
                                                 </div>
                                                 ${payment.notes ? `<p class="text-xs text-gray-500 mt-2">${payment.notes}</p>` : ''}
                                             </div>
-                                        `).join('') : '<p class="text-gray-500 text-sm p-4 bg-gray-50 border-2 border-gray-200">No payments yet</p>'}
+                                        `}).join('') : '<p class="text-gray-500 text-sm p-4 bg-gray-50 border-2 border-gray-200">No payments yet</p>'}
                                     </div>
                                 </div>
                             </div>

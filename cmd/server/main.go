@@ -416,6 +416,8 @@ func main() {
 	ledgerRepo := repositories.NewLedgerRepository(pool)
 	debtRequestRepo := repositories.NewDebtRequestRepository(pool)
 	familyMemberRepo := repositories.NewFamilyMemberRepository(pool)
+	onlineTransactionRepo := repositories.NewOnlineTransactionRepository(pool)
+	pendingSettingChangeRepo := repositories.NewPendingSettingChangeRepository(pool)
 
 	// Initialize middleware (needed for both modes)
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userRepo)
@@ -469,8 +471,21 @@ func main() {
 			jwtManager,
 		)
 
+		// Initialize Razorpay service and handler for online payments
+		razorpayService := services.NewRazorpayService(
+			cfg.Razorpay.KeyID,
+			cfg.Razorpay.KeySecret,
+			cfg.Razorpay.WebhookSecret,
+			onlineTransactionRepo,
+			rentPaymentRepo,
+			ledgerRepo,
+			customerRepo,
+			systemSettingRepo,
+		)
+		razorpayHandler := handlers.NewRazorpayHandler(razorpayService, customerRepo)
+
 		// Create customer router
-		router := h.NewCustomerRouter(customerPortalHandler, pageHandler, healthHandler, authMiddleware)
+		router := h.NewCustomerRouter(customerPortalHandler, pageHandler, healthHandler, authMiddleware, razorpayHandler)
 
 		// Wrap with panic recovery and metrics middleware
 		handler = middleware.PanicRecovery(middleware.MetricsMiddleware(corsMiddleware(router)))
@@ -620,8 +635,28 @@ func main() {
 		// Initialize merge history handler
 		mergeHistoryHandler := handlers.NewMergeHistoryHandler(customerRepo, entryRepo, entryManagementLogRepo)
 
+		// Initialize Razorpay service and handler for online payments (admin view)
+		razorpayService := services.NewRazorpayService(
+			cfg.Razorpay.KeyID,
+			cfg.Razorpay.KeySecret,
+			cfg.Razorpay.WebhookSecret,
+			onlineTransactionRepo,
+			rentPaymentRepo,
+			ledgerRepo,
+			customerRepo,
+			systemSettingRepo,
+		)
+		razorpayHandler := handlers.NewRazorpayHandler(razorpayService, customerRepo)
+
+		// Initialize pending setting change handler (dual admin approval for sensitive settings)
+		pendingSettingHandler := handlers.NewPendingSettingHandler(
+			pendingSettingChangeRepo,
+			systemSettingRepo,
+			userRepo,
+		)
+
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler, razorpayHandler, pendingSettingHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

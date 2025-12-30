@@ -6,11 +6,12 @@ import "time"
 type LedgerEntryType string
 
 const (
-	LedgerEntryTypeCharge       LedgerEntryType = "CHARGE"        // Rent charged for stored items
-	LedgerEntryTypePayment      LedgerEntryType = "PAYMENT"       // Customer payment received
-	LedgerEntryTypeCredit       LedgerEntryType = "CREDIT"        // Discount/adjustment given
-	LedgerEntryTypeRefund       LedgerEntryType = "REFUND"        // Money returned to customer
-	LedgerEntryTypeDebtApproval LedgerEntryType = "DEBT_APPROVAL" // Record of admin approving item out on credit
+	LedgerEntryTypeCharge        LedgerEntryType = "CHARGE"         // Rent charged for stored items
+	LedgerEntryTypePayment       LedgerEntryType = "PAYMENT"        // Customer payment received (cash)
+	LedgerEntryTypeCredit        LedgerEntryType = "CREDIT"         // Discount/adjustment given
+	LedgerEntryTypeRefund        LedgerEntryType = "REFUND"         // Money returned to customer
+	LedgerEntryTypeDebtApproval  LedgerEntryType = "DEBT_APPROVAL"  // Record of admin approving item out on credit
+	LedgerEntryTypeOnlinePayment LedgerEntryType = "ONLINE_PAYMENT" // Online payment via Razorpay (includes UTR)
 )
 
 // LedgerEntry represents a single entry in the accounting ledger

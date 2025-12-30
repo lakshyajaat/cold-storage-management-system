@@ -797,8 +797,16 @@
         }
 
         .hidden { display: none !important; }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
     </style>
     <script src="/static/js/theme.js"></script>
+    <!-- Razorpay Checkout Script (loaded only when needed) -->
+    <script id="razorpayScript" src="https://checkout.razorpay.com/v1/checkout.js" async></script>
 </head>
 <body>
     <!-- Header -->
@@ -931,33 +939,66 @@
 
                 <div class="payment-amount-input">
                     <label data-i18n="enter_amount">Enter Amount (₹)</label>
-                    <input type="number" id="paymentAmount" inputmode="numeric" placeholder="0" min="1">
+                    <input type="number" id="paymentAmount" inputmode="numeric" placeholder="0" min="1" oninput="updateFeeDisplay()">
                 </div>
 
                 <div class="quick-amount-btns" id="quickAmountBtns">
                     <!-- Will be populated dynamically -->
                 </div>
 
-                <div class="qr-section">
-                    <div class="qr-placeholder" id="qrPlaceholder">
-                        <i class="bi bi-qr-code"></i>
-                        <span data-i18n="qr_coming_soon">QR Code Coming Soon</span>
+                <!-- Online Payment Section (shown when enabled) -->
+                <div id="onlinePaymentSection" class="hidden" style="margin-top: 1rem;">
+                    <!-- Fee Breakdown -->
+                    <div style="background: #f0f9ff; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; border: 2px solid #0ea5e9;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Payment Amount:</span>
+                            <strong id="feeBaseAmount">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #0369a1;">
+                            <span>Transaction Fee (<span id="feePercentDisplay">2.5</span>%):</span>
+                            <strong id="feeAmount">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; padding-top: 0.5rem; border-top: 1px solid #0ea5e9;">
+                            <span>Total to Pay:</span>
+                            <strong id="totalPayAmount" style="color: #0369a1;">₹0</strong>
+                        </div>
                     </div>
-                    <div class="qr-info" data-i18n="scan_to_pay">Scan QR code to pay via UPI</div>
-                    <div class="payment-upi-id">
-                        <span id="upiId">coldstore@upi</span>
-                        <button class="copy-btn" onclick="copyUPI()"><i class="bi bi-copy"></i></button>
+
+                    <!-- Pay Now Button -->
+                    <button id="razorpayPayBtn" onclick="initiateRazorpayPayment()" class="modal-btn modal-btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #0ea5e9, #0369a1);">
+                        <i class="bi bi-shield-lock"></i> Pay Securely via UPI/Card/NetBanking
+                    </button>
+                    <div style="text-align: center; margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
+                        <i class="bi bi-shield-check"></i> Secured by Razorpay | 100% Safe & Secure
                     </div>
                 </div>
 
-                <div style="background: #fff8e7; padding: 0.75rem; border-radius: 10px; font-size: 0.8rem; color: #92400e;">
-                    <i class="bi bi-info-circle"></i>
-                    <span data-i18n="payment_note">Payment will be verified automatically. Please keep the transaction ID handy.</span>
+                <!-- Offline Payment Section (shown when online disabled) -->
+                <div id="offlinePaymentSection">
+                    <div class="qr-section">
+                        <div class="qr-placeholder" id="qrPlaceholder">
+                            <i class="bi bi-qr-code"></i>
+                            <span data-i18n="qr_coming_soon">QR Code Coming Soon</span>
+                        </div>
+                        <div class="qr-info" data-i18n="scan_to_pay">Scan QR code to pay via UPI</div>
+                        <div class="payment-upi-id">
+                            <span id="upiId">coldstore@upi</span>
+                            <button class="copy-btn" onclick="copyUPI()"><i class="bi bi-copy"></i></button>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff8e7; padding: 0.75rem; border-radius: 10px; font-size: 0.8rem; color: #92400e;">
+                        <i class="bi bi-info-circle"></i>
+                        <span data-i18n="payment_note">Payment will be verified automatically. Please keep the transaction ID handy.</span>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="offlinePaymentFooter">
                 <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()" data-i18n="cancel">Cancel</button>
                 <button class="modal-btn modal-btn-primary" onclick="confirmPayment()" data-i18n="i_have_paid">I Have Paid</button>
+            </div>
+            <div class="modal-footer hidden" id="onlinePaymentFooter">
+                <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()" data-i18n="cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -981,6 +1022,8 @@
                 window.location.href = '/login';
                 return;
             }
+            // Check payment status (for Razorpay integration)
+            await checkPaymentStatus();
             await loadDashboard();
         }
 
@@ -1342,6 +1385,28 @@
         let currentPaymentTruck = null;
         let currentPaymentDue = 0;
         let currentPaymentEntryId = 0;
+        let onlinePaymentEnabled = false;
+        let onlinePaymentFeePercent = 2.5;
+        let razorpayKeyId = '';
+
+        // Check payment status on load
+        async function checkPaymentStatus() {
+            try {
+                const token = localStorage.getItem('customer_token');
+                const response = await fetch('/api/payment/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const status = await response.json();
+                    onlinePaymentEnabled = status.enabled;
+                    onlinePaymentFeePercent = status.fee_percent || 2.5;
+                    razorpayKeyId = status.key_id || '';
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+            }
+        }
 
         function openPaymentModal(truckNumber, dueAmount, entryId) {
             currentPaymentTruck = truckNumber;
@@ -1353,7 +1418,8 @@
             document.getElementById('paymentTruckDue').textContent = '₹' + formatNumber(dueAmount);
 
             // Set default amount to full due
-            document.getElementById('paymentAmount').value = Math.round(dueAmount);
+            const amount = Math.round(dueAmount);
+            document.getElementById('paymentAmount').value = amount;
 
             // Generate quick amount buttons
             const quickBtns = document.getElementById('quickAmountBtns');
@@ -1370,6 +1436,21 @@
                     ${a.label}
                 </button>
             `).join('');
+
+            // Show/hide online vs offline payment sections
+            if (onlinePaymentEnabled && razorpayKeyId) {
+                document.getElementById('onlinePaymentSection').classList.remove('hidden');
+                document.getElementById('offlinePaymentSection').classList.add('hidden');
+                document.getElementById('offlinePaymentFooter').classList.add('hidden');
+                document.getElementById('onlinePaymentFooter').classList.remove('hidden');
+                document.getElementById('feePercentDisplay').textContent = onlinePaymentFeePercent;
+                updateFeeDisplay();
+            } else {
+                document.getElementById('onlinePaymentSection').classList.add('hidden');
+                document.getElementById('offlinePaymentSection').classList.remove('hidden');
+                document.getElementById('offlinePaymentFooter').classList.remove('hidden');
+                document.getElementById('onlinePaymentFooter').classList.add('hidden');
+            }
 
             // Show modal
             document.getElementById('paymentModal').classList.remove('hidden');
@@ -1388,6 +1469,21 @@
             // Update active state
             document.querySelectorAll('.quick-amount-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
+
+            // Update fee display if online payment enabled
+            if (onlinePaymentEnabled) {
+                updateFeeDisplay();
+            }
+        }
+
+        function updateFeeDisplay() {
+            const amount = parseFloat(document.getElementById('paymentAmount').value) || 0;
+            const feeAmount = Math.round(amount * onlinePaymentFeePercent / 100 * 100) / 100;
+            const totalAmount = amount + feeAmount;
+
+            document.getElementById('feeBaseAmount').textContent = '₹' + formatNumber(amount);
+            document.getElementById('feeAmount').textContent = '₹' + formatNumber(feeAmount);
+            document.getElementById('totalPayAmount').textContent = '₹' + formatNumber(totalAmount);
         }
 
         function copyUPI() {
@@ -1409,17 +1505,139 @@
                 return;
             }
 
-            // For now, just show a confirmation since payment gateway is not integrated yet
+            // For offline payment, just show a confirmation
             const message = i18n.t('payment_confirmation_msg',
                 `Payment of ₹${formatNumber(amount)} for truck ${currentPaymentTruck} will be verified once you complete the UPI payment. Please ensure you use the correct UPI ID.`);
 
             alert(message);
-
-            // Close modal
             closePaymentModal();
+        }
 
-            // In future, this would integrate with payment gateway
-            // For now, user needs to manually pay and admin verifies
+        // ========== Razorpay Integration ==========
+        async function initiateRazorpayPayment() {
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+
+            if (!amount || amount <= 0) {
+                alert(i18n.t('enter_valid_amount', 'Please enter a valid amount'));
+                return;
+            }
+
+            // Disable button while processing
+            const payBtn = document.getElementById('razorpayPayBtn');
+            const originalText = payBtn.innerHTML;
+            payBtn.disabled = true;
+            payBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Processing...';
+
+            try {
+                const token = localStorage.getItem('customer_token');
+
+                // Create order on backend
+                const response = await fetch('/api/payment/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        entry_id: currentPaymentEntryId,
+                        thock_number: currentPaymentTruck,
+                        payment_scope: 'truck'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Failed to create payment order');
+                }
+
+                const orderData = await response.json();
+
+                // Open Razorpay checkout
+                const options = {
+                    key: orderData.key_id,
+                    amount: orderData.total_amount,
+                    currency: orderData.currency,
+                    name: 'Cold Storage',
+                    description: `Payment for Truck ${currentPaymentTruck}`,
+                    order_id: orderData.order_id,
+                    prefill: {
+                        name: orderData.customer_name,
+                        contact: orderData.customer_phone
+                    },
+                    theme: {
+                        color: '#0ea5e9'
+                    },
+                    handler: async function(response) {
+                        await verifyPayment(response);
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            payBtn.disabled = false;
+                            payBtn.innerHTML = originalText;
+                        }
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function(response) {
+                    alert(i18n.t('payment_failed', 'Payment failed. Please try again.') + '\n' + (response.error.description || ''));
+                    payBtn.disabled = false;
+                    payBtn.innerHTML = originalText;
+                });
+
+                rzp.open();
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert(i18n.t('payment_error', 'Payment error: ') + error.message);
+                payBtn.disabled = false;
+                payBtn.innerHTML = originalText;
+            }
+        }
+
+        async function verifyPayment(razorpayResponse) {
+            const payBtn = document.getElementById('razorpayPayBtn');
+            payBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Verifying...';
+
+            try {
+                const token = localStorage.getItem('customer_token');
+
+                const response = await fetch('/api/payment/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: razorpayResponse.razorpay_order_id,
+                        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                        razorpay_signature: razorpayResponse.razorpay_signature
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Payment verification failed');
+                }
+
+                const result = await response.json();
+
+                // Payment successful
+                alert(i18n.t('payment_success', 'Payment successful! Your payment has been recorded.'));
+                closePaymentModal();
+
+                // Refresh dashboard to show updated balance
+                await loadDashboard(true);
+
+            } catch (error) {
+                console.error('Verification error:', error);
+                alert(i18n.t('verification_error', 'Payment verification failed. Please contact support with your payment ID: ') + razorpayResponse.razorpay_payment_id);
+            }
+
+            const originalText = '<i class="bi bi-shield-lock"></i> Pay Securely via UPI/Card/NetBanking';
+            payBtn.disabled = false;
+            payBtn.innerHTML = originalText;
         }
 
         // Close modal on escape key

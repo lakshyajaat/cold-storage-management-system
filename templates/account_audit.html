@@ -58,6 +58,7 @@
         .badge-credit { background: #bfdbfe; color: #1e40af; }
         .badge-refund { background: #fef08a; color: #854d0e; }
         .badge-debt { background: #e9d5ff; color: #6b21a8; }
+        .badge-online { background: #cffafe; color: #0e7490; }
         #mainContent {
             display: none;
         }
@@ -182,6 +183,7 @@
                         <option value="CREDIT">Credit</option>
                         <option value="REFUND">Refund</option>
                         <option value="DEBT_APPROVAL">Debt Approval</option>
+                        <option value="ONLINE_PAYMENT">Online Payment</option>
                     </select>
                 </div>
                 <div>
@@ -446,7 +448,8 @@
                 'PAYMENT': 'badge-payment',
                 'CREDIT': 'badge-credit',
                 'REFUND': 'badge-refund',
-                'DEBT_APPROVAL': 'badge-debt'
+                'DEBT_APPROVAL': 'badge-debt',
+                'ONLINE_PAYMENT': 'badge-online'
             };
             return classes[type] || '';
         }

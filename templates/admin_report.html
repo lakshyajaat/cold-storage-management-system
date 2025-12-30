@@ -162,6 +162,37 @@
             </div>
         </div>
 
+        <!-- Online Payments Summary -->
+        <div id="onlinePaymentsSummary" class="hidden neu-border p-6 bg-gradient-to-r from-cyan-50 to-blue-50 mb-8">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                <i class="bi bi-credit-card text-cyan-600"></i> Online Payment Summary
+                <span class="ml-auto text-sm font-normal text-gray-500">Razorpay Transactions</span>
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded neu-border text-center">
+                    <p class="text-xs text-gray-600">Total Transactions</p>
+                    <p class="text-2xl font-bold text-gray-700" id="onlineTotalTx">0</p>
+                </div>
+                <div class="bg-white p-4 rounded neu-border text-center">
+                    <p class="text-xs text-gray-600">Successful</p>
+                    <p class="text-2xl font-bold text-green-600" id="onlineSuccessTx">0</p>
+                </div>
+                <div class="bg-white p-4 rounded neu-border text-center">
+                    <p class="text-xs text-gray-600">Amount Collected</p>
+                    <p class="text-2xl font-bold text-cyan-600" id="onlineAmountCollected">₹0</p>
+                </div>
+                <div class="bg-white p-4 rounded neu-border text-center">
+                    <p class="text-xs text-gray-600">Fees Collected</p>
+                    <p class="text-2xl font-bold text-purple-600" id="onlineFeesCollected">₹0</p>
+                </div>
+            </div>
+            <div class="mt-4 text-right">
+                <a href="/admin/online-transactions" class="text-cyan-600 hover:underline text-sm">
+                    <i class="bi bi-list-ul"></i> View All Transactions
+                </a>
+            </div>
+        </div>
+
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Operations Chart -->
@@ -333,8 +364,34 @@
                 });
 
                 updateAnalytics();
+
+                // Load online payment summary (separate call)
+                loadOnlinePaymentSummary();
             } catch (error) {
                 console.error('Error loading data:', error);
+            }
+        }
+
+        async function loadOnlinePaymentSummary() {
+            try {
+                const response = await fetch('/api/admin/online-transactions/summary', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const summary = await response.json();
+
+                    // Show the summary section if there are any transactions
+                    if (summary.total_transactions > 0 || summary.successful_payments > 0) {
+                        document.getElementById('onlinePaymentsSummary').classList.remove('hidden');
+                        document.getElementById('onlineTotalTx').textContent = summary.total_transactions || 0;
+                        document.getElementById('onlineSuccessTx').textContent = summary.successful_payments || 0;
+                        document.getElementById('onlineAmountCollected').textContent = '₹' + (summary.total_amount || 0).toLocaleString('en-IN');
+                        document.getElementById('onlineFeesCollected').textContent = '₹' + (summary.total_fees || 0).toLocaleString('en-IN');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading online payment summary:', error);
             }
         }
 

@@ -50,6 +50,8 @@ func NewRouter(
 	customerActivityLogHandler *handlers.CustomerActivityLogHandler,
 	smsHandler *handlers.SMSHandler,
 	familyMemberHandler *handlers.FamilyMemberHandler,
+	razorpayHandler *handlers.RazorpayHandler,
+	pendingSettingHandler *handlers.PendingSettingHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -607,6 +609,37 @@ func NewRouter(
 		debtAPI.HandleFunc("", debtHandler.GetAllRequests).Methods("GET")
 	}
 
+	// Protected API routes - Online Transactions (admin/accountant)
+	if razorpayHandler != nil {
+		onlineTxAPI := r.PathPrefix("/api/admin/online-transactions").Subrouter()
+		onlineTxAPI.Use(authMiddleware.Authenticate)
+		onlineTxAPI.HandleFunc("", authMiddleware.RequireAccountantAccess(http.HandlerFunc(razorpayHandler.GetAllTransactions)).ServeHTTP).Methods("GET")
+		onlineTxAPI.HandleFunc("/summary", authMiddleware.RequireAccountantAccess(http.HandlerFunc(razorpayHandler.GetTransactionSummary)).ServeHTTP).Methods("GET")
+	}
+
+	// Protected API routes - Pending Setting Changes (dual admin approval for sensitive settings)
+	if pendingSettingHandler != nil {
+		settingChangesAPI := r.PathPrefix("/api/admin/setting-changes").Subrouter()
+		settingChangesAPI.Use(authMiddleware.Authenticate)
+		settingChangesAPI.Use(authMiddleware.RequireRole("admin"))
+		// Request a new setting change
+		settingChangesAPI.HandleFunc("", pendingSettingHandler.RequestChange).Methods("POST")
+		// Get all pending changes
+		settingChangesAPI.HandleFunc("/pending", pendingSettingHandler.GetPendingChanges).Methods("GET")
+		// Get list of protected settings
+		settingChangesAPI.HandleFunc("/protected", pendingSettingHandler.GetProtectedSettings).Methods("GET")
+		// Check if setting has pending change
+		settingChangesAPI.HandleFunc("/check", pendingSettingHandler.CheckPendingForSetting).Methods("GET")
+		// Get setting change history
+		settingChangesAPI.HandleFunc("/history", pendingSettingHandler.GetHistory).Methods("GET")
+		// Get specific change
+		settingChangesAPI.HandleFunc("/{id}", pendingSettingHandler.GetChange).Methods("GET")
+		// Approve a change (requires password)
+		settingChangesAPI.HandleFunc("/{id}/approve", pendingSettingHandler.ApproveChange).Methods("POST")
+		// Reject a change
+		settingChangesAPI.HandleFunc("/{id}/reject", pendingSettingHandler.RejectChange).Methods("POST")
+	}
+
 	// Protected API routes - Entry Room (optimized single-call endpoint)
 	if entryRoomHandler != nil {
 		entryRoomAPI := r.PathPrefix("/api/entry-room").Subrouter()
@@ -642,6 +675,7 @@ func NewCustomerRouter(
 	pageHandler *handlers.PageHandler,
 	healthHandler *handlers.HealthHandler,
 	authMiddleware *middleware.AuthMiddleware,
+	razorpayHandler *handlers.RazorpayHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -672,6 +706,19 @@ func NewCustomerRouter(
 	customerAPI.Use(authMiddleware.AuthenticateCustomer)
 	customerAPI.HandleFunc("/dashboard", customerPortalHandler.GetDashboard).Methods("GET")
 	customerAPI.HandleFunc("/gate-pass-requests", customerPortalHandler.CreateGatePassRequest).Methods("POST")
+
+	// Payment routes (Razorpay)
+	if razorpayHandler != nil {
+		customerAPI.HandleFunc("/payment/status", razorpayHandler.CheckPaymentStatus).Methods("GET")
+		customerAPI.HandleFunc("/payment/create-order", razorpayHandler.CreateOrder).Methods("POST")
+		customerAPI.HandleFunc("/payment/verify", razorpayHandler.VerifyPayment).Methods("POST")
+		customerAPI.HandleFunc("/payment/transactions", razorpayHandler.GetMyTransactions).Methods("GET")
+	}
+
+	// Razorpay webhook (no JWT auth - uses signature verification)
+	if razorpayHandler != nil {
+		r.HandleFunc("/api/payment/webhook", razorpayHandler.HandleWebhook).Methods("POST")
+	}
 
 	// Health endpoints - only basic health for K8s probes on customer portal
 	// Detailed health and metrics are NOT exposed on customer portal for security

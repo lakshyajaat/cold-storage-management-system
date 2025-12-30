@@ -48,6 +48,12 @@ type Config struct {
 			Name     string `mapstructure:"name"`
 		} `mapstructure:"db"`
 	} `mapstructure:"g"`
+
+	Razorpay struct {
+		KeyID         string `mapstructure:"key_id"`
+		KeySecret     string `mapstructure:"key_secret"`
+		WebhookSecret string `mapstructure:"webhook_secret"`
+	} `mapstructure:"razorpay"`
 }
 
 func Load() *Config {
@@ -118,6 +124,17 @@ func Load() *Config {
 		if cfg.G.DB.Password == "" || cfg.G.DB.Password == "${G_DB_PASSWORD}" {
 			cfg.G.DB.Password = os.Getenv("G_DB_PASSWORD")
 		}
+	}
+
+	// Load Razorpay config from environment variables
+	if keyID := os.Getenv("RAZORPAY_KEY_ID"); keyID != "" {
+		cfg.Razorpay.KeyID = keyID
+	}
+	if keySecret := os.Getenv("RAZORPAY_KEY_SECRET"); keySecret != "" {
+		cfg.Razorpay.KeySecret = keySecret
+	}
+	if webhookSecret := os.Getenv("RAZORPAY_WEBHOOK_SECRET"); webhookSecret != "" {
+		cfg.Razorpay.WebhookSecret = webhookSecret
 	}
 
 	return &cfg
