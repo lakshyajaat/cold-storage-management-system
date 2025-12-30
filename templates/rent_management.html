@@ -451,6 +451,103 @@
         </div>
     </div>
 
+    <!-- Change Family Member Modal -->
+    <div id="changeFamilyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white neu-border p-4 md:p-8 max-w-lg w-full mx-2 md:mx-4">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-person-fill text-purple-600"></i>
+                Assign to Family Member
+            </h3>
+
+            <div class="mb-4 p-3 bg-purple-50 border-2 border-purple-200">
+                <p class="text-sm text-gray-600">Thock</p>
+                <p class="font-bold">Thock #<span id="changeFamilyThockNumber">-</span></p>
+                <p class="text-sm">Current: <span id="changeFamilyCurrentMember" class="font-semibold">-</span></p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Select Family Member *
+                </label>
+                <select id="changeFamilySelect" class="w-full neu-input">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+
+            <input type="hidden" id="changeFamilyEntryId">
+            <input type="hidden" id="changeFamilyCustomerId">
+
+            <div class="flex gap-4">
+                <button id="changeFamilySubmitBtn" onclick="submitChangeFamilyMember()" class="flex-1 neu-button bg-purple-500 text-white">
+                    <i class="bi bi-check-circle"></i> Assign
+                </button>
+                <button onclick="closeChangeFamilyModal()" class="flex-1 neu-button bg-gray-300">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Transfer Floating Toolbar -->
+    <div id="bulkTransferToolbar" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-40 flex items-center gap-4 neu-border border-blue-800">
+        <span class="font-bold"><span id="selectedCount">0</span> thock(s) selected</span>
+        <button onclick="openBulkTransferModal()" class="neu-button bg-green-500 text-white py-2 px-4">
+            <i class="bi bi-arrow-left-right"></i> Transfer Selected
+        </button>
+        <button onclick="clearBulkSelection()" class="neu-button bg-red-500 text-white py-2 px-4">
+            <i class="bi bi-x-circle"></i> Clear
+        </button>
+    </div>
+
+    <!-- Bulk Transfer Modal -->
+    <div id="bulkTransferModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white neu-border p-4 md:p-8 max-w-lg w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="bi bi-arrow-left-right text-green-600"></i>
+                Bulk Transfer Thocks
+            </h3>
+
+            <div class="mb-4 p-3 bg-green-50 border-2 border-green-200">
+                <p class="text-sm text-gray-600">Selected Thocks</p>
+                <div id="bulkTransferSelectedThocks" class="font-bold text-sm max-h-32 overflow-y-auto"></div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Search Destination Customer *
+                </label>
+                <input
+                    type="text"
+                    id="bulkTransferCustomerSearch"
+                    class="w-full neu-input"
+                    placeholder="Search by name or phone..."
+                    oninput="searchCustomersForBulkTransfer()"
+                >
+            </div>
+
+            <div class="mb-4 max-h-48 overflow-y-auto" id="bulkTransferCustomerResults">
+                <p class="text-gray-500 text-sm p-4 text-center">Type to search customers...</p>
+            </div>
+
+            <div class="mb-4 p-3 bg-blue-50 border-2 border-blue-200 hidden" id="bulkTransferSelectedCustomer">
+                <p class="text-sm text-gray-600">Destination Customer</p>
+                <p class="font-bold" id="bulkTransferNewCustomerName">-</p>
+                <p class="text-sm" id="bulkTransferNewCustomerPhone">-</p>
+            </div>
+
+            <input type="hidden" id="bulkTransferNewCustomerId">
+
+            <div class="flex gap-4">
+                <button id="bulkTransferSubmitBtn" onclick="submitBulkTransfer()" class="flex-1 neu-button bg-green-500 text-white" disabled>
+                    <i class="bi bi-arrow-left-right"></i> Transfer All
+                </button>
+                <button onclick="closeBulkTransferModal()" class="flex-1 neu-button bg-gray-300">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Customer Merge Modal -->
     <div id="mergeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white neu-border p-4 md:p-8 max-w-lg w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto">
@@ -1130,7 +1227,8 @@
                                         const hasMultipleMembers = memberNames.length > 1;
 
                                         // Render thocks table (with optional family member headers)
-                                        let tableHtml = '<table class="w-full"><thead class="bg-gray-100 border-2 border-black sticky top-0"><tr><th class="text-left p-3 font-bold">Thok Number</th><th class="text-left p-3 font-bold">Quantity</th><th class="text-left p-3 font-bold">Rent</th><th class="text-left p-3 font-bold">Date</th>' + (canManageEntries ? '<th class="text-left p-3 font-bold">Action</th>' : '') + '</tr></thead><tbody>';
+                                        const selectAllCheckbox = canManageEntries ? '<th class="p-3 w-10"><input type="checkbox" class="select-all-thock cursor-pointer" data-customer="' + customer.customer_id + '" onchange="toggleSelectAllThocks(this, ' + customer.customer_id + ')"></th>' : '';
+                                        let tableHtml = '<table class="w-full"><thead class="bg-gray-100 border-2 border-black sticky top-0"><tr>' + selectAllCheckbox + '<th class="text-left p-3 font-bold">Thok Number</th><th class="text-left p-3 font-bold">Quantity</th><th class="text-left p-3 font-bold">Rent</th><th class="text-left p-3 font-bold">Date</th>' + (canManageEntries ? '<th class="text-left p-3 font-bold">Action</th>' : '') + '</tr></thead><tbody>';
 
                                         memberNames.forEach(memberName => {
                                             const memberThocks = groupedThocks[memberName];
@@ -1138,7 +1236,7 @@
                                             if (hasMultipleMembers) {
                                                 const memberQty = memberThocks.filter(t => t.type !== 'outgoing').reduce((sum, t) => sum + Math.abs(t.quantity), 0);
                                                 const memberRent = memberThocks.filter(t => t.type !== 'outgoing').reduce((sum, t) => sum + Math.abs(t.rent), 0);
-                                                tableHtml += '<tr class="bg-purple-100 border-t-2 border-purple-400"><td colspan="' + (canManageEntries ? 5 : 4) + '" class="p-2 font-bold text-purple-800"><i class="bi bi-person-fill"></i> ' + capitalizeText(memberName) + ' <span class="text-sm font-normal">(' + memberThocks.length + ' thoks, ' + memberQty + ' qty, ₹' + memberRent.toLocaleString('en-IN', {minimumFractionDigits: 2}) + ')</span></td></tr>';
+                                                tableHtml += '<tr class="bg-purple-100 border-t-2 border-purple-400"><td colspan="' + (canManageEntries ? 6 : 4) + '" class="p-2 font-bold text-purple-800"><i class="bi bi-person-fill"></i> ' + capitalizeText(memberName) + ' <span class="text-sm font-normal">(' + memberThocks.length + ' thoks, ' + memberQty + ' qty, ₹' + memberRent.toLocaleString('en-IN', {minimumFractionDigits: 2}) + ')</span></td></tr>';
                                             }
 
                                             memberThocks.forEach(thock => {
@@ -1149,7 +1247,9 @@
                                                 const rentClass = isOutgoing ? 'text-red-700' : '';
                                                 const typeLabel = isOutgoing ? ' ⬅️ OUT' : ' ➡️ IN';
                                                 const displayQty = thock.qtyDisplay || Math.abs(thock.quantity);
-                                                tableHtml += '<tr class="border-b border-gray-200 ' + rowClass + '"><td class="p-3 font-bold ' + thockColorClass + '">' + thock.thock_number + typeLabel + '</td><td class="p-3 ' + quantityClass + '">' + displayQty + '</td><td class="p-3 font-bold ' + rentClass + '">₹' + Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</td><td class="p-3 text-sm">' + thock.date + '</td>' + (canManageEntries ? '<td class="p-3"><button onclick="openReassignModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + customer.name.replace(/'/g, "\\'") + '\', \'' + customer.phone + '\')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i> Change</button></td>' : '') + '</tr>';
+                                                const familyBtnHtml = !isOutgoing && customer.familyMembers && customer.familyMembers.length > 0 ? '<button onclick="openChangeFamilyModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + (thock.family_member_name || customer.name).replace(/'/g, "\\'") + '\', ' + customer.customer_id + ')" class="text-xs neu-button bg-purple-500 text-white py-1 px-2 ml-1" style="padding: 0.25rem 0.5rem;" title="Change Family Member"><i class="bi bi-person"></i></button>' : '';
+                                                const checkboxHtml = canManageEntries && !isOutgoing ? '<td class="p-3"><input type="checkbox" class="thock-select cursor-pointer" data-entry-id="' + thock.id + '" data-thock="' + thock.thock_number + '" data-customer-id="' + customer.customer_id + '" data-customer-name="' + customer.name.replace(/'/g, "\\'") + '" data-customer-phone="' + customer.phone + '" onchange="updateBulkSelection()"></td>' : (canManageEntries ? '<td class="p-3"></td>' : '');
+                                                tableHtml += '<tr class="border-b border-gray-200 ' + rowClass + '">' + checkboxHtml + '<td class="p-3 font-bold ' + thockColorClass + '">' + thock.thock_number + typeLabel + '</td><td class="p-3 ' + quantityClass + '">' + displayQty + '</td><td class="p-3 font-bold ' + rentClass + '">₹' + Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</td><td class="p-3 text-sm">' + thock.date + '</td>' + (canManageEntries ? '<td class="p-3"><button onclick="openReassignModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + customer.name.replace(/'/g, "\\'") + '\', \'' + customer.phone + '\')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i></button>' + familyBtnHtml + '</td>' : '') + '</tr>';
                                             });
                                         });
                                         return tableHtml;
@@ -1744,6 +1844,262 @@
                 alert('Error reassigning entry: ' + error.message);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Reassign';
+            }
+        }
+
+        // ===============================
+        // Change Family Member Functions
+        // ===============================
+        async function openChangeFamilyModal(entryId, thockNumber, currentMember, customerId) {
+            document.getElementById('changeFamilyEntryId').value = entryId;
+            document.getElementById('changeFamilyCustomerId').value = customerId;
+            document.getElementById('changeFamilyThockNumber').textContent = thockNumber;
+            document.getElementById('changeFamilyCurrentMember').textContent = currentMember;
+            document.getElementById('changeFamilySelect').innerHTML = '<option value="">Loading...</option>';
+            document.getElementById('changeFamilyModal').classList.remove('hidden');
+
+            // Load family members for this customer
+            try {
+                const response = await fetch(`/api/customers/${customerId}/family-members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const members = data.family_members || [];
+                    if (members.length > 0) {
+                        document.getElementById('changeFamilySelect').innerHTML =
+                            members.map(m => `<option value="${m.id}" data-name="${escapeHtml(m.name)}" ${m.name === currentMember ? 'selected' : ''}>${capitalizeText(m.name)} (${m.relation})</option>`).join('');
+                    } else {
+                        document.getElementById('changeFamilySelect').innerHTML = '<option value="">No family members found</option>';
+                    }
+                } else {
+                    document.getElementById('changeFamilySelect').innerHTML = '<option value="">Failed to load</option>';
+                }
+            } catch (error) {
+                console.error('Error loading family members:', error);
+                document.getElementById('changeFamilySelect').innerHTML = '<option value="">Error loading</option>';
+            }
+        }
+
+        function closeChangeFamilyModal() {
+            document.getElementById('changeFamilyModal').classList.add('hidden');
+        }
+
+        async function submitChangeFamilyMember() {
+            const entryId = document.getElementById('changeFamilyEntryId').value;
+            const select = document.getElementById('changeFamilySelect');
+            const familyMemberId = select.value;
+            const familyMemberName = select.options[select.selectedIndex]?.dataset?.name || '';
+
+            if (!entryId || !familyMemberId) {
+                alert('Please select a family member');
+                return;
+            }
+
+            const submitBtn = document.getElementById('changeFamilySubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+
+            try {
+                const response = await fetch(`/api/entries/${entryId}/family-member`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        family_member_id: parseInt(familyMemberId),
+                        family_member_name: familyMemberName
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to update family member');
+                }
+
+                alert('Family member updated successfully!');
+                closeChangeFamilyModal();
+                loadCustomerAccounts(true); // Force refresh
+            } catch (error) {
+                console.error('Error updating family member:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Assign';
+            }
+        }
+
+        // ===============================
+        // Bulk Transfer Functions
+        // ===============================
+        let selectedThocks = new Map(); // entryId -> {thock, customerName, customerPhone}
+        let bulkTransferSearchTimeout;
+
+        function toggleSelectAllThocks(checkbox, customerId) {
+            const thockCheckboxes = document.querySelectorAll(`.thock-select[data-customer-id="${customerId}"]`);
+            thockCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            updateBulkSelection();
+        }
+
+        function updateBulkSelection() {
+            selectedThocks.clear();
+            const checkedBoxes = document.querySelectorAll('.thock-select:checked');
+            checkedBoxes.forEach(cb => {
+                selectedThocks.set(cb.dataset.entryId, {
+                    thock: cb.dataset.thock,
+                    customerName: cb.dataset.customerName,
+                    customerPhone: cb.dataset.customerPhone
+                });
+            });
+
+            const toolbar = document.getElementById('bulkTransferToolbar');
+            const countSpan = document.getElementById('selectedCount');
+
+            if (selectedThocks.size > 0) {
+                toolbar.classList.remove('hidden');
+                countSpan.textContent = selectedThocks.size;
+            } else {
+                toolbar.classList.add('hidden');
+            }
+
+            // Update select-all checkboxes
+            document.querySelectorAll('.select-all-thock').forEach(selectAll => {
+                const customerId = selectAll.dataset.customer;
+                const customerCheckboxes = document.querySelectorAll(`.thock-select[data-customer-id="${customerId}"]`);
+                const checkedCount = document.querySelectorAll(`.thock-select[data-customer-id="${customerId}"]:checked`).length;
+                selectAll.checked = customerCheckboxes.length > 0 && checkedCount === customerCheckboxes.length;
+                selectAll.indeterminate = checkedCount > 0 && checkedCount < customerCheckboxes.length;
+            });
+        }
+
+        function clearBulkSelection() {
+            document.querySelectorAll('.thock-select:checked').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.select-all-thock').forEach(cb => {
+                cb.checked = false;
+                cb.indeterminate = false;
+            });
+            selectedThocks.clear();
+            document.getElementById('bulkTransferToolbar').classList.add('hidden');
+        }
+
+        function openBulkTransferModal() {
+            // Show selected thocks
+            const thocksHtml = Array.from(selectedThocks.entries()).map(([id, data]) =>
+                `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-1 mb-1">${data.thock}</span>`
+            ).join('');
+            document.getElementById('bulkTransferSelectedThocks').innerHTML = thocksHtml;
+
+            // Reset customer search
+            document.getElementById('bulkTransferCustomerSearch').value = '';
+            document.getElementById('bulkTransferCustomerResults').innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">Type to search customers...</p>';
+            document.getElementById('bulkTransferSelectedCustomer').classList.add('hidden');
+            document.getElementById('bulkTransferNewCustomerId').value = '';
+            document.getElementById('bulkTransferSubmitBtn').disabled = true;
+
+            document.getElementById('bulkTransferModal').classList.remove('hidden');
+        }
+
+        function closeBulkTransferModal() {
+            document.getElementById('bulkTransferModal').classList.add('hidden');
+        }
+
+        async function searchCustomersForBulkTransfer() {
+            const searchTerm = document.getElementById('bulkTransferCustomerSearch').value.trim();
+
+            clearTimeout(bulkTransferSearchTimeout);
+
+            if (searchTerm.length < 2) {
+                document.getElementById('bulkTransferCustomerResults').innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">Type at least 2 characters...</p>';
+                return;
+            }
+
+            bulkTransferSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/customers/search?q=${encodeURIComponent(searchTerm)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) throw new Error('Search failed');
+
+                    const customers = await response.json();
+
+                    if (customers.length === 0) {
+                        document.getElementById('bulkTransferCustomerResults').innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">No customers found</p>';
+                        return;
+                    }
+
+                    document.getElementById('bulkTransferCustomerResults').innerHTML = customers.map(c => `
+                        <div class="p-3 border-b hover:bg-gray-100 cursor-pointer" onclick="selectBulkTransferCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.phone}')">
+                            <p class="font-bold">${c.name}</p>
+                            <p class="text-sm text-gray-600">${c.phone}</p>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('bulkTransferCustomerResults').innerHTML = '<p class="text-red-500 text-sm p-4 text-center">Search error</p>';
+                }
+            }, 300);
+        }
+
+        function selectBulkTransferCustomer(customerId, name, phone) {
+            document.getElementById('bulkTransferNewCustomerId').value = customerId;
+            document.getElementById('bulkTransferNewCustomerName').textContent = name;
+            document.getElementById('bulkTransferNewCustomerPhone').textContent = phone;
+            document.getElementById('bulkTransferSelectedCustomer').classList.remove('hidden');
+            document.getElementById('bulkTransferSubmitBtn').disabled = false;
+        }
+
+        async function submitBulkTransfer() {
+            const newCustomerId = document.getElementById('bulkTransferNewCustomerId').value;
+
+            if (!newCustomerId || selectedThocks.size === 0) {
+                alert('Please select a destination customer');
+                return;
+            }
+
+            const entryIds = Array.from(selectedThocks.keys()).map(id => parseInt(id));
+
+            const submitBtn = document.getElementById('bulkTransferSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Transferring...';
+
+            try {
+                const response = await fetch('/api/entries/bulk-reassign', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        entry_ids: entryIds,
+                        new_customer_id: parseInt(newCustomerId)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.errors?.join(', ') || 'Transfer failed');
+                }
+
+                if (result.errors && result.errors.length > 0) {
+                    alert(`Transferred ${result.success_count}/${result.total_count} thocks.\n\nErrors:\n${result.errors.join('\n')}`);
+                } else {
+                    alert(`Successfully transferred ${result.success_count} thock(s)!`);
+                }
+
+                closeBulkTransferModal();
+                clearBulkSelection();
+                loadCustomerAccounts(true); // Force refresh
+            } catch (error) {
+                console.error('Bulk transfer error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Transfer All';
             }
         }
 

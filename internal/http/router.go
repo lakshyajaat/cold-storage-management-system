@@ -203,8 +203,10 @@ func NewRouter(
 	entriesAPI.HandleFunc("/{id}", entryHandler.GetEntry).Methods("GET")
 	entriesAPI.HandleFunc("/{id}", entryHandler.UpdateEntry).Methods("PUT")
 	entriesAPI.HandleFunc("/{id}/reassign", entryHandler.ReassignEntry).Methods("PUT") // Requires can_manage_entries permission
+	entriesAPI.HandleFunc("/{id}/family-member", entryHandler.UpdateFamilyMember).Methods("PUT") // Requires can_manage_entries permission
 	entriesAPI.HandleFunc("/{id}/soft-delete", entryHandler.SoftDeleteEntry).Methods("DELETE") // Admin only
 	entriesAPI.HandleFunc("/{id}/restore", entryHandler.RestoreEntry).Methods("PUT") // Admin only
+	entriesAPI.HandleFunc("/bulk-reassign", entryHandler.BulkReassignEntries).Methods("POST") // Requires can_manage_entries permission
 	entriesAPI.HandleFunc("/deleted", entryHandler.GetDeletedEntries).Methods("GET") // Admin only - get all deleted entries
 	entriesAPI.HandleFunc("/customer/{customer_id}", entryHandler.ListEntriesByCustomer).Methods("GET")
 

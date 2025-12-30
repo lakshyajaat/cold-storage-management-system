@@ -571,3 +571,145 @@ func (h *EntryHandler) GetDeletedEntries(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
 }
+
+// UpdateFamilyMember updates the family member assignment for an entry
+// PUT /api/entries/{id}/family-member
+func (h *EntryHandler) UpdateFamilyMember(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid entry ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check permission: admin OR can_manage_entries
+	if !middleware.HasManageEntriesAccess(r.Context()) {
+		http.Error(w, "Forbidden: Manage entries permission required", http.StatusForbidden)
+		return
+	}
+
+	var req struct {
+		FamilyMemberID   int    `json:"family_member_id"`
+		FamilyMemberName string `json:"family_member_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.FamilyMemberID <= 0 {
+		http.Error(w, "family_member_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Update family member in database
+	err = h.Service.EntryRepo.UpdateFamilyMember(r.Context(), id, req.FamilyMemberID, req.FamilyMemberName)
+	if err != nil {
+		http.Error(w, "Failed to update family member: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate caches
+	cache.InvalidateEntryCaches(r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Family member updated successfully",
+	})
+}
+
+// BulkReassignEntries reassigns multiple entries to a different customer at once
+// POST /api/entries/bulk-reassign
+func (h *EntryHandler) BulkReassignEntries(w http.ResponseWriter, r *http.Request) {
+	// Check permission: admin OR can_manage_entries
+	if !middleware.HasManageEntriesAccess(r.Context()) {
+		http.Error(w, "Forbidden: Manage entries permission required", http.StatusForbidden)
+		return
+	}
+
+	// Get user ID for logging
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		EntryIDs         []int  `json:"entry_ids"`
+		NewCustomerID    int    `json:"new_customer_id"`
+		FamilyMemberID   *int   `json:"family_member_id,omitempty"`
+		FamilyMemberName string `json:"family_member_name,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.EntryIDs) == 0 {
+		http.Error(w, "entry_ids is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewCustomerID <= 0 {
+		http.Error(w, "new_customer_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Process each entry
+	var successCount int
+	var errors []string
+
+	for _, entryID := range req.EntryIDs {
+		// Get old entry for logging
+		oldEntry, err := h.Service.GetEntry(context.Background(), entryID)
+		if err != nil {
+			errors = append(errors, "Entry "+strconv.Itoa(entryID)+": not found")
+			continue
+		}
+
+		// Skip if already assigned to this customer (unless changing family member)
+		if oldEntry.CustomerID == req.NewCustomerID && req.FamilyMemberID == nil {
+			errors = append(errors, "Entry "+strconv.Itoa(entryID)+": already assigned to this customer")
+			continue
+		}
+
+		// Reassign the entry
+		entry, newCustomer, err := h.Service.ReassignEntry(context.Background(), entryID, req.NewCustomerID, req.FamilyMemberID, req.FamilyMemberName)
+		if err != nil {
+			errors = append(errors, "Entry "+strconv.Itoa(entryID)+": "+err.Error())
+			continue
+		}
+
+		// Log the reassignment
+		if h.ManagementLogRepo != nil {
+			oldCustomerID := oldEntry.CustomerID
+			managementLog := &models.EntryManagementLog{
+				PerformedByID:    userID,
+				EntryID:          &entryID,
+				ThockNumber:      &entry.ThockNumber,
+				OldCustomerID:    &oldCustomerID,
+				OldCustomerName:  &oldEntry.Name,
+				OldCustomerPhone: &oldEntry.Phone,
+				NewCustomerID:    &req.NewCustomerID,
+				NewCustomerName:  &newCustomer.Name,
+				NewCustomerPhone: &newCustomer.Phone,
+			}
+			h.ManagementLogRepo.CreateReassignLog(context.Background(), managementLog)
+		}
+
+		successCount++
+	}
+
+	// Invalidate caches
+	cache.InvalidateEntryCaches(r.Context())
+	cache.InvalidateCustomerCaches(r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":       len(errors) == 0,
+		"success_count": successCount,
+		"total_count":   len(req.EntryIDs),
+		"errors":        errors,
+	})
+}

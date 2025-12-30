@@ -576,3 +576,11 @@ func (r *EntryRepository) GetDeletedEntries(ctx context.Context) ([]*models.Entr
 	}
 	return entries, nil
 }
+
+// UpdateFamilyMember updates the family member assignment for an entry
+func (r *EntryRepository) UpdateFamilyMember(ctx context.Context, entryID int, familyMemberID int, familyMemberName string) error {
+	_, err := r.DB.Exec(ctx,
+		`UPDATE entries SET family_member_id = $1, family_member_name = $2, updated_at = NOW() WHERE id = $3`,
+		familyMemberID, familyMemberName, entryID)
+	return err
+}
