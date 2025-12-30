@@ -6,6 +6,8 @@ type RentPayment struct {
 	ID                 int       `json:"id"`
 	ReceiptNumber      string    `json:"receipt_number"`
 	EntryID            int       `json:"entry_id"`
+	FamilyMemberID     *int      `json:"family_member_id,omitempty"`
+	FamilyMemberName   string    `json:"family_member_name,omitempty"`
 	CustomerName       string    `json:"customer_name"`
 	CustomerPhone      string    `json:"customer_phone"`
 	TotalRent          float64   `json:"total_rent"`
@@ -19,11 +21,13 @@ type RentPayment struct {
 }
 
 type CreateRentPaymentRequest struct {
-	EntryID       int     `json:"entry_id"`
-	CustomerName  string  `json:"customer_name"`
-	CustomerPhone string  `json:"customer_phone"`
-	TotalRent     float64 `json:"total_rent"`
-	AmountPaid    float64 `json:"amount_paid"`
-	Balance       float64 `json:"balance"`
-	Notes         string  `json:"notes"`
+	EntryID          int     `json:"entry_id"`
+	FamilyMemberID   *int    `json:"family_member_id,omitempty"`
+	FamilyMemberName string  `json:"family_member_name,omitempty"`
+	CustomerName     string  `json:"customer_name"`
+	CustomerPhone    string  `json:"customer_phone"`
+	TotalRent        float64 `json:"total_rent"`
+	AmountPaid       float64 `json:"amount_paid"`
+	Balance          float64 `json:"balance"`
+	Notes            string  `json:"notes"`
 }

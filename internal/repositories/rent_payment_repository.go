@@ -61,14 +61,16 @@ func (r *RentPaymentRepository) Create(ctx context.Context, payment *models.Rent
 	}
 
 	query := `
-		INSERT INTO rent_payments (receipt_number, entry_id, customer_name, customer_phone, total_rent, amount_paid, balance, processed_by_user_id, notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO rent_payments (receipt_number, entry_id, family_member_id, family_member_name, customer_name, customer_phone, total_rent, amount_paid, balance, processed_by_user_id, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, payment_date, created_at
 	`
 
 	err = r.DB.QueryRow(ctx, query,
 		receiptNumber,
 		payment.EntryID,
+		payment.FamilyMemberID,
+		payment.FamilyMemberName,
 		payment.CustomerName,
 		payment.CustomerPhone,
 		payment.TotalRent,
@@ -88,7 +90,8 @@ func (r *RentPaymentRepository) Create(ctx context.Context, payment *models.Rent
 
 func (r *RentPaymentRepository) GetByEntryID(ctx context.Context, entryID int) ([]*models.RentPayment, error) {
 	query := `
-		SELECT id, receipt_number, entry_id, customer_name, customer_phone, total_rent, amount_paid, balance,
+		SELECT id, receipt_number, entry_id, family_member_id, COALESCE(family_member_name, ''),
+		       customer_name, customer_phone, total_rent, amount_paid, balance,
 		       payment_date, COALESCE(processed_by_user_id, 0), COALESCE(notes, ''), created_at
 		FROM rent_payments
 		WHERE entry_id = $1
@@ -108,6 +111,8 @@ func (r *RentPaymentRepository) GetByEntryID(ctx context.Context, entryID int) (
 			&payment.ID,
 			&payment.ReceiptNumber,
 			&payment.EntryID,
+			&payment.FamilyMemberID,
+			&payment.FamilyMemberName,
 			&payment.CustomerName,
 			&payment.CustomerPhone,
 			&payment.TotalRent,
@@ -129,7 +134,8 @@ func (r *RentPaymentRepository) GetByEntryID(ctx context.Context, entryID int) (
 
 func (r *RentPaymentRepository) GetByPhone(ctx context.Context, phone string) ([]*models.RentPayment, error) {
 	query := `
-		SELECT id, receipt_number, entry_id, customer_name, customer_phone, total_rent, amount_paid, balance,
+		SELECT id, receipt_number, entry_id, family_member_id, COALESCE(family_member_name, ''),
+		       customer_name, customer_phone, total_rent, amount_paid, balance,
 		       payment_date, COALESCE(processed_by_user_id, 0), COALESCE(notes, ''), created_at
 		FROM rent_payments
 		WHERE customer_phone = $1
@@ -149,6 +155,52 @@ func (r *RentPaymentRepository) GetByPhone(ctx context.Context, phone string) ([
 			&payment.ID,
 			&payment.ReceiptNumber,
 			&payment.EntryID,
+			&payment.FamilyMemberID,
+			&payment.FamilyMemberName,
+			&payment.CustomerName,
+			&payment.CustomerPhone,
+			&payment.TotalRent,
+			&payment.AmountPaid,
+			&payment.Balance,
+			&payment.PaymentDate,
+			&payment.ProcessedByUserID,
+			&payment.Notes,
+			&payment.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		payments = append(payments, payment)
+	}
+
+	return payments, nil
+}
+
+func (r *RentPaymentRepository) GetByFamilyMemberID(ctx context.Context, familyMemberID int) ([]*models.RentPayment, error) {
+	query := `
+		SELECT id, receipt_number, entry_id, family_member_id, COALESCE(family_member_name, ''),
+		       customer_name, customer_phone, total_rent, amount_paid, balance,
+		       payment_date, COALESCE(processed_by_user_id, 0), COALESCE(notes, ''), created_at
+		FROM rent_payments
+		WHERE family_member_id = $1
+		ORDER BY payment_date DESC
+	`
+
+	rows, err := r.DB.Query(ctx, query, familyMemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []*models.RentPayment
+	for rows.Next() {
+		payment := &models.RentPayment{}
+		err := rows.Scan(
+			&payment.ID,
+			&payment.ReceiptNumber,
+			&payment.EntryID,
+			&payment.FamilyMemberID,
+			&payment.FamilyMemberName,
 			&payment.CustomerName,
 			&payment.CustomerPhone,
 			&payment.TotalRent,
@@ -171,7 +223,8 @@ func (r *RentPaymentRepository) GetByPhone(ctx context.Context, phone string) ([
 func (r *RentPaymentRepository) List(ctx context.Context) ([]*models.RentPayment, error) {
 	// JOIN with users table to get employee name - eliminates N+1 queries
 	query := `
-		SELECT rp.id, rp.receipt_number, rp.entry_id, rp.customer_name, rp.customer_phone,
+		SELECT rp.id, rp.receipt_number, rp.entry_id, rp.family_member_id, COALESCE(rp.family_member_name, ''),
+		       rp.customer_name, rp.customer_phone,
 		       rp.total_rent, rp.amount_paid, rp.balance, rp.payment_date,
 		       COALESCE(rp.processed_by_user_id, 0), COALESCE(u.name, 'Unknown'),
 		       COALESCE(rp.notes, ''), rp.created_at
@@ -193,6 +246,8 @@ func (r *RentPaymentRepository) List(ctx context.Context) ([]*models.RentPayment
 			&payment.ID,
 			&payment.ReceiptNumber,
 			&payment.EntryID,
+			&payment.FamilyMemberID,
+			&payment.FamilyMemberName,
 			&payment.CustomerName,
 			&payment.CustomerPhone,
 			&payment.TotalRent,

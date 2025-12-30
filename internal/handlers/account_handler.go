@@ -34,6 +34,18 @@ type AccountHandler struct {
 	SettingsRepo    *repositories.SystemSettingRepository
 }
 
+// FamilyMemberAccount represents a family member's account within a customer
+type FamilyMemberAccount struct {
+	ID        int                   `json:"id,omitempty"`
+	Name      string                `json:"name"`
+	Quantity  int                   `json:"quantity"`
+	Rent      float64               `json:"rent"`
+	Paid      float64               `json:"paid"`
+	Balance   float64               `json:"balance"`
+	Thocks    []ThockInfo           `json:"thocks"`
+	Payments  []*models.RentPayment `json:"payments"`
+}
+
 // CustomerAccount represents a customer's complete account info
 type CustomerAccount struct {
 	Name          string                `json:"name"`
@@ -42,6 +54,7 @@ type CustomerAccount struct {
 	Village       string                `json:"village"`
 	Thocks        []ThockInfo           `json:"thocks"`
 	Payments      []*models.RentPayment `json:"payments"`
+	FamilyMembers []FamilyMemberAccount `json:"family_members"`
 	TotalQuantity int                   `json:"total_quantity"`
 	TotalRent     float64               `json:"total_rent"`
 	TotalPaid     float64               `json:"total_paid"`
@@ -350,6 +363,86 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 	var totalThocks, totalQty int
 
 	for _, customer := range customerMap {
+		// Group thocks by family member
+		familyMemberThocks := make(map[string][]ThockInfo)
+		familyMemberQty := make(map[string]int)
+		familyMemberRent := make(map[string]float64)
+
+		for _, thock := range customer.Thocks {
+			fmName := thock.FamilyMemberName
+			if fmName == "" {
+				fmName = customer.Name // Default to customer name if no family member
+			}
+			familyMemberThocks[fmName] = append(familyMemberThocks[fmName], thock)
+			if thock.Type == "incoming" {
+				familyMemberQty[fmName] += thock.Quantity
+				familyMemberRent[fmName] += thock.Rent
+			}
+		}
+
+		// Group payments by family member
+		familyMemberPayments := make(map[string][]*models.RentPayment)
+		familyMemberPaid := make(map[string]float64)
+
+		for _, payment := range customer.Payments {
+			fmName := payment.FamilyMemberName
+			if fmName == "" {
+				fmName = customer.Name // Default to customer name if no family member
+			}
+			familyMemberPayments[fmName] = append(familyMemberPayments[fmName], payment)
+			familyMemberPaid[fmName] += payment.AmountPaid
+		}
+
+		// Build family member accounts
+		familyMembers := make([]FamilyMemberAccount, 0)
+		processedFamilyMembers := make(map[string]bool)
+
+		// Process family members from thocks
+		for fmName := range familyMemberThocks {
+			processedFamilyMembers[fmName] = true
+			fmRent := familyMemberRent[fmName]
+			fmPaid := familyMemberPaid[fmName]
+			fmBalance := fmRent - fmPaid
+
+			familyMembers = append(familyMembers, FamilyMemberAccount{
+				Name:     fmName,
+				Quantity: familyMemberQty[fmName],
+				Rent:     fmRent,
+				Paid:     fmPaid,
+				Balance:  fmBalance,
+				Thocks:   familyMemberThocks[fmName],
+				Payments: familyMemberPayments[fmName],
+			})
+		}
+
+		// Add family members who only have payments (no thocks)
+		for fmName, payments := range familyMemberPayments {
+			if !processedFamilyMembers[fmName] {
+				fmPaid := familyMemberPaid[fmName]
+				familyMembers = append(familyMembers, FamilyMemberAccount{
+					Name:     fmName,
+					Quantity: 0,
+					Rent:     0,
+					Paid:     fmPaid,
+					Balance:  -fmPaid, // Overpaid
+					Thocks:   []ThockInfo{},
+					Payments: payments,
+				})
+			}
+		}
+
+		// Sort family members: those with balance first, then alphabetically
+		sort.Slice(familyMembers, func(i, j int) bool {
+			iHasDue := familyMembers[i].Balance > 0
+			jHasDue := familyMembers[j].Balance > 0
+			if iHasDue != jHasDue {
+				return iHasDue
+			}
+			return strings.ToLower(familyMembers[i].Name) < strings.ToLower(familyMembers[j].Name)
+		})
+
+		customer.FamilyMembers = familyMembers
+
 		// Balance = TotalRent + CreditValue - TotalPaid
 		// TotalRent = rent for items currently in storage
 		// CreditValue = rent for items taken out on credit (admin-approved debt)

@@ -330,6 +330,20 @@
                 <p class="text-3xl font-bold text-red-600" id="paymentTotalAmount">₹0</p>
             </div>
 
+            <!-- Family Member Selection -->
+            <div class="mb-6" id="familyMemberSection" style="display: none;">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Pay for Family Member *
+                </label>
+                <select id="paymentFamilyMember" class="w-full neu-input" onchange="updatePaymentForFamilyMember()">
+                    <option value="">-- Select Family Member --</option>
+                </select>
+                <div id="familyMemberBalance" class="mt-2 p-2 bg-yellow-50 border-2 border-yellow-200 hidden">
+                    <p class="text-sm text-gray-600">Selected Member Balance</p>
+                    <p class="text-xl font-bold text-red-600" id="selectedMemberBalance">₹0</p>
+                </div>
+            </div>
+
             <div class="mb-6">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     Payment Amount *
@@ -778,6 +792,16 @@
                         type: t.type
                     })),
                     payments: customer.payments || [],
+                    familyMembers: (customer.family_members || []).map(fm => ({
+                        id: fm.id,
+                        name: fm.name,
+                        quantity: fm.quantity,
+                        rent: fm.rent,
+                        paid: fm.paid,
+                        balance: fm.balance,
+                        thocks: fm.thocks || [],
+                        payments: fm.payments || []
+                    })),
                     totalQuantity: customer.total_quantity,
                     totalRent: customer.total_rent,
                     totalPaid: customer.total_paid,
@@ -997,6 +1021,32 @@
                                         <p class="text-xl font-bold text-red-600">₹${customer.balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</p>
                                     </div>
                                 </div>
+
+                                ${customer.familyMembers && customer.familyMembers.length > 1 ? `
+                                <div class="mb-4 p-3 bg-purple-50 border-2 border-purple-300">
+                                    <h4 class="font-bold text-purple-800 mb-2 flex items-center gap-2">
+                                        <i class="bi bi-people-fill"></i> Family Member Balances
+                                    </h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        ${customer.familyMembers.map(fm => `
+                                            <div class="p-2 ${fm.balance > 0 ? 'bg-red-100 border-red-300' : 'bg-green-100 border-green-300'} border-2 rounded flex justify-between items-center">
+                                                <div>
+                                                    <p class="font-bold text-sm">${capitalizeText(fm.name)}</p>
+                                                    <p class="text-xs text-gray-600">${fm.quantity} items | ₹${fm.rent.toLocaleString('en-IN')}</p>
+                                                    <p class="text-sm ${fm.balance > 0 ? 'text-red-600' : 'text-green-600'} font-bold">
+                                                        ${fm.balance > 0 ? 'Due: ₹' + fm.balance.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '✓ Paid'}
+                                                    </p>
+                                                </div>
+                                                ${fm.balance > 0 ? `
+                                                    <button onclick="openPaymentModal('${customer.phone}', '${fm.name.replace(/'/g, "\\'")}')" class="text-xs neu-button bg-green-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;">
+                                                        <i class="bi bi-cash"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
 
                             <div class="flex flex-col gap-2">
@@ -1254,7 +1304,9 @@
             document.getElementById('totalCollected').textContent = '₹' + totalCollected.toLocaleString('en-IN', {minimumFractionDigits: 2});
         }
 
-        function openPaymentModal(phone) {
+        let selectedFamilyMember = null;
+
+        function openPaymentModal(phone, familyMemberName = null) {
             currentPaymentCustomer = allCustomerAccounts.find(c => c.phone === phone);
             if (!currentPaymentCustomer) {
                 alert('Customer not found');
@@ -1269,7 +1321,52 @@
             // Reset payment method to Cash
             selectPaymentMethod('cash');
 
+            // Populate family members dropdown if multiple exist
+            const familyMemberSection = document.getElementById('familyMemberSection');
+            const familyMemberSelect = document.getElementById('paymentFamilyMember');
+            const familyMembers = currentPaymentCustomer.familyMembers || [];
+
+            if (familyMembers.length > 1) {
+                familyMemberSection.style.display = 'block';
+                familyMemberSelect.innerHTML = '<option value="">-- Pay for Entire Account --</option>' +
+                    familyMembers.filter(fm => fm.balance > 0).map(fm =>
+                        `<option value="${escapeHtml(fm.name)}" ${familyMemberName === fm.name ? 'selected' : ''}>
+                            ${capitalizeText(fm.name)} - ₹${fm.balance.toLocaleString('en-IN', {minimumFractionDigits: 2})} due
+                        </option>`
+                    ).join('');
+
+                // Pre-select if familyMemberName was provided
+                if (familyMemberName) {
+                    familyMemberSelect.value = familyMemberName;
+                    updatePaymentForFamilyMember();
+                } else {
+                    selectedFamilyMember = null;
+                    document.getElementById('familyMemberBalance').classList.add('hidden');
+                }
+            } else {
+                familyMemberSection.style.display = 'none';
+                selectedFamilyMember = null;
+            }
+
             document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function updatePaymentForFamilyMember() {
+            const familyMemberName = document.getElementById('paymentFamilyMember').value;
+            const familyMembers = currentPaymentCustomer.familyMembers || [];
+            const balanceDiv = document.getElementById('familyMemberBalance');
+
+            if (familyMemberName) {
+                selectedFamilyMember = familyMembers.find(fm => fm.name === familyMemberName);
+                if (selectedFamilyMember) {
+                    document.getElementById('selectedMemberBalance').textContent =
+                        '₹' + selectedFamilyMember.balance.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    balanceDiv.classList.remove('hidden');
+                }
+            } else {
+                selectedFamilyMember = null;
+                balanceDiv.classList.add('hidden');
+            }
         }
 
         function selectPaymentMethod(method) {
@@ -1289,6 +1386,7 @@
         function closePaymentModal() {
             document.getElementById('paymentModal').classList.add('hidden');
             currentPaymentCustomer = null;
+            selectedFamilyMember = null;
             // Reset button state when modal closes
             const btn = document.getElementById('collectPaymentBtn');
             if (btn) {
@@ -1317,8 +1415,9 @@
                 return;
             }
 
-            if (amount > currentPaymentCustomer.balance) {
-                if (!confirm(`Payment amount (₹${amount}) is more than balance (₹${currentPaymentCustomer.balance.toFixed(2)}). Continue?`)) {
+            const relevantBalanceForCheck = selectedFamilyMember ? selectedFamilyMember.balance : currentPaymentCustomer.balance;
+            if (amount > relevantBalanceForCheck) {
+                if (!confirm(`Payment amount (₹${amount}) is more than balance (₹${relevantBalanceForCheck.toFixed(2)}). Continue?`)) {
                     return;
                 }
             }
@@ -1339,18 +1438,29 @@
                 // Get first entry ID for this customer
                 const entryId = currentPaymentCustomer.thocks[0].id;
 
-                // Calculate new balance
-                const newBalance = currentPaymentCustomer.balance - amount;
+                // Calculate new balance based on whether paying for family member or entire account
+                const relevantBalance = selectedFamilyMember ? selectedFamilyMember.balance : currentPaymentCustomer.balance;
+                const newBalance = relevantBalance - amount;
 
                 const paymentData = {
                     entry_id: entryId,
                     customer_name: currentPaymentCustomer.name,
                     customer_phone: currentPaymentCustomer.phone,
-                    total_rent: currentPaymentCustomer.totalRent,
+                    total_rent: selectedFamilyMember ? selectedFamilyMember.rent : currentPaymentCustomer.totalRent,
                     amount_paid: amount,
                     balance: newBalance < 0 ? 0 : newBalance,
                     notes: `${paymentMethod.toUpperCase()}${remark ? ' - ' + remark : ''}`
                 };
+
+                // Add family member info if selected
+                if (selectedFamilyMember) {
+                    paymentData.family_member_name = selectedFamilyMember.name;
+                    // Find family member ID from thocks
+                    const fmThock = currentPaymentCustomer.thocks.find(t => t.family_member_name === selectedFamilyMember.name);
+                    if (fmThock && fmThock.id) {
+                        // We need the family_member_id not entry_id - this will be handled by backend
+                    }
+                }
 
                 console.log('Creating payment with data:', paymentData);
 
