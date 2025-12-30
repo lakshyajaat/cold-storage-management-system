@@ -53,14 +53,24 @@ type ThockInfo struct {
 	RentPerItem       float64 `json:"rent_per_item"`
 }
 
+// PaymentInfo represents a payment for the customer dashboard
+type PaymentInfo struct {
+	ID          int     `json:"id"`
+	Amount      float64 `json:"amount"`
+	PaymentDate string  `json:"payment_date"`
+	ThockNumber string  `json:"thock_number,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+}
+
 // DashboardData represents the complete customer dashboard
 type DashboardData struct {
-	Customer    *models.Customer         `json:"customer"`
-	Trucks      []ThockInfo              `json:"trucks"`
-	GatePasses  []map[string]interface{} `json:"gate_passes"`
-	TotalRent   float64                  `json:"total_rent"`
-	TotalPaid   float64                  `json:"total_paid"`
-	TotalBalance float64                 `json:"total_balance"`
+	Customer     *models.Customer         `json:"customer"`
+	Trucks       []ThockInfo              `json:"trucks"`
+	GatePasses   []map[string]interface{} `json:"gate_passes"`
+	Payments     []PaymentInfo            `json:"payments"`
+	TotalRent    float64                  `json:"total_rent"`
+	TotalPaid    float64                  `json:"total_paid"`
+	TotalBalance float64                  `json:"total_balance"`
 }
 
 // GetDashboardData returns all dashboard data for a customer
@@ -194,10 +204,42 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		gatePasses = []map[string]interface{}{}
 	}
 
+	// Get recent payments for this customer
+	var payments []PaymentInfo
+	if s.RentPaymentRepo != nil {
+		rentPayments, err := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
+		if err == nil && rentPayments != nil {
+			// Create a map of entry_id to thock_number for lookup
+			entryThockMap := make(map[int]string)
+			for _, truck := range trucks {
+				// Find entry by thock number
+				entry, _ := s.EntryRepo.GetByThockNumber(ctx, truck.ThockNumber)
+				if entry != nil {
+					entryThockMap[entry.ID] = truck.ThockNumber
+				}
+			}
+
+			for _, rp := range rentPayments {
+				thockNumber := ""
+				if rp.EntryID > 0 {
+					thockNumber = entryThockMap[rp.EntryID]
+				}
+				payments = append(payments, PaymentInfo{
+					ID:          rp.ID,
+					Amount:      rp.AmountPaid,
+					PaymentDate: rp.PaymentDate.Format("2006-01-02"),
+					ThockNumber: thockNumber,
+					CreatedAt:   rp.CreatedAt.Format("2006-01-02T15:04:05Z"),
+				})
+			}
+		}
+	}
+
 	return &DashboardData{
 		Customer:     customer,
 		Trucks:       trucks,
 		GatePasses:   gatePasses,
+		Payments:     payments,
 		TotalRent:    totalRent,
 		TotalPaid:    totalPaid,
 		TotalBalance: totalBalance,

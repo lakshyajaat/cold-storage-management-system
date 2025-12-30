@@ -6,187 +6,625 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png?v=2">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f8fafb">
     <title data-i18n-page-title="page_title_customer_dashboard">Customer Dashboard</title>
     <link href="/static/css/tailwind.min.css" rel="stylesheet">
     <link href="/static/css/arbitrary.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/bootstrap-icons.min.css">
     <style>
-        .lang-selector {
-            border: 2px solid #667eea;
-            background: linear-gradient(145deg, #667eea, #764ba2);
-            color: white;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-weight: 600;
-            cursor: pointer;
+        :root {
+            --primary: #4a90a4;
+            --primary-light: #e8f4f8;
+            --secondary: #5cb85c;
+            --secondary-light: #e8f5e9;
+            --accent: #f5a623;
+            --accent-light: #fff8e7;
+            --light: #f8fafb;
+            --dark: #2c3e50;
+            --white: #ffffff;
+            --text-muted: #6c7a89;
+            --border-color: #e0e6ed;
+            --seed-color: #5cb85c;
+            --seed-light: #e8f5e9;
+            --sell-color: #e74c3c;
+            --sell-light: #fdeaea;
         }
-        .lang-selector:hover {
-            opacity: 0.9;
-        }
-        .lang-selector option {
-            background: white;
-            color: #333;
-        }
-    </style>
-    <style>
+
+        * { box-sizing: border-box; }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--light);
             min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
         }
-        .neu-card {
-            background: #ffffff;
-            border-radius: 15px;
-            box-shadow: 10px 10px 30px rgba(0,0,0,0.1), -10px -10px 30px rgba(255,255,255,0.5);
-            padding: 20px;
-            margin-bottom: 20px;
+
+        /* Header */
+        .header {
+            background: var(--white);
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .neu-button {
-            background: linear-gradient(145deg, #667eea, #764ba2);
-            border-radius: 8px;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .user-info h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .user-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .lang-btn, .logout-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
             border: none;
-            padding: 10px 20px;
-            color: white;
+            cursor: pointer;
+        }
+
+        .lang-btn {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border-color);
+        }
+
+        .logout-btn {
+            background: var(--sell-light);
+            color: var(--sell-color);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        /* Summary Stats */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .summary-item {
+            padding: 0.75rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .summary-item.rent { background: var(--primary-light); }
+        .summary-item.paid { background: var(--secondary-light); }
+        .summary-item.balance { background: var(--accent-light); }
+
+        .summary-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .summary-item.rent .summary-value { color: var(--primary); }
+        .summary-item.paid .summary-value { color: var(--secondary); }
+        .summary-item.balance .summary-value { color: var(--accent); }
+
+        .balance-due { color: var(--sell-color) !important; }
+        .balance-advance { color: var(--secondary) !important; }
+
+        /* Truck Cards */
+        .truck-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .truck-card {
+            background: var(--light);
+            border-radius: 14px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .truck-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .truck-number {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .truck-category {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .category-seed {
+            background: var(--seed-light);
+            color: var(--seed-color);
+        }
+
+        .category-sell {
+            background: var(--sell-light);
+            color: var(--sell-color);
+        }
+
+        .truck-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .truck-stat {
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--white);
+            border-radius: 8px;
+        }
+
+        .truck-stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .truck-stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .truck-stat-value.can-take {
+            color: var(--secondary);
+        }
+
+        .truck-balance {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .truck-balance-amount {
+            font-weight: 700;
+        }
+
+        .truck-balance-amount.due { color: var(--sell-color); }
+        .truck-balance-amount.paid { color: var(--secondary); }
+
+        .request-btn {
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
         }
-        .neu-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.25);
-        }
-        .neu-input {
-            background: #f0f0f0;
-            border-radius: 8px;
-            box-shadow: inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff;
-            border: none;
-            padding: 10px 14px;
-            width: 100%;
-        }
-        .status-badge {
-            padding: 4px 12px;
+
+        /* Family Member Header */
+        .family-header {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary-light) 100%);
+            padding: 0.75rem 1rem;
             border-radius: 12px;
-            font-size: 12px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .family-name {
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .family-name i {
+            color: var(--primary);
+        }
+
+        .family-stats {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Gate Pass Form */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--light);
+            color: var(--dark);
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(74, 144, 164, 0.3);
+        }
+
+        /* Payments Section */
+        .payment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--light);
+            border-radius: 10px;
+        }
+
+        .payment-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .payment-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .payment-thock {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .payment-amount {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        /* Gate Pass History */
+        .gp-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .gp-item {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 0.75rem;
+        }
+
+        .gp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .gp-thock {
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .gp-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
             font-weight: 600;
         }
+
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-approved { background: #dbeafe; color: #1e40af; }
         .status-completed { background: #d1fae5; color: #065f46; }
         .status-expired { background: #fee2e2; color: #991b1b; }
         .status-partially_completed { background: #fed7aa; color: #9a3412; }
+
+        .gp-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .gp-detail-label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .gp-detail-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .gp-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+
+        /* Desktop Styles */
+        @media (min-width: 768px) {
+            .main-container {
+                padding: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .summary-grid {
+                gap: 1rem;
+            }
+
+            .summary-item {
+                padding: 1.25rem;
+            }
+
+            .summary-label {
+                font-size: 0.85rem;
+            }
+
+            .summary-value {
+                font-size: 1.5rem;
+            }
+
+            .truck-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .gp-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .payment-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .form-grid .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .truck-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .hidden { display: none !important; }
     </style>
     <script src="/static/js/theme.js"></script>
 </head>
-<body class="p-3 md:p-4">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="neu-card mb-4 md:mb-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <div>
-                    <h1 class="text-xl md:text-2xl font-bold text-gray-800"><span data-i18n="welcome">Welcome</span>, <span id="customerName"></span></h1>
-                    <p class="text-gray-600 text-sm md:text-base"><span data-i18n="phone">Phone</span>: <span id="customerPhone"></span></p>
-                </div>
-                <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
-                    <select id="langSelector" onchange="i18n.setLanguage(this.value)"
-                            class="lang-selector px-3 py-2 text-sm font-medium cursor-pointer">
-                        <option value="en">EN</option>
-                        <option value="hi">हिं</option>
-                    </select>
-                <!-- Theme Toggle -->
-                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-3 py-2" title="Toggle Dark Mode">
-                    <i class="bi bi-moon-fill theme-icon-moon"></i>
-                    <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="user-info">
+                <h1><span data-i18n="welcome">Welcome</span>, <span id="customerName"></span></h1>
+                <p><i class="bi bi-telephone"></i> <span id="customerPhone"></span></p>
+            </div>
+            <div class="header-actions">
+                <select id="langSelector" onchange="i18n.setLanguage(this.value)" class="lang-btn">
+                    <option value="en">EN</option>
+                    <option value="hi">हिं</option>
+                </select>
+                <button onclick="logout()" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
                 </button>
-                <!-- Fullscreen Toggle (Tablets) -->
-                    <button onclick="logout()" class="neu-button bg-red-500 text-sm md:text-base" data-i18n="logout">Logout</button>
-                </div>
             </div>
         </div>
+    </div>
 
+    <div class="main-container">
         <!-- Payment Summary -->
-        <div class="neu-card">
-            <h2 class="text-lg md:text-xl font-bold mb-3 md:mb-4 text-gray-800" data-i18n="payment_summary">Payment Summary</h2>
-            <div class="grid grid-cols-3 gap-2 md:gap-4">
-                <div class="p-2 md:p-4 bg-blue-50 rounded-lg">
-                    <p class="text-xs md:text-sm text-gray-600" data-i18n="total_rent">Total Rent</p>
-                    <p class="text-lg md:text-2xl font-bold text-blue-600">₹<span id="totalRent">0</span></p>
+        <div class="card">
+            <div class="card-title">
+                <i class="bi bi-wallet2"></i>
+                <span data-i18n="payment_summary">Payment Summary</span>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-item rent">
+                    <div class="summary-label" data-i18n="total_rent">Total Rent</div>
+                    <div class="summary-value">₹<span id="totalRent">0</span></div>
                 </div>
-                <div class="p-2 md:p-4 bg-green-50 rounded-lg">
-                    <p class="text-xs md:text-sm text-gray-600" data-i18n="total_paid">Total Paid</p>
-                    <p class="text-lg md:text-2xl font-bold text-green-600">₹<span id="totalPaid">0</span></p>
+                <div class="summary-item paid">
+                    <div class="summary-label" data-i18n="total_paid">Total Paid</div>
+                    <div class="summary-value">₹<span id="totalPaid">0</span></div>
                 </div>
-                <div class="p-2 md:p-4 bg-orange-50 rounded-lg">
-                    <p class="text-xs md:text-sm text-gray-600" data-i18n="balance">Balance</p>
-                    <p class="text-lg md:text-2xl font-bold" id="balanceAmount">₹<span id="totalBalance">0</span></p>
+                <div class="summary-item balance">
+                    <div class="summary-label" data-i18n="balance">Balance</div>
+                    <div class="summary-value" id="balanceAmount">₹<span id="totalBalance">0</span></div>
                 </div>
             </div>
         </div>
 
-        <!-- Trucks List (Grouped by Family Member) -->
-        <div class="neu-card">
-            <h2 class="text-lg md:text-xl font-bold mb-3 md:mb-4 text-gray-800" data-i18n="your_trucks">Your Trucks</h2>
-            <div id="trucksContainer">
-                <!-- Trucks grouped by family member will be loaded here -->
+        <!-- Trucks List -->
+        <div class="card">
+            <div class="card-title">
+                <i class="bi bi-truck"></i>
+                <span data-i18n="your_trucks">Your Trucks</span>
+            </div>
+            <div id="trucksContainer" class="truck-list">
+                <!-- Trucks will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="card">
+            <div class="card-title">
+                <i class="bi bi-cash-stack"></i>
+                <span data-i18n="recent_payments">Recent Payments</span>
+            </div>
+            <div id="paymentsContainer" class="payment-list">
+                <!-- Payments will be loaded here -->
             </div>
         </div>
 
         <!-- Gate Pass Request Form -->
-        <div class="neu-card">
-            <h2 class="text-lg md:text-xl font-bold mb-3 md:mb-4 text-gray-800" data-i18n="request_gate_pass">Request Gate Pass</h2>
-            <form id="gatePassForm" onsubmit="submitGatePassRequest(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                <div>
-                    <label class="block font-semibold mb-2 text-sm md:text-base" data-i18n="select_truck">Select Truck</label>
-                    <select id="thockSelect" class="neu-input" required>
-                        <option value="" data-i18n="select_truck_option">-- Select Truck --</option>
-                    </select>
-                <!-- Theme Toggle -->
-                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-3 py-2" title="Toggle Dark Mode">
-                    <i class="bi bi-moon-fill theme-icon-moon"></i>
-                    <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
-                </button>
-                <!-- Fullscreen Toggle (Tablets) -->
-                </div>
-                <div>
-                    <label class="block font-semibold mb-2 text-sm md:text-base" data-i18n="quantity">Quantity</label>
-                    <input type="number" id="quantity" class="neu-input" min="1" required>
-                    <p class="text-xs text-gray-500 mt-1"><span data-i18n="max">Max</span>: <span id="maxQuantity">0</span></p>
-                </div>
-                <div>
-                    <label class="block font-semibold mb-2 text-sm md:text-base" data-i18n="recipient_name_required">Recipient Name *</label>
-                    <input type="text" id="recipientName" class="neu-input" data-i18n-placeholder="who_will_receive" placeholder="Who will receive items" required>
-                </div>
-                <div>
-                    <label class="block font-semibold mb-2 text-sm md:text-base" data-i18n="remarks_optional">Remarks (optional)</label>
-                    <input type="text" id="remarks" class="neu-input" data-i18n-placeholder="add_any_notes" placeholder="Add any notes">
-                </div>
-                <div class="md:col-span-2 lg:col-span-4">
-                    <button type="submit" class="neu-button w-full" data-i18n="submit_request">Submit Request</button>
+        <div class="card">
+            <div class="card-title">
+                <i class="bi bi-file-earmark-plus"></i>
+                <span data-i18n="request_gate_pass">Request Gate Pass</span>
+            </div>
+            <form id="gatePassForm" onsubmit="submitGatePassRequest(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="select_truck">Select Truck</label>
+                        <select id="thockSelect" class="form-select" required>
+                            <option value="" data-i18n="select_truck_option">-- Select Truck --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="quantity">Quantity</label>
+                        <input type="number" id="quantity" class="form-input" min="1" inputmode="numeric" required>
+                        <p class="form-hint"><span data-i18n="max">Max</span>: <span id="maxQuantity">0</span></p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="recipient_name_required">Recipient Name *</label>
+                        <input type="text" id="recipientName" class="form-input" data-i18n-placeholder="who_will_receive" placeholder="Who will receive items" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="remarks_optional">Remarks (optional)</label>
+                        <input type="text" id="remarks" class="form-input" data-i18n-placeholder="add_any_notes" placeholder="Add any notes">
+                    </div>
+                    <div class="form-group full-width">
+                        <button type="submit" class="submit-btn" data-i18n="submit_request">Submit Request</button>
+                    </div>
                 </div>
             </form>
         </div>
 
         <!-- Gate Pass History -->
-        <div class="neu-card">
-            <h2 class="text-lg md:text-xl font-bold mb-3 md:mb-4 text-gray-800" data-i18n="gate_pass_history">Gate Pass History</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[600px] text-sm md:text-base">
-                    <thead>
-                        <tr class="border-b-2">
-                            <th class="text-left p-2" data-i18n="date">Date</th>
-                            <th class="text-left p-2" data-i18n="truck">Truck</th>
-                            <th class="text-left p-2" data-i18n="recipient">Recipient</th>
-                            <th class="text-left p-2" data-i18n="requested">Requested</th>
-                            <th class="text-left p-2" data-i18n="approved">Approved</th>
-                            <th class="text-left p-2" data-i18n="picked_up">Picked Up</th>
-                            <th class="text-left p-2" data-i18n="status">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gatePassHistory">
-                        <!-- History will be loaded here -->
-                    </tbody>
-                </table>
+        <div class="card">
+            <div class="card-title">
+                <i class="bi bi-clock-history"></i>
+                <span data-i18n="gate_pass_history">Gate Pass History</span>
+            </div>
+            <div id="gatePassHistory" class="gp-list">
+                <!-- History will be loaded here -->
             </div>
         </div>
     </div>
@@ -197,11 +635,9 @@
 
     <script>
         let dashboardData = null;
-        let selectedThockData = null;
 
         // Check authentication after i18n is ready
         window.addEventListener('load', async function() {
-            // Wait for i18n to initialize
             await i18n.init();
             checkAuth();
         });
@@ -212,7 +648,6 @@
                 window.location.href = '/login';
                 return;
             }
-
             await loadDashboard();
         }
 
@@ -220,9 +655,7 @@
             try {
                 const token = localStorage.getItem('customer_token');
                 const response = await fetch('/api/dashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (!response.ok) {
@@ -231,18 +664,27 @@
                         window.location.href = '/login';
                         return;
                     }
-                    throw new Error(i18n.t('failed_load_dashboard', 'Failed to load dashboard'));
+                    throw new Error('Failed to load dashboard');
                 }
 
                 dashboardData = await response.json();
                 renderDashboard();
             } catch (error) {
                 console.error('Error:', error);
-                // Only show alert on initial load, not on silent auto-refresh
                 if (!silent) {
                     alert(i18n.t('failed_load_dashboard_data', 'Failed to load dashboard data'));
                 }
             }
+        }
+
+        function getCategoryLabel(category) {
+            const lang = localStorage.getItem('lang') || 'en';
+            if (category === 'seed') {
+                return lang === 'hi' ? 'बीज' : 'SEED';
+            } else if (category === 'sell') {
+                return lang === 'hi' ? 'बिक्री' : 'SELL';
+            }
+            return category || '-';
         }
 
         function renderDashboard() {
@@ -251,29 +693,50 @@
             document.getElementById('customerPhone').textContent = dashboardData.customer.phone;
 
             // Payment summary
-            document.getElementById('totalRent').textContent = dashboardData.total_rent.toFixed(2);
-            document.getElementById('totalPaid').textContent = dashboardData.total_paid.toFixed(2);
-            document.getElementById('totalBalance').textContent = Math.abs(dashboardData.total_balance).toFixed(2);
+            document.getElementById('totalRent').textContent = formatNumber(dashboardData.total_rent);
+            document.getElementById('totalPaid').textContent = formatNumber(dashboardData.total_paid);
+            document.getElementById('totalBalance').textContent = formatNumber(Math.abs(dashboardData.total_balance));
 
             const balanceEl = document.getElementById('balanceAmount');
             if (dashboardData.total_balance > 0) {
-                balanceEl.className = 'text-2xl font-bold text-red-600';
-                balanceEl.innerHTML = '₹' + dashboardData.total_balance.toFixed(2) + ' (' + i18n.t('due', 'Due') + ')';
+                balanceEl.classList.add('balance-due');
+                balanceEl.classList.remove('balance-advance');
+                balanceEl.innerHTML = '₹' + formatNumber(dashboardData.total_balance) + ' <small>(' + i18n.t('due', 'Due') + ')</small>';
             } else if (dashboardData.total_balance < 0) {
-                balanceEl.className = 'text-2xl font-bold text-green-600';
-                balanceEl.innerHTML = '₹' + Math.abs(dashboardData.total_balance).toFixed(2) + ' (' + i18n.t('advance', 'Advance') + ')';
+                balanceEl.classList.add('balance-advance');
+                balanceEl.classList.remove('balance-due');
+                balanceEl.innerHTML = '₹' + formatNumber(Math.abs(dashboardData.total_balance)) + ' <small>(' + i18n.t('advance', 'Advance') + ')</small>';
             }
 
-            // Trucks grouped by family member
+            // Render trucks
+            renderTrucks();
+
+            // Render payments
+            renderPayments();
+
+            // Render gate pass history
+            renderGatePassHistory();
+        }
+
+        function renderTrucks() {
             const trucksContainer = document.getElementById('trucksContainer');
             const thockSelect = document.getElementById('thockSelect');
             trucksContainer.innerHTML = '';
             thockSelect.innerHTML = '<option value="">' + i18n.t('select_truck_option', '-- Select Truck --') + '</option>';
 
-            const requestPassText = i18n.t('request_pass', 'Request Pass');
             const maxText = i18n.t('max', 'Max');
 
-            // Group trucks by family member
+            if (!dashboardData.trucks || dashboardData.trucks.length === 0) {
+                trucksContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-truck"></i>
+                        <p>${i18n.t('no_trucks_found', 'No trucks found')}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by family member
             const groupedTrucks = {};
             dashboardData.trucks.forEach(truck => {
                 const memberName = truck.family_member_name || dashboardData.customer.name || 'Unknown';
@@ -282,142 +745,164 @@
                 }
                 groupedTrucks[memberName].push(truck);
 
-                // Add to select dropdown
                 thockSelect.innerHTML += `<option value="${truck.thock_number}" data-max="${truck.can_take_out}">
                     ${truck.thock_number} (${maxText}: ${truck.can_take_out})
                 </option>`;
             });
 
-            // Render each family member section
             const memberNames = Object.keys(groupedTrucks);
-            if (memberNames.length === 0) {
-                trucksContainer.innerHTML = '<p class="text-gray-500 text-center p-4">' + i18n.t('no_trucks_found', 'No trucks found') + '</p>';
-            } else if (memberNames.length === 1) {
-                // Only one family member - no need for grouping
-                trucksContainer.innerHTML = renderTrucksTable(groupedTrucks[memberNames[0]]);
-            } else {
-                // Multiple family members - show grouped sections
-                memberNames.forEach((memberName, index) => {
-                    const trucks = groupedTrucks[memberName];
-                    const memberBalance = trucks.reduce((sum, t) => sum + t.balance, 0);
-                    const memberTotal = trucks.reduce((sum, t) => sum + t.current_inventory, 0);
 
-                    const sectionHtml = `
-                        <div class="mb-4">
-                            <div class="flex justify-between items-center p-3 bg-gradient-to-r from-purple-100 to-blue-100 rounded-t-lg cursor-pointer"
-                                 onclick="toggleFamilySection('family-${index}')">
-                                <div class="flex items-center gap-2">
-                                    <i class="bi bi-person-fill text-purple-600"></i>
-                                    <span class="font-bold text-gray-800">${memberName}</span>
-                                    <span class="text-sm text-gray-600">(${trucks.length} ${i18n.t('trucks', 'trucks')}, ${memberTotal} ${i18n.t('qty', 'qty')})</span>
+            memberNames.forEach((memberName, index) => {
+                const trucks = groupedTrucks[memberName];
+
+                // Show family header only if multiple members
+                if (memberNames.length > 1) {
+                    const memberTotal = trucks.reduce((sum, t) => sum + t.current_inventory, 0);
+                    trucksContainer.innerHTML += `
+                        <div class="family-header" style="grid-column: 1 / -1;">
+                            <div class="family-name">
+                                <i class="bi bi-person-fill"></i>
+                                ${memberName}
+                            </div>
+                            <div class="family-stats">${trucks.length} ${i18n.t('trucks', 'trucks')} | ${memberTotal} ${i18n.t('qty', 'qty')}</div>
+                        </div>
+                    `;
+                }
+
+                // Render each truck card
+                trucks.forEach(truck => {
+                    const category = truck.thock_category || '';
+                    const categoryClass = category === 'seed' ? 'category-seed' : category === 'sell' ? 'category-sell' : '';
+                    const categoryLabel = getCategoryLabel(category);
+
+                    const balanceClass = truck.balance > 0 ? 'due' : 'paid';
+                    const balanceLabel = truck.balance > 0 ? i18n.t('due', 'Due') : i18n.t('paid', 'Paid');
+
+                    trucksContainer.innerHTML += `
+                        <div class="truck-card">
+                            <div class="truck-header">
+                                <div class="truck-number">${truck.thock_number}</div>
+                                ${category ? `<span class="truck-category ${categoryClass}">${categoryLabel}</span>` : ''}
+                            </div>
+                            <div class="truck-stats">
+                                <div class="truck-stat">
+                                    <div class="truck-stat-label">${i18n.t('stored', 'Stored')}</div>
+                                    <div class="truck-stat-value">${truck.expected_quantity}</div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="${memberBalance > 0 ? 'text-red-600' : 'text-green-600'} font-semibold">
-                                        ₹${Math.abs(memberBalance).toFixed(2)}
-                                    </span>
-                                    <i class="bi bi-chevron-down transition-transform" id="chevron-${index}"></i>
+                                <div class="truck-stat">
+                                    <div class="truck-stat-label">${i18n.t('current', 'Current')}</div>
+                                    <div class="truck-stat-value">${truck.current_inventory}</div>
+                                </div>
+                                <div class="truck-stat">
+                                    <div class="truck-stat-label">${i18n.t('can_take', 'Can Take')}</div>
+                                    <div class="truck-stat-value can-take">${truck.can_take_out}</div>
                                 </div>
                             </div>
-                            <div id="family-${index}" class="overflow-x-auto border border-t-0 rounded-b-lg">
-                                ${renderTrucksTable(trucks)}
+                            <div class="truck-balance">
+                                <div>
+                                    <span class="truck-balance-amount ${balanceClass}">₹${formatNumber(Math.abs(truck.balance))}</span>
+                                    <small style="color: var(--text-muted)">${balanceLabel}</small>
+                                </div>
+                                <button onclick="selectThock('${truck.thock_number}', ${truck.can_take_out})" class="request-btn">
+                                    ${i18n.t('request', 'Request')}
+                                </button>
                             </div>
                         </div>
                     `;
-                    trucksContainer.innerHTML += sectionHtml;
                 });
+            });
+        }
+
+        function renderPayments() {
+            const container = document.getElementById('paymentsContainer');
+
+            // Get payments from dashboard data
+            const payments = dashboardData.payments || [];
+
+            if (payments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-cash-stack"></i>
+                        <p>${i18n.t('no_payments_yet', 'No payments recorded yet')}</p>
+                    </div>
+                `;
+                return;
             }
 
-            function renderTrucksTable(trucks) {
-                let rows = trucks.map(truck => {
-                    const qtyDisplay = truck.expected_quantity !== truck.current_inventory
-                        ? `${truck.expected_quantity} → ${truck.current_inventory}`
-                        : truck.current_inventory;
-                    return `
-                        <tr class="border-b">
-                            <td class="p-2 font-semibold">${truck.thock_number}</td>
-                            <td class="p-2">${qtyDisplay}</td>
-                            <td class="p-2">${truck.current_inventory}</td>
-                            <td class="p-2 font-bold text-green-600">${truck.can_take_out}</td>
-                            <td class="p-2 ${truck.balance > 0 ? 'text-red-600' : 'text-green-600'}">
-                                ₹${Math.abs(truck.balance).toFixed(2)}
-                            </td>
-                            <td class="p-2">
-                                <button onclick="selectThock('${truck.thock_number}', ${truck.can_take_out})"
-                                        class="text-blue-600 hover:underline text-sm">
-                                    ${requestPassText}
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+            container.innerHTML = payments.slice(0, 10).map(payment => {
+                const date = new Date(payment.payment_date || payment.created_at).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
 
                 return `
-                    <table class="w-full min-w-[500px] text-sm md:text-base">
-                        <thead>
-                            <tr class="border-b-2 bg-gray-50">
-                                <th class="text-left p-2" data-i18n="truck_number">Truck Number</th>
-                                <th class="text-left p-2" data-i18n="expected_qty">Expected Qty</th>
-                                <th class="text-left p-2" data-i18n="current_stock">Current Stock</th>
-                                <th class="text-left p-2" data-i18n="can_take_out">Can Take Out</th>
-                                <th class="text-left p-2" data-i18n="balance">Balance</th>
-                                <th class="text-left p-2" data-i18n="action">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
+                    <div class="payment-item">
+                        <div class="payment-info">
+                            <span class="payment-date">${date}</span>
+                            <span class="payment-thock">${payment.thock_number || i18n.t('general', 'General')}</span>
+                        </div>
+                        <div class="payment-amount">+₹${formatNumber(payment.amount)}</div>
+                    </div>
                 `;
+            }).join('');
+        }
+
+        function renderGatePassHistory() {
+            const container = document.getElementById('gatePassHistory');
+
+            if (!dashboardData.gate_passes || dashboardData.gate_passes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-file-earmark"></i>
+                        <p>${i18n.t('no_gate_pass_requests', 'No gate pass requests yet')}</p>
+                    </div>
+                `;
+                return;
             }
 
-            // Gate pass history
-            const historyTable = document.getElementById('gatePassHistory');
-            historyTable.innerHTML = '';
-
-            dashboardData.gate_passes.forEach(gp => {
-                const date = new Date(gp.issued_at).toLocaleDateString('en-IN');
+            container.innerHTML = dashboardData.gate_passes.map(gp => {
+                const date = new Date(gp.issued_at).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short'
+                });
                 const statusClass = `status-${gp.status.replace(/ /g, '_')}`;
-
-                // Translate status
                 const statusText = i18n.t(gp.status.replace(/ /g, '_'), gp.status);
 
-                // Extract recipient from remarks (format: "Recipient: Name | ...")
                 let recipient = '-';
                 if (gp.remarks) {
                     const match = gp.remarks.match(/Recipient:\s*([^|]+)/i);
                     if (match) recipient = match[1].trim();
                 }
 
-                const row = `
-                    <tr class="border-b">
-                        <td class="p-2">${date}</td>
-                        <td class="p-2">${gp.thock_number}</td>
-                        <td class="p-2 font-semibold">${recipient}</td>
-                        <td class="p-2">${gp.requested_quantity}</td>
-                        <td class="p-2">${gp.approved_quantity || '-'}</td>
-                        <td class="p-2">${gp.total_picked_up || 0}</td>
-                        <td class="p-2"><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    </tr>
+                return `
+                    <div class="gp-item">
+                        <div class="gp-header">
+                            <span class="gp-thock">${gp.thock_number}</span>
+                            <span class="gp-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="gp-details">
+                            <div>
+                                <div class="gp-detail-label">${i18n.t('requested', 'Requested')}</div>
+                                <div class="gp-detail-value">${gp.requested_quantity}</div>
+                            </div>
+                            <div>
+                                <div class="gp-detail-label">${i18n.t('approved', 'Approved')}</div>
+                                <div class="gp-detail-value">${gp.approved_quantity || '-'}</div>
+                            </div>
+                            <div>
+                                <div class="gp-detail-label">${i18n.t('picked_up', 'Picked Up')}</div>
+                                <div class="gp-detail-value">${gp.total_picked_up || 0}</div>
+                            </div>
+                        </div>
+                        <div class="gp-date"><i class="bi bi-calendar3"></i> ${date} | ${i18n.t('to', 'To')}: ${recipient}</div>
+                    </div>
                 `;
-                historyTable.innerHTML += row;
-            });
-
-            if (dashboardData.gate_passes.length === 0) {
-                historyTable.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">' + i18n.t('no_gate_pass_requests', 'No gate pass requests yet') + '</td></tr>';
-            }
+            }).join('');
         }
 
-        // Toggle family member section collapse
-        function toggleFamilySection(sectionId) {
-            const section = document.getElementById(sectionId);
-            const index = sectionId.replace('family-', '');
-            const chevron = document.getElementById('chevron-' + index);
-
-            if (section.style.display === 'none') {
-                section.style.display = 'block';
-                if (chevron) chevron.style.transform = 'rotate(0deg)';
-            } else {
-                section.style.display = 'none';
-                if (chevron) chevron.style.transform = 'rotate(-90deg)';
-            }
+        function formatNumber(num) {
+            return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
         }
 
         function selectThock(truckNumber, maxQty) {
@@ -425,9 +910,11 @@
             document.getElementById('maxQuantity').textContent = maxQty;
             document.getElementById('quantity').max = maxQty;
             document.getElementById('quantity').focus();
+
+            // Scroll to form
+            document.getElementById('gatePassForm').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Update max quantity when truck is selected
         document.addEventListener('DOMContentLoaded', () => {
             const thockSelect = document.getElementById('thockSelect');
             thockSelect.addEventListener('change', (e) => {
@@ -456,7 +943,6 @@
                 return;
             }
 
-            // Combine recipient and remarks
             let finalRemarks = `Recipient: ${recipientName}`;
             if (remarks) {
                 finalRemarks += ` | ${remarks}`;
@@ -480,7 +966,7 @@
                 if (response.ok) {
                     alert(i18n.t('gate_pass_submitted_success', 'Gate pass request submitted successfully!'));
                     document.getElementById('gatePassForm').reset();
-                    await loadDashboard(); // Reload dashboard
+                    await loadDashboard();
                 } else {
                     const error = await response.text();
                     alert(i18n.t('failed_submit_request', 'Failed to submit request') + ': ' + error);
@@ -501,14 +987,8 @@
             });
         }
 
-        // Auto-refresh dashboard every 30 seconds (silent mode - no error alerts)
-        setInterval(async () => {
-            try {
-                await loadDashboard(true);
-            } catch (e) {
-                console.error('Auto-refresh failed:', e);
-            }
-        }, 30000);
+        // Auto-refresh every 30 seconds
+        setInterval(() => loadDashboard(true), 30000);
     </script>
 </body>
 </html>
