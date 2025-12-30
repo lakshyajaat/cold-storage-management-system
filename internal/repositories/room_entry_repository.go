@@ -40,12 +40,14 @@ func (r *RoomEntryRepository) Get(ctx context.Context, id int) (*models.RoomEntr
 }
 
 func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, error) {
+	// Filter out room entries where the parent entry is deleted
 	rows, err := r.DB.Query(ctx,
 		`SELECT re.id, re.entry_id, re.thock_number, re.room_no, re.floor, re.gate_no, re.remark, re.quantity,
 		        COALESCE(re.quantity_breakdown, ''), re.created_by_user_id, re.created_at, re.updated_at,
 		        COALESCE(e.remark, '') as variety
          FROM room_entries re
          LEFT JOIN entries e ON re.entry_id = e.id
+         WHERE COALESCE(e.status, 'active') != 'deleted'
          ORDER BY re.created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -67,13 +69,14 @@ func (r *RoomEntryRepository) List(ctx context.Context) ([]*models.RoomEntry, er
 
 // ListSince returns room entries created after the given timestamp (for delta refresh)
 func (r *RoomEntryRepository) ListSince(ctx context.Context, since string) ([]*models.RoomEntry, error) {
+	// Filter out room entries where the parent entry is deleted
 	rows, err := r.DB.Query(ctx,
 		`SELECT re.id, re.entry_id, re.thock_number, re.room_no, re.floor, re.gate_no, re.remark, re.quantity,
 		        COALESCE(re.quantity_breakdown, ''), re.created_by_user_id, re.created_at, re.updated_at,
 		        COALESCE(e.remark, '') as variety
          FROM room_entries re
          LEFT JOIN entries e ON re.entry_id = e.id
-         WHERE re.created_at > $1::timestamptz
+         WHERE re.created_at > $1::timestamptz AND COALESCE(e.status, 'active') != 'deleted'
          ORDER BY re.created_at DESC`, since)
 	if err != nil {
 		return nil, err
@@ -150,13 +153,15 @@ func (r *RoomEntryRepository) GetTotalQuantityByThockNumber(ctx context.Context,
 
 // ListByThockNumber returns all room entries for a specific truck
 func (r *RoomEntryRepository) ListByThockNumber(ctx context.Context, thockNumber string) ([]*models.RoomEntry, error) {
+	// Filter out room entries where the parent entry is deleted
 	rows, err := r.DB.Query(ctx,
 		`SELECT re.id, re.entry_id, re.thock_number, re.room_no, re.floor, re.gate_no, re.remark, re.quantity,
 		        COALESCE(re.quantity_breakdown, ''), re.created_by_user_id, re.created_at, re.updated_at,
 		        COALESCE(e.remark, '') as variety
          FROM room_entries re
          LEFT JOIN entries e ON re.entry_id = e.id
-         WHERE re.thock_number=$1 ORDER BY re.created_at DESC`, thockNumber)
+         WHERE re.thock_number=$1 AND COALESCE(e.status, 'active') != 'deleted'
+         ORDER BY re.created_at DESC`, thockNumber)
 	if err != nil {
 		return nil, err
 	}
