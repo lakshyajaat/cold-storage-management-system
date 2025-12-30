@@ -642,6 +642,7 @@
         let currentPaymentCustomer = null;
         let rentPerItem = 0;
         let canManageEntries = false; // Permission flag for entry reassignment and customer merge
+        let isAdmin = false; // Admin role flag for delete functionality
         let creditOutItems = []; // Items taken out via admin approval
 
         // Escape HTML to prevent XSS
@@ -770,6 +771,7 @@
                 // Admins always have manage entries access
                 if (user.role === 'admin') {
                     canManageEntries = true;
+                    isAdmin = true;
                 }
                 // Admins and accountants always have access
                 document.getElementById('loadingScreen').style.display = 'none';
@@ -1248,8 +1250,9 @@
                                                 const typeLabel = isOutgoing ? ' ⬅️ OUT' : ' ➡️ IN';
                                                 const displayQty = thock.qtyDisplay || Math.abs(thock.quantity);
                                                 const familyBtnHtml = !isOutgoing && customer.familyMembers && customer.familyMembers.length > 0 ? '<button onclick="openChangeFamilyModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + (thock.family_member_name || customer.name).replace(/'/g, "\\'") + '\', ' + customer.customer_id + ')" class="text-xs neu-button bg-purple-500 text-white py-1 px-2 ml-1" style="padding: 0.25rem 0.5rem;" title="Change Family Member"><i class="bi bi-person"></i></button>' : '';
+                                                const deleteBtnHtml = isAdmin && !isOutgoing ? '<button onclick="deleteThock(' + thock.id + ', \'' + thock.thock_number + '\')" class="text-xs neu-button bg-red-500 text-white py-1 px-2 ml-1" style="padding: 0.25rem 0.5rem;" title="Delete Thock"><i class="bi bi-trash"></i></button>' : '';
                                                 const checkboxHtml = canManageEntries && !isOutgoing ? '<td class="p-3"><input type="checkbox" class="thock-select cursor-pointer" data-entry-id="' + thock.id + '" data-thock="' + thock.thock_number + '" data-customer-id="' + customer.customer_id + '" data-customer-name="' + customer.name.replace(/'/g, "\\'") + '" data-customer-phone="' + customer.phone + '" onchange="updateBulkSelection()"></td>' : (canManageEntries ? '<td class="p-3"></td>' : '');
-                                                tableHtml += '<tr class="border-b border-gray-200 ' + rowClass + '">' + checkboxHtml + '<td class="p-3 font-bold ' + thockColorClass + '">' + thock.thock_number + typeLabel + '</td><td class="p-3 ' + quantityClass + '">' + displayQty + '</td><td class="p-3 font-bold ' + rentClass + '">₹' + Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</td><td class="p-3 text-sm">' + thock.date + '</td>' + (canManageEntries ? '<td class="p-3"><button onclick="openReassignModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + customer.name.replace(/'/g, "\\'") + '\', \'' + customer.phone + '\')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i></button>' + familyBtnHtml + '</td>' : '') + '</tr>';
+                                                tableHtml += '<tr class="border-b border-gray-200 ' + rowClass + '">' + checkboxHtml + '<td class="p-3 font-bold ' + thockColorClass + '">' + thock.thock_number + typeLabel + '</td><td class="p-3 ' + quantityClass + '">' + displayQty + '</td><td class="p-3 font-bold ' + rentClass + '">₹' + Math.abs(thock.rent).toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</td><td class="p-3 text-sm">' + thock.date + '</td>' + (canManageEntries ? '<td class="p-3"><button onclick="openReassignModal(' + thock.id + ', \'' + thock.thock_number + '\', \'' + customer.name.replace(/'/g, "\\'") + '\', \'' + customer.phone + '\')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-arrow-left-right"></i></button>' + familyBtnHtml + deleteBtnHtml + '</td>' : '') + '</tr>';
                                             });
                                         });
                                         return tableHtml;
@@ -1927,6 +1930,36 @@
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Assign';
+            }
+        }
+
+        // ===============================
+        // Delete Thock Function (Admin Only)
+        // ===============================
+        async function deleteThock(entryId, thockNumber) {
+            if (!confirm(`Are you sure you want to delete thock ${thockNumber}?\n\nThis is a soft delete and can be undone from Merge & Transfer History.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/entries/${entryId}/soft-delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to delete thock');
+                }
+
+                alert(`Thock ${thockNumber} deleted successfully!`);
+                loadCustomerAccounts(true); // Force refresh
+            } catch (error) {
+                console.error('Error deleting thock:', error);
+                alert('Error: ' + error.message);
             }
         }
 

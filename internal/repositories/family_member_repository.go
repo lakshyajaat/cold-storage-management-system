@@ -91,12 +91,15 @@ func (r *FamilyMemberRepository) GetByCustomerAndName(ctx context.Context, custo
 		 fm.created_at, fm.updated_at,
 		 (SELECT COUNT(*) FROM entries e WHERE e.family_member_id = fm.id) as entry_count
 		 FROM family_members fm
-		 WHERE fm.customer_id = $1 AND fm.name = $2`, customerID, name)
+		 WHERE fm.customer_id = $1 AND LOWER(fm.name) = LOWER($2)`, customerID, name)
 
 	var fm models.FamilyMember
 	err := row.Scan(&fm.ID, &fm.CustomerID, &fm.Name, &fm.Relation, &fm.IsDefault,
 		&fm.CreatedAt, &fm.UpdatedAt, &fm.EntryCount)
-	return &fm, err
+	if err != nil {
+		return nil, err
+	}
+	return &fm, nil
 }
 
 // GetOrCreateDefault gets or creates the default "Self" family member for a customer
