@@ -230,6 +230,7 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <span data-i18n="so_label">S/O</span> <span class="text-sm text-gray-500">(<span data-i18n="so_description">Son Of / Father's Name</span>)</span>
+                            <span id="soLockedBadge" class="hidden ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Locked</span>
                         </label>
                         <input
                             type="text"
@@ -243,6 +244,7 @@
                     <div class="relative">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <span data-i18n="village">Village</span> *
+                            <span id="villageLockedBadge" class="hidden ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Locked</span>
                         </label>
                         <div class="relative">
                             <input
@@ -266,13 +268,40 @@
                     <div id="familyMemberSection" class="hidden">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <span data-i18n="family_member">Family Member</span>
-                            <span class="text-xs text-gray-500 ml-1">(optional)</span>
+                            <span class="text-xs text-gray-500 ml-1">(Select or Add New)</span>
                         </label>
-                        <div class="flex flex-wrap gap-2" id="familyMemberChips">
+                        <div class="flex flex-wrap gap-2 mb-2" id="familyMemberChips">
                             <!-- Family member chips will be loaded here -->
                         </div>
+                        <!-- Add New Family Member Option -->
+                        <div id="addFamilyMemberOption" class="hidden mt-2 p-3 bg-yellow-50 border-2 border-yellow-300 rounded">
+                            <p class="text-sm font-semibold text-yellow-800 mb-2">
+                                <i class="bi bi-person-plus"></i> Add "<span id="newFamilyMemberName"></span>" as family member?
+                            </p>
+                            <div class="flex gap-2 items-center">
+                                <select id="newFamilyMemberRelation" class="neu-input py-1 px-2 text-sm flex-1">
+                                    <option value="">Select Relation</option>
+                                    <option value="Self">Self</option>
+                                    <option value="Son">Son</option>
+                                    <option value="Daughter">Daughter</option>
+                                    <option value="Wife">Wife</option>
+                                    <option value="Husband">Husband</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Brother">Brother</option>
+                                    <option value="Sister">Sister</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <button type="button" onclick="addNewFamilyMember()" class="neu-button bg-green-500 text-white py-1 px-3 text-sm">
+                                    <i class="bi bi-plus"></i> Add
+                                </button>
+                                <button type="button" onclick="cancelAddFamilyMember()" class="neu-button bg-gray-300 py-1 px-3 text-sm">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
                         <p class="text-xs text-gray-500 mt-1" data-i18n="family_member_hint">
-                            Select who this entry is for. Leave blank to use the name entered above.
+                            Select who this entry is for, or type a different name above to add a new family member.
                         </p>
                     </div>
                 </div>
@@ -886,6 +915,9 @@
             }
         }
 
+        // Store original customer data for comparison
+        let selectedCustomer = null;
+
         // Select a phone and auto-fill customer data
         function selectPhone(phoneData) {
             document.getElementById('userPhone').value = phoneData.phone;
@@ -904,18 +936,61 @@
             // Store customer ID and load family members
             if (phoneData.id) {
                 document.getElementById('userId').value = phoneData.id;
+
+                // Store selected customer data for name comparison
+                selectedCustomer = {
+                    id: phoneData.id,
+                    name: phoneData.name,
+                    phone: phoneData.phone,
+                    village: phoneData.village,
+                    so: phoneData.so || ''
+                };
+
+                // Lock Village and S/O fields (existing customer data can't be changed here)
+                lockCustomerFields(true);
+
                 loadFamilyMembers(phoneData.id);
             } else {
-                // New customer - hide family member section
+                // New customer - hide family member section and unlock fields
+                selectedCustomer = null;
+                lockCustomerFields(false);
                 document.getElementById('familyMemberSection').classList.add('hidden');
                 document.getElementById('selectedFamilyMemberId').value = '';
             }
         }
 
+        // Lock/unlock Village and S/O fields for existing customers
+        function lockCustomerFields(lock) {
+            const villageInput = document.getElementById('userVillage');
+            const soInput = document.getElementById('userSO');
+            const villageBadge = document.getElementById('villageLockedBadge');
+            const soBadge = document.getElementById('soLockedBadge');
+
+            if (lock) {
+                villageInput.readOnly = true;
+                villageInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                soInput.readOnly = true;
+                soInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                villageBadge.classList.remove('hidden');
+                soBadge.classList.remove('hidden');
+            } else {
+                villageInput.readOnly = false;
+                villageInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                soInput.readOnly = false;
+                soInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                villageBadge.classList.add('hidden');
+                soBadge.classList.add('hidden');
+            }
+        }
+
+        // Store loaded family members for name comparison
+        let loadedFamilyMembers = [];
+
         // Load family members for a customer
         async function loadFamilyMembers(customerId) {
             const section = document.getElementById('familyMemberSection');
             const chipsContainer = document.getElementById('familyMemberChips');
+            loadedFamilyMembers = []; // Reset
 
             try {
                 const response = await fetch(`/api/customers/${customerId}/family-members`, {
@@ -929,10 +1004,14 @@
 
                 const data = await response.json();
                 const members = data.family_members || [];
+                loadedFamilyMembers = members; // Store for later comparison
+
+                // Always show family member section for existing customers
+                section.classList.remove('hidden');
 
                 if (members.length === 0) {
-                    // No family members yet - hide section
-                    section.classList.add('hidden');
+                    // No family members yet - show empty state
+                    chipsContainer.innerHTML = `<span class="text-gray-500 text-sm">No family members yet. Type a different name above to add one.</span>`;
                     document.getElementById('selectedFamilyMemberId').value = '';
                     return;
                 }
@@ -950,9 +1029,6 @@
                         ${member.entry_count > 0 ? `<span class="text-xs ml-1 text-gray-500">(${member.entry_count})</span>` : ''}
                     </button>`;
                 }).join('');
-
-                // Show section
-                section.classList.remove('hidden');
 
                 // Clear any previous selection
                 document.getElementById('selectedFamilyMemberId').value = '';
@@ -997,8 +1073,130 @@
                     nameInput.value = memberName;
                     capitalizeFirstLetter(nameInput);
                 }
+
+                // Hide add family member option when selecting existing member
+                document.getElementById('addFamilyMemberOption').classList.add('hidden');
             }
         }
+
+        // Check if entered name matches any existing family member
+        function checkNameForFamilyMember() {
+            const nameInput = document.getElementById('userName');
+            const enteredName = nameInput.value.trim().toLowerCase();
+            const addOption = document.getElementById('addFamilyMemberOption');
+            const newNameSpan = document.getElementById('newFamilyMemberName');
+
+            // Only check if we have a selected customer (existing customer)
+            if (!selectedCustomer) {
+                addOption.classList.add('hidden');
+                return;
+            }
+
+            // Check if name matches customer name
+            if (enteredName === selectedCustomer.name.toLowerCase()) {
+                addOption.classList.add('hidden');
+                return;
+            }
+
+            // Check if name matches any existing family member
+            const matchingMember = loadedFamilyMembers.find(m =>
+                m.name.toLowerCase() === enteredName
+            );
+
+            if (matchingMember) {
+                // Name matches existing family member - auto-select them
+                addOption.classList.add('hidden');
+                selectFamilyMember(matchingMember.id, matchingMember.name);
+                return;
+            }
+
+            // Name is different - show option to add as new family member
+            if (enteredName.length > 0) {
+                newNameSpan.textContent = nameInput.value.trim();
+                addOption.classList.remove('hidden');
+            } else {
+                addOption.classList.add('hidden');
+            }
+        }
+
+        // Add new family member for the selected customer
+        async function addNewFamilyMember() {
+            if (!selectedCustomer) {
+                alert('Please select a customer first');
+                return;
+            }
+
+            const nameInput = document.getElementById('userName');
+            const relationSelect = document.getElementById('newFamilyMemberRelation');
+            const name = nameInput.value.trim();
+            const relation = relationSelect.value;
+
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+
+            if (!relation) {
+                alert('Please select a relation');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/customers/${selectedCustomer.id}/family-members`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        relation: relation
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const newMember = await response.json();
+
+                // Hide the add option
+                document.getElementById('addFamilyMemberOption').classList.add('hidden');
+
+                // Reload family members and select the new one
+                await loadFamilyMembers(selectedCustomer.id);
+
+                // Select the newly added family member
+                if (newMember.id) {
+                    selectFamilyMember(newMember.id, newMember.name);
+                }
+
+                showSearchStatus(`Added "${name}" as family member (${relation})`, 'success');
+
+            } catch (error) {
+                console.error('Error adding family member:', error);
+                alert('Error adding family member: ' + error.message);
+            }
+        }
+
+        // Cancel adding new family member
+        function cancelAddFamilyMember() {
+            document.getElementById('addFamilyMemberOption').classList.add('hidden');
+            document.getElementById('newFamilyMemberRelation').value = '';
+
+            // Reset name to customer's original name
+            if (selectedCustomer) {
+                document.getElementById('userName').value = selectedCustomer.name;
+            }
+        }
+
+        // Add name input change listener for detecting new family members
+        document.getElementById('userName').addEventListener('input', function() {
+            // Debounce the check
+            clearTimeout(this.nameCheckTimeout);
+            this.nameCheckTimeout = setTimeout(checkNameForFamilyMember, 300);
+        });
 
         // Close dropdowns when clicking outside
         document.addEventListener('click', function(e) {
@@ -1305,6 +1503,26 @@
 
             // Update category info
             updateCategoryInfo();
+
+            // Check if customer exists in database by phone and lock fields if found
+            const existingCustomer = customerPhones.find(c => c.phone === mobile);
+            if (existingCustomer) {
+                selectedCustomer = {
+                    id: existingCustomer.id,
+                    name: existingCustomer.name,
+                    phone: existingCustomer.phone,
+                    village: existingCustomer.village,
+                    so: existingCustomer.so || ''
+                };
+                document.getElementById('userId').value = existingCustomer.id;
+                lockCustomerFields(true);
+                loadFamilyMembers(existingCustomer.id);
+            } else {
+                // New customer from guard entry
+                selectedCustomer = null;
+                lockCustomerFields(false);
+                document.getElementById('familyMemberSection').classList.add('hidden');
+            }
 
             // Focus on quantity field
             document.getElementById('expectedQuantity').focus();
@@ -2083,6 +2301,16 @@
             clearVarietySelection();
 
             currentUser = null;
+
+            // Reset customer/family member state
+            selectedCustomer = null;
+            loadedFamilyMembers = [];
+            lockCustomerFields(false);
+            document.getElementById('familyMemberSection').classList.add('hidden');
+            document.getElementById('addFamilyMemberOption').classList.add('hidden');
+            document.getElementById('newFamilyMemberRelation').value = '';
+            document.getElementById('selectedFamilyMemberId').value = '';
+            document.getElementById('userId').value = '';
 
             // Refresh the lists
             loadRecentEntries();
