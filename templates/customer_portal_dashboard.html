@@ -1245,7 +1245,7 @@
             renderGatePassHistory();
 
             // Render payment section at top (if enabled)
-            renderPaymentSection();
+            await renderPaymentSection();
         }
 
         async function renderTrucks() {
@@ -1790,7 +1790,7 @@
         let selectedPaymentAmount = 0;
         let memberBalances = {};
 
-        function renderPaymentSection() {
+        async function renderPaymentSection() {
             const section = document.getElementById('paymentSection');
 
             // Only show if online payments enabled AND there's a balance due
@@ -1815,6 +1815,12 @@
             const memberNames = Object.keys(memberBalances);
             const hasMultipleMembers = memberNames.length > 1;
 
+            // Pre-transliterate member names for display
+            const translatedMemberNames = {};
+            for (const name of memberNames) {
+                translatedMemberNames[name] = await getDisplayText(name);
+            }
+
             // Build scope options HTML
             const optionsContainer = document.getElementById('paymentScopeOptions');
             let optionsHTML = '';
@@ -1838,6 +1844,7 @@
             if (hasMultipleMembers) {
                 memberNames.forEach(name => {
                     const data = memberBalances[name];
+                    const displayName = translatedMemberNames[name] || name;
                     if (data.balance > 0) {
                         optionsHTML += `
                             <label class="scope-option" onclick="selectPaymentScope('${name}', ${data.balance})">
@@ -1845,7 +1852,7 @@
                                 <div class="scope-option-left">
                                     <div class="scope-radio"></div>
                                     <div>
-                                        <div class="scope-label">${name}</div>
+                                        <div class="scope-label">${displayName}</div>
                                         <div class="scope-sublabel">${data.trucks.length} ${i18n.t('trucks', 'trucks')}</div>
                                     </div>
                                 </div>
