@@ -1055,25 +1055,25 @@
                     <!-- Fee Breakdown -->
                     <div style="background: #f0f9ff; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; border: 2px solid #0ea5e9;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span>Payment Amount:</span>
+                            <span data-i18n="payment_amount">Payment Amount</span>:
                             <strong id="feeBaseAmount">₹0</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #0369a1;">
-                            <span>Transaction Fee (<span id="feePercentDisplay">2.5</span>%):</span>
+                            <span><span data-i18n="transaction_fee">Transaction Fee</span> (<span id="feePercentDisplay">2.5</span>%):</span>
                             <strong id="feeAmount">₹0</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 1.1rem; padding-top: 0.5rem; border-top: 1px solid #0ea5e9;">
-                            <span>Total to Pay:</span>
+                            <span data-i18n="total_to_pay">Total to Pay</span>:
                             <strong id="totalPayAmount" style="color: #0369a1;">₹0</strong>
                         </div>
                     </div>
 
                     <!-- Pay Now Button -->
                     <button id="razorpayPayBtn" onclick="initiateRazorpayPayment()" class="modal-btn modal-btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #0ea5e9, #0369a1);">
-                        <i class="bi bi-shield-lock"></i> Pay Securely via UPI/Card/NetBanking
+                        <i class="bi bi-shield-lock"></i> <span data-i18n="pay_securely">Pay Securely via UPI/Card/NetBanking</span>
                     </button>
                     <div style="text-align: center; margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
-                        <i class="bi bi-shield-check"></i> Secured by Razorpay | 100% Safe & Secure
+                        <i class="bi bi-shield-check"></i> <span data-i18n="secured_by_razorpay">Secured by Razorpay | 100% Safe & Secure</span>
                     </div>
                 </div>
 
@@ -1778,7 +1778,7 @@
                 alert(i18n.t('verification_error', 'Payment verification failed. Please contact support with your payment ID: ') + razorpayResponse.razorpay_payment_id);
             }
 
-            const originalText = '<i class="bi bi-shield-lock"></i> Pay Securely via UPI/Card/NetBanking';
+            const originalText = '<i class="bi bi-shield-lock"></i> <span data-i18n="pay_securely">' + i18n.t('pay_securely', 'Pay Securely via UPI/Card/NetBanking') + '</span>';
             payBtn.disabled = false;
             payBtn.innerHTML = originalText;
         }
