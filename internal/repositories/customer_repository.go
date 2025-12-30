@@ -26,7 +26,7 @@ func (r *CustomerRepository) Create(ctx context.Context, c *models.Customer) err
 
 func (r *CustomerRepository) Get(ctx context.Context, id int) (*models.Customer, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, name, phone, COALESCE(so, '') as so, village, address,
+		`SELECT id, name, phone, COALESCE(so, '') as so, COALESCE(village, '') as village, COALESCE(address, '') as address,
 		 COALESCE(status, 'active') as status, merged_into_customer_id, merged_at,
 		 created_at, updated_at
          FROM customers WHERE id=$1`, id)
@@ -40,7 +40,7 @@ func (r *CustomerRepository) Get(ctx context.Context, id int) (*models.Customer,
 
 func (r *CustomerRepository) GetByPhone(ctx context.Context, phone string) (*models.Customer, error) {
 	row := r.DB.QueryRow(ctx,
-		`SELECT id, name, phone, COALESCE(so, '') as so, village, address,
+		`SELECT id, name, phone, COALESCE(so, '') as so, COALESCE(village, '') as village, COALESCE(address, '') as address,
 		 COALESCE(status, 'active') as status, merged_into_customer_id, merged_at,
 		 created_at, updated_at
          FROM customers WHERE phone=$1`, phone)
@@ -54,7 +54,7 @@ func (r *CustomerRepository) GetByPhone(ctx context.Context, phone string) (*mod
 
 func (r *CustomerRepository) List(ctx context.Context) ([]*models.Customer, error) {
 	rows, err := r.DB.Query(ctx,
-		`SELECT id, name, phone, COALESCE(so, '') as so, village, address,
+		`SELECT id, name, phone, COALESCE(so, '') as so, COALESCE(village, '') as village, COALESCE(address, '') as address,
 		 COALESCE(status, 'active') as status, merged_into_customer_id, merged_at,
 		 created_at, updated_at
          FROM customers ORDER BY created_at DESC`)
