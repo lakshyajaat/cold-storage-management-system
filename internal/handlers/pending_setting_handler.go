@@ -8,6 +8,7 @@ import (
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
+	"cold-backend/internal/services"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,17 +17,20 @@ type PendingSettingHandler struct {
 	pendingRepo       *repositories.PendingSettingChangeRepository
 	systemSettingRepo *repositories.SystemSettingRepository
 	userRepo          *repositories.UserRepository
+	totpService       *services.TOTPService
 }
 
 func NewPendingSettingHandler(
 	pendingRepo *repositories.PendingSettingChangeRepository,
 	systemSettingRepo *repositories.SystemSettingRepository,
 	userRepo *repositories.UserRepository,
+	totpService *services.TOTPService,
 ) *PendingSettingHandler {
 	return &PendingSettingHandler{
 		pendingRepo:       pendingRepo,
 		systemSettingRepo: systemSettingRepo,
 		userRepo:          userRepo,
+		totpService:       totpService,
 	}
 }
 
@@ -216,6 +220,29 @@ func (h *PendingSettingHandler) ApproveChange(w http.ResponseWriter, r *http.Req
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		http.Error(w, "Invalid password", http.StatusUnauthorized)
 		return
+	}
+
+	// If approver has 2FA enabled, verify TOTP code
+	if user.TOTPEnabled {
+		if req.TOTPCode == "" {
+			http.Error(w, "2FA code is required for approval", http.StatusBadRequest)
+			return
+		}
+
+		ipAddress := getIPAddress(r)
+		valid, err := h.totpService.Verify(r.Context(), userID, req.TOTPCode, ipAddress)
+		if err != nil {
+			if _, ok := err.(*services.TOTPError); ok {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			http.Error(w, "2FA verification failed", http.StatusInternalServerError)
+			return
+		}
+		if !valid {
+			http.Error(w, "Invalid 2FA code", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Approve the change

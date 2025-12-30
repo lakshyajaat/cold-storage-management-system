@@ -36,6 +36,7 @@ type RequestSettingChangeRequest struct {
 
 type ApproveSettingChangeRequest struct {
 	Password string `json:"password"`
+	TOTPCode string `json:"totp_code,omitempty"` // Required if approver has 2FA enabled
 }
 
 type RejectSettingChangeRequest struct {

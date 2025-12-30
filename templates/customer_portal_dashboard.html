@@ -1252,28 +1252,11 @@
                     const categoryClass = category === 'seed' ? 'category-seed' : category === 'sell' ? 'category-sell' : '';
                     const categoryLabel = getCategoryLabel(category);
 
-                    const hasDue = truck.balance > 0;
-                    const dueClass = hasDue ? '' : 'paid';
-                    const dueLabel = hasDue ? i18n.t('amount_due', 'Amount Due') : i18n.t('fully_paid', 'Fully Paid');
-                    const dueAmount = hasDue ? `₹${formatNumber(truck.balance)}` : `<i class="bi bi-check-circle"></i> ${i18n.t('cleared', 'Cleared')}`;
-
-                    // Pay button only if there's a due AND online payments are enabled
-                    const payButton = (hasDue && onlinePaymentEnabled) ?
-                        `<button onclick="openPaymentModal('${truck.thock_number}', ${truck.balance}, ${truck.entry_id})" class="pay-btn">
-                            <i class="bi bi-credit-card"></i> ${i18n.t('pay', 'Pay')}
-                        </button>` : '';
-
                     trucksContainer.innerHTML += `
                         <div class="truck-card">
                             <div class="truck-header">
                                 <div class="truck-number">${truck.thock_number}</div>
                                 ${category ? `<span class="truck-category ${categoryClass}">${categoryLabel}</span>` : ''}
-                            </div>
-
-                            <!-- Prominent Due Section -->
-                            <div class="truck-due-section ${dueClass}">
-                                <div class="truck-due-label">${dueLabel}</div>
-                                <div class="truck-due-amount">${dueAmount}</div>
                             </div>
 
                             <div class="truck-stats">
@@ -1296,7 +1279,6 @@
                                     ${i18n.t('paid', 'Paid')}: ₹${formatNumber(truck.total_paid)}
                                 </div>
                                 <div class="truck-actions">
-                                    ${payButton}
                                     <button onclick="selectThock('${truck.thock_number}', ${truck.can_take_out})" class="request-btn">
                                         ${i18n.t('request', 'Request')}
                                     </button>

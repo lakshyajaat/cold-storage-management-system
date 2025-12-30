@@ -52,6 +52,7 @@ func NewRouter(
 	familyMemberHandler *handlers.FamilyMemberHandler,
 	razorpayHandler *handlers.RazorpayHandler,
 	pendingSettingHandler *handlers.PendingSettingHandler,
+	totpHandler *handlers.TOTPHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -85,6 +86,11 @@ func NewRouter(
 	// Public API routes - Authentication (with rate limiting)
 	r.HandleFunc("/auth/signup", middleware.LoginRateLimiter.Middleware(http.HandlerFunc(authHandler.Signup)).ServeHTTP).Methods("POST")
 	r.HandleFunc("/auth/login", middleware.LoginRateLimiter.Middleware(http.HandlerFunc(authHandler.Login)).ServeHTTP).Methods("POST")
+
+	// 2FA verification endpoint (rate limited, used after login when 2FA is enabled)
+	if totpHandler != nil {
+		r.HandleFunc("/api/auth/verify-2fa", middleware.LoginRateLimiter.Middleware(http.HandlerFunc(totpHandler.VerifyTOTP)).ServeHTTP).Methods("POST")
+	}
 
 	// Setup routes - Always available for disaster recovery
 	// Allows restoring from R2 backup even when DB is connected
@@ -165,6 +171,18 @@ func NewRouter(
 	usersAPI.HandleFunc("/{id}", authMiddleware.RequireAdmin(http.HandlerFunc(userHandler.UpdateUser)).ServeHTTP).Methods("PUT")
 	usersAPI.HandleFunc("/{id}", authMiddleware.RequireAdmin(http.HandlerFunc(userHandler.DeleteUser)).ServeHTTP).Methods("DELETE")
 	usersAPI.HandleFunc("/{id}/toggle-active", authMiddleware.RequireAdmin(http.HandlerFunc(userHandler.ToggleActiveStatus)).ServeHTTP).Methods("PATCH")
+
+	// Protected API routes - 2FA Management (admin only)
+	if totpHandler != nil {
+		twoFAAPI := r.PathPrefix("/api/2fa").Subrouter()
+		twoFAAPI.Use(authMiddleware.Authenticate)
+		// 2FA setup and management - admin only
+		twoFAAPI.HandleFunc("/setup", authMiddleware.RequireAdmin(http.HandlerFunc(totpHandler.SetupTOTP)).ServeHTTP).Methods("POST")
+		twoFAAPI.HandleFunc("/enable", authMiddleware.RequireAdmin(http.HandlerFunc(totpHandler.EnableTOTP)).ServeHTTP).Methods("POST")
+		twoFAAPI.HandleFunc("/disable", authMiddleware.RequireAdmin(http.HandlerFunc(totpHandler.DisableTOTP)).ServeHTTP).Methods("POST")
+		twoFAAPI.HandleFunc("/status", authMiddleware.RequireAdmin(http.HandlerFunc(totpHandler.GetStatus)).ServeHTTP).Methods("GET")
+		twoFAAPI.HandleFunc("/backup-codes", authMiddleware.RequireAdmin(http.HandlerFunc(totpHandler.RegenerateBackupCodes)).ServeHTTP).Methods("POST")
+	}
 
 	// Protected API routes - Customers
 	customersAPI := r.PathPrefix("/api/customers").Subrouter()

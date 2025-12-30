@@ -77,6 +77,7 @@
 
             <div id="errorMessage" style="display:none; background-color: #e74c3c; color: white; padding: 1rem; border: 3px solid #000; box-shadow: 4px 4px 0 #000; margin-bottom: 1rem;"></div>
 
+            <!-- Login Form (Step 1) -->
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" for="email" data-i18n="email">Email</label>
@@ -108,6 +109,42 @@
                 </button>
             </form>
 
+            <!-- 2FA Verification Form (Step 2) - Hidden by default -->
+            <form id="twoFAForm" class="space-y-6" style="display: none;">
+                <div class="text-center mb-4">
+                    <i class="bi bi-shield-lock text-4xl text-[#27ae60]"></i>
+                    <h2 class="text-xl font-bold mt-2">Two-Factor Authentication</h2>
+                    <p class="text-gray-600 text-sm mt-1">Enter the 6-digit code from your authenticator app</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="totpCode">Verification Code</label>
+                    <input type="text" id="totpCode" name="totpCode" required
+                        class="w-full px-4 py-3 neu-brutal bg-white text-center text-2xl tracking-widest"
+                        placeholder="000000"
+                        maxlength="8"
+                        autocomplete="one-time-code"
+                        inputmode="numeric"
+                        pattern="[A-Z0-9]*">
+                </div>
+
+                <p class="text-sm text-gray-500 text-center">
+                    You can also use a backup code if you don't have access to your authenticator app.
+                </p>
+
+                <button type="submit"
+                    class="w-full bg-[#27ae60] text-white py-3 px-4 neu-brutal flex items-center justify-center">
+                    <span>Verify</span>
+                    <div class="loader ml-3" id="twoFALoader"></div>
+                </button>
+
+                <button type="button" id="backToLogin"
+                    class="w-full bg-gray-200 text-gray-700 py-2 px-4 neu-brutal flex items-center justify-center text-sm">
+                    <i class="bi bi-arrow-left mr-2"></i>
+                    <span>Back to Login</span>
+                </button>
+            </form>
+
             <!-- Language info -->
             <div class="mt-6 text-center text-sm text-gray-500">
                 <span data-i18n="select_language">Select Language</span>:
@@ -120,8 +157,13 @@
     <script src="/static/js/i18n.js"></script>
     <script>
         const loginForm = document.getElementById('loginForm');
+        const twoFAForm = document.getElementById('twoFAForm');
         const loader = document.getElementById('loader');
+        const twoFALoader = document.getElementById('twoFALoader');
         const errorMessage = document.getElementById('errorMessage');
+        const backToLogin = document.getElementById('backToLogin');
+
+        let tempToken = null; // Store temp token for 2FA verification
 
         // Update language display
         function updateLangDisplay() {
@@ -132,13 +174,38 @@
         }
         updateLangDisplay();
 
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Hide error message
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Handle successful login
+        function handleLoginSuccess(data) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            // Redirect based on user role
+            if (data.user && data.user.role === 'admin') {
+                window.location.href = '/admin/dashboard';
+            } else {
+                window.location.href = '/dashboard';
+            }
+        }
+
+        // Login form submission (Step 1)
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
             loader.style.display = 'block';
-            errorMessage.style.display = 'none';
+            hideError();
 
             try {
                 const response = await fetch('/auth/login', {
@@ -159,24 +226,75 @@
 
                 const data = await response.json();
 
-                // Store token in localStorage
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-
-                // Redirect based on user role
-                if (data.user && data.user.role === 'admin') {
-                    window.location.href = '/admin/dashboard';
+                // Check if 2FA is required
+                if (data.requires_2fa) {
+                    tempToken = data.temp_token;
+                    // Show 2FA form, hide login form
+                    loginForm.style.display = 'none';
+                    twoFAForm.style.display = 'block';
+                    document.getElementById('totpCode').focus();
                 } else {
-                    window.location.href = '/dashboard';
+                    // No 2FA, proceed with login
+                    handleLoginSuccess(data);
                 }
 
             } catch (error) {
                 const loginFailedText = i18n.t('login_failed', 'Login failed');
-                errorMessage.textContent = loginFailedText + ': ' + error.message;
-                errorMessage.style.display = 'block';
+                showError(loginFailedText + ': ' + error.message);
             } finally {
                 loader.style.display = 'none';
             }
+        });
+
+        // 2FA form submission (Step 2)
+        twoFAForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('totpCode').value.trim().toUpperCase();
+
+            if (!code) {
+                showError('Please enter the verification code');
+                return;
+            }
+
+            twoFALoader.style.display = 'block';
+            hideError();
+
+            try {
+                const response = await fetch('/api/auth/verify-2fa', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        temp_token: tempToken,
+                        code: code
+                    })
+                });
+
+                if(!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || '2FA verification failed');
+                }
+
+                const data = await response.json();
+                handleLoginSuccess(data);
+
+            } catch (error) {
+                showError('Verification failed: ' + error.message);
+                document.getElementById('totpCode').value = '';
+                document.getElementById('totpCode').focus();
+            } finally {
+                twoFALoader.style.display = 'none';
+            }
+        });
+
+        // Back to login button
+        backToLogin.addEventListener('click', () => {
+            tempToken = null;
+            twoFAForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            document.getElementById('totpCode').value = '';
+            hideError();
         });
     </script>
 </body>

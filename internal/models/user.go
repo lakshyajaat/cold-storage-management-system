@@ -3,18 +3,23 @@ package models
 import "time"
 
 type User struct {
-	ID                   int       `json:"id"`
-	Name                 string    `json:"name"`
-	Email                string    `json:"email"`
-	Phone                string    `json:"phone"`
-	Village              string    `json:"village"`
-	PasswordHash         string    `json:"-"` // Never expose in JSON
-	Role                 string    `json:"role"` // admin or employee
-	HasAccountantAccess  bool      `json:"has_accountant_access"` // employees can have accountant access
-	CanManageEntries     bool      `json:"can_manage_entries"`    // can reassign entries and merge customers
-	IsActive             bool      `json:"is_active"` // true = active, false = paused/suspended
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	ID                   int        `json:"id"`
+	Name                 string     `json:"name"`
+	Email                string     `json:"email"`
+	Phone                string     `json:"phone"`
+	Village              string     `json:"village"`
+	PasswordHash         string     `json:"-"` // Never expose in JSON
+	Role                 string     `json:"role"` // admin or employee
+	HasAccountantAccess  bool       `json:"has_accountant_access"` // employees can have accountant access
+	CanManageEntries     bool       `json:"can_manage_entries"`    // can reassign entries and merge customers
+	IsActive             bool       `json:"is_active"` // true = active, false = paused/suspended
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+	// 2FA fields
+	TOTPSecret     string     `json:"-"`                            // Never expose - TOTP secret key
+	TOTPEnabled    bool       `json:"totp_enabled"`                 // Is 2FA active
+	TOTPVerifiedAt *time.Time `json:"totp_verified_at,omitempty"`   // When 2FA was enabled
+	BackupCodes    string     `json:"-"`                            // Never expose - JSON array of hashed backup codes
 }
 
 // SignupRequest represents the request body for signup

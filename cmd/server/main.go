@@ -418,6 +418,7 @@ func main() {
 	familyMemberRepo := repositories.NewFamilyMemberRepository(pool)
 	onlineTransactionRepo := repositories.NewOnlineTransactionRepository(pool)
 	pendingSettingChangeRepo := repositories.NewPendingSettingChangeRepository(pool)
+	totpRepo := repositories.NewTOTPRepository(pool)
 
 	// Initialize middleware (needed for both modes)
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userRepo)
@@ -635,6 +636,10 @@ func main() {
 		// Initialize merge history handler
 		mergeHistoryHandler := handlers.NewMergeHistoryHandler(customerRepo, entryRepo, entryManagementLogRepo)
 
+		// Initialize TOTP service and handler (2FA for admin users)
+		totpService := services.NewTOTPService(userRepo, totpRepo)
+		totpHandler := handlers.NewTOTPHandler(totpService, userRepo, jwtManager)
+
 		// Initialize Razorpay service and handler for online payments (admin view)
 		razorpayService := services.NewRazorpayService(
 			cfg.Razorpay.KeyID,
@@ -653,10 +658,11 @@ func main() {
 			pendingSettingChangeRepo,
 			systemSettingRepo,
 			userRepo,
+			totpService,
 		)
 
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler, razorpayHandler, pendingSettingHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler, razorpayHandler, pendingSettingHandler, totpHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

@@ -108,8 +108,15 @@ func (s *UserService) Signup(ctx context.Context, req *models.SignupRequest) (*m
 	}, nil
 }
 
-// Login authenticates a user and returns a JWT token
-func (s *UserService) Login(ctx context.Context, req *models.LoginRequest) (*models.AuthResponse, error) {
+// LoginResult contains either a full auth response or a 2FA pending response
+type LoginResult struct {
+	AuthResponse   *models.AuthResponse
+	Step1Response  *models.LoginStep1Response
+	Requires2FA    bool
+}
+
+// Login authenticates a user and returns either a JWT token or 2FA requirement
+func (s *UserService) Login(ctx context.Context, req *models.LoginRequest) (*LoginResult, error) {
 	// Validate input
 	if req.Email == "" || req.Password == "" {
 		return nil, errors.New("email and password are required")
@@ -119,11 +126,29 @@ func (s *UserService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 	if cachedUserID, found := cache.GetCachedAuth(ctx, req.Email, req.Password); found {
 		user, err := s.Repo.Get(ctx, int(cachedUserID))
 		if err == nil && user != nil {
+			// Check if 2FA is enabled
+			if user.TOTPEnabled {
+				tempToken, err := s.JWTManager.GenerateTempToken(user)
+				if err != nil {
+					return nil, err
+				}
+				return &LoginResult{
+					Requires2FA: true,
+					Step1Response: &models.LoginStep1Response{
+						Requires2FA: true,
+						TempToken:   tempToken,
+						Message:     "Please enter your 2FA code",
+					},
+				}, nil
+			}
+
 			token, err := s.JWTManager.GenerateToken(user)
 			if err != nil {
 				return nil, err
 			}
-			return &models.AuthResponse{Token: token, User: user}, nil
+			return &LoginResult{
+				AuthResponse: &models.AuthResponse{Token: token, User: user},
+			}, nil
 		}
 	}
 
@@ -141,14 +166,32 @@ func (s *UserService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 	// Cache successful auth for 15 minutes
 	cache.CacheAuth(ctx, req.Email, req.Password, int64(user.ID))
 
-	// Generate JWT token
+	// Check if 2FA is enabled
+	if user.TOTPEnabled {
+		tempToken, err := s.JWTManager.GenerateTempToken(user)
+		if err != nil {
+			return nil, err
+		}
+		return &LoginResult{
+			Requires2FA: true,
+			Step1Response: &models.LoginStep1Response{
+				Requires2FA: true,
+				TempToken:   tempToken,
+				Message:     "Please enter your 2FA code",
+			},
+		}, nil
+	}
+
+	// Generate full JWT token (no 2FA)
 	token, err := s.JWTManager.GenerateToken(user)
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.AuthResponse{
-		Token: token,
-		User:  user,
+	return &LoginResult{
+		AuthResponse: &models.AuthResponse{
+			Token: token,
+			User:  user,
+		},
 	}, nil
 }

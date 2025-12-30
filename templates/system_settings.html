@@ -844,6 +844,225 @@
             </div>
         </div>
 
+        <!-- Two-Factor Authentication Section -->
+        <div class="neu-border bg-white p-8 mt-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="bi bi-shield-lock-fill text-green-600"></i>
+                Two-Factor Authentication (2FA)
+            </h2>
+
+            <div class="mb-6 p-4 bg-green-50 neu-border">
+                <p class="text-sm text-green-800">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Security Enhancement:</strong> 2FA adds an extra layer of security to your account.
+                    When enabled, you'll need both your password and a code from your authenticator app to log in
+                    and approve protected setting changes.
+                </p>
+            </div>
+
+            <!-- 2FA Status -->
+            <div id="twoFAStatus" class="p-6 neu-border bg-gradient-to-r from-gray-50 to-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold mb-1">
+                            <span id="twoFAStatusIcon"><i class="bi bi-shield-x text-red-500"></i></span>
+                            <span id="twoFAStatusText">2FA Not Enabled</span>
+                        </h3>
+                        <p id="twoFAStatusMessage" class="text-sm text-gray-600">
+                            Your account is not protected by two-factor authentication.
+                        </p>
+                    </div>
+                    <div>
+                        <button id="setup2FABtn" onclick="start2FASetup()" class="neu-button bg-green-500 text-white">
+                            <i class="bi bi-shield-plus"></i> Set Up 2FA
+                        </button>
+                        <button id="disable2FABtn" onclick="showDisable2FAModal()" class="hidden neu-button bg-red-500 text-white">
+                            <i class="bi bi-shield-x"></i> Disable 2FA
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Codes Section (shown when 2FA enabled) -->
+            <div id="backupCodesSection" class="hidden mt-6 p-4 neu-border bg-amber-50">
+                <h4 class="font-bold mb-2 flex items-center gap-2">
+                    <i class="bi bi-key text-amber-600"></i>
+                    Backup Codes
+                </h4>
+                <p class="text-sm text-amber-800 mb-3">
+                    Use backup codes to sign in if you lose access to your authenticator app.
+                    Each code can only be used once.
+                </p>
+                <button onclick="regenerateBackupCodes()" class="neu-button bg-amber-500 text-white text-sm">
+                    <i class="bi bi-arrow-repeat"></i> Regenerate Backup Codes
+                </button>
+            </div>
+        </div>
+
+        <!-- 2FA Setup Modal -->
+        <div id="setup2FAModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white neu-border p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-shield-lock text-green-600"></i>
+                    Set Up Two-Factor Authentication
+                </h3>
+
+                <!-- Step 1: Show QR Code -->
+                <div id="setup2FAStep1">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Scan this QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
+                    </p>
+
+                    <div class="text-center mb-4">
+                        <img id="totpQRCode" src="" alt="QR Code" class="mx-auto" style="width: 200px; height: 200px;">
+                    </div>
+
+                    <div class="mb-4 p-3 bg-gray-100 rounded">
+                        <p class="text-xs text-gray-600 mb-1">Can't scan? Enter this code manually:</p>
+                        <code id="totpSecret" class="text-sm font-mono bg-white px-2 py-1 border rounded break-all"></code>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Enter the 6-digit code from your app:
+                        </label>
+                        <input type="text" id="setup2FACode"
+                            class="w-full neu-input text-center text-2xl tracking-widest"
+                            placeholder="000000"
+                            maxlength="6"
+                            autocomplete="one-time-code"
+                            inputmode="numeric">
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="closeSetup2FAModal()" class="flex-1 neu-button bg-gray-200">
+                            Cancel
+                        </button>
+                        <button onclick="verify2FASetup()" class="flex-1 neu-button bg-green-500 text-white">
+                            <i class="bi bi-check-circle"></i> Verify & Enable
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Show Backup Codes -->
+                <div id="setup2FAStep2" class="hidden">
+                    <div class="mb-4 p-4 bg-amber-50 neu-border">
+                        <h4 class="font-bold text-amber-800 mb-2">
+                            <i class="bi bi-exclamation-triangle"></i> Save Your Backup Codes!
+                        </h4>
+                        <p class="text-sm text-amber-700">
+                            These codes can be used to access your account if you lose your authenticator device.
+                            Each code can only be used once. Store them in a safe place!
+                        </p>
+                    </div>
+
+                    <div id="backupCodesList" class="grid grid-cols-2 gap-2 mb-4 p-3 bg-gray-100 rounded font-mono text-sm">
+                        <!-- Backup codes will be populated here -->
+                    </div>
+
+                    <button onclick="copyBackupCodes()" class="w-full neu-button bg-blue-500 text-white mb-4">
+                        <i class="bi bi-clipboard"></i> Copy All Codes
+                    </button>
+
+                    <button onclick="finish2FASetup()" class="w-full neu-button bg-green-500 text-white">
+                        <i class="bi bi-check-circle"></i> I've Saved My Codes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disable 2FA Modal -->
+        <div id="disable2FAModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white neu-border p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-red-600">
+                    <i class="bi bi-shield-x"></i>
+                    Disable Two-Factor Authentication
+                </h3>
+
+                <div class="mb-4 p-4 bg-red-50 neu-border">
+                    <p class="text-sm text-red-800">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Warning:</strong> Disabling 2FA will make your account less secure.
+                        You'll only need your password to log in.
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Enter your password:
+                        </label>
+                        <input type="password" id="disable2FAPassword"
+                            class="w-full neu-input"
+                            placeholder="Your password">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Enter current 2FA code:
+                        </label>
+                        <input type="text" id="disable2FACode"
+                            class="w-full neu-input text-center text-xl tracking-widest"
+                            placeholder="000000"
+                            maxlength="6"
+                            inputmode="numeric">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button onclick="closeDisable2FAModal()" class="flex-1 neu-button bg-gray-200">
+                        Cancel
+                    </button>
+                    <button onclick="disable2FA()" class="flex-1 neu-button bg-red-500 text-white">
+                        <i class="bi bi-shield-x"></i> Disable 2FA
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Regenerate Backup Codes Modal -->
+        <div id="regenerateBackupCodesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white neu-border p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="bi bi-key text-amber-600"></i>
+                    Regenerate Backup Codes
+                </h3>
+
+                <div class="mb-4 p-4 bg-amber-50 neu-border">
+                    <p class="text-sm text-amber-800">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        This will invalidate all existing backup codes and generate new ones.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Enter your password to confirm:
+                    </label>
+                    <input type="password" id="regeneratePassword"
+                        class="w-full neu-input"
+                        placeholder="Your password">
+                </div>
+
+                <div id="newBackupCodesList" class="hidden grid grid-cols-2 gap-2 mb-4 p-3 bg-gray-100 rounded font-mono text-sm">
+                    <!-- New backup codes will be populated here -->
+                </div>
+
+                <div class="flex gap-3" id="regenerateButtons">
+                    <button onclick="closeRegenerateBackupCodesModal()" class="flex-1 neu-button bg-gray-200">
+                        Cancel
+                    </button>
+                    <button onclick="confirmRegenerateBackupCodes()" class="flex-1 neu-button bg-amber-500 text-white">
+                        <i class="bi bi-arrow-repeat"></i> Regenerate
+                    </button>
+                </div>
+
+                <button onclick="closeRegenerateBackupCodesModal()" id="regenerateDoneBtn" class="hidden w-full neu-button bg-green-500 text-white">
+                    <i class="bi bi-check-circle"></i> Done
+                </button>
+            </div>
+        </div>
+
         <!-- Token Color Section -->
         <div class="neu-border bg-white p-8 mt-8">
             <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -1370,6 +1589,16 @@
                     Enter Your Password to Confirm
                 </label>
                 <input type="password" id="approvalPassword" class="w-full neu-input" placeholder="Your password">
+
+                <!-- 2FA Code Input (shown if user has 2FA enabled) -->
+                <div id="approval2FASection" class="hidden mt-3">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        <i class="bi bi-shield-lock text-green-600"></i> 2FA Verification Code
+                    </label>
+                    <input type="text" id="approvalTOTPCode" class="w-full neu-input text-center text-xl tracking-widest"
+                        placeholder="000000" maxlength="8" inputmode="numeric">
+                    <p class="text-xs text-gray-500 mt-1">Enter the 6-digit code from your authenticator app</p>
+                </div>
             </div>
 
             <div id="rejectReasonSection" class="hidden">
@@ -1443,6 +1672,9 @@
 
                 // Load protected settings status (dual approval)
                 await loadProtectedSettingsStatus();
+
+                // Load 2FA status
+                await load2FAStatus();
             } catch (error) {
                 console.error('Error loading settings:', error);
                 showError('Failed to load settings: ' + error.message);
@@ -2002,7 +2234,7 @@
             document.getElementById('settingChangeHistoryModal').classList.add('hidden');
         }
 
-        function openApproveModal(id, settingKey, newValue) {
+        async function openApproveModal(id, settingKey, newValue) {
             currentApproveRejectId = id;
             currentApproveRejectAction = 'approve';
 
@@ -2020,6 +2252,24 @@
             document.getElementById('confirmRejectBtn').classList.add('hidden');
             document.getElementById('approveRejectError').classList.add('hidden');
             document.getElementById('approvalPassword').value = '';
+            document.getElementById('approvalTOTPCode').value = '';
+
+            // Check if current user has 2FA enabled
+            try {
+                const response = await fetch('/api/2fa/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const status = await response.json();
+                    if (status.enabled) {
+                        document.getElementById('approval2FASection').classList.remove('hidden');
+                    } else {
+                        document.getElementById('approval2FASection').classList.add('hidden');
+                    }
+                }
+            } catch (e) {
+                document.getElementById('approval2FASection').classList.add('hidden');
+            }
 
             document.getElementById('approveRejectModal').classList.remove('hidden');
         }
@@ -2059,14 +2309,28 @@
                 return;
             }
 
+            // Check if 2FA input is visible and get the code
+            const twoFASection = document.getElementById('approval2FASection');
+            const totpCode = document.getElementById('approvalTOTPCode').value.trim();
+            if (!twoFASection.classList.contains('hidden') && !totpCode) {
+                document.getElementById('approveRejectError').textContent = '2FA code is required';
+                document.getElementById('approveRejectError').classList.remove('hidden');
+                return;
+            }
+
             try {
+                const requestBody = { password: password };
+                if (totpCode) {
+                    requestBody.totp_code = totpCode;
+                }
+
                 const response = await fetch(`/api/admin/setting-changes/${currentApproveRejectId}/approve`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ password: password })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (response.ok) {
@@ -3226,6 +3490,243 @@
 
         // Load SMS notification settings on page load
         window.addEventListener('load', loadSMSNotificationSettings);
+
+        // ==================== Two-Factor Authentication Functions ====================
+
+        let backupCodes = []; // Store backup codes temporarily
+
+        async function load2FAStatus() {
+            try {
+                const response = await fetch('/api/2fa/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const status = await response.json();
+                    update2FAStatusDisplay(status);
+                }
+            } catch (error) {
+                console.error('Error loading 2FA status:', error);
+            }
+        }
+
+        function update2FAStatusDisplay(status) {
+            const statusIcon = document.getElementById('twoFAStatusIcon');
+            const statusText = document.getElementById('twoFAStatusText');
+            const statusMessage = document.getElementById('twoFAStatusMessage');
+            const setupBtn = document.getElementById('setup2FABtn');
+            const disableBtn = document.getElementById('disable2FABtn');
+            const backupSection = document.getElementById('backupCodesSection');
+
+            if (status.enabled) {
+                statusIcon.innerHTML = '<i class="bi bi-shield-check text-green-500"></i>';
+                statusText.textContent = '2FA Enabled';
+                statusText.className = 'text-green-700';
+                statusMessage.textContent = 'Your account is protected by two-factor authentication.';
+                if (status.enabled_at) {
+                    const enabledAt = new Date(status.enabled_at);
+                    statusMessage.textContent += ` Enabled on ${enabledAt.toLocaleDateString()}.`;
+                }
+                setupBtn.classList.add('hidden');
+                disableBtn.classList.remove('hidden');
+                backupSection.classList.remove('hidden');
+            } else {
+                statusIcon.innerHTML = '<i class="bi bi-shield-x text-red-500"></i>';
+                statusText.textContent = '2FA Not Enabled';
+                statusText.className = 'text-red-700';
+                statusMessage.textContent = 'Your account is not protected by two-factor authentication.';
+                setupBtn.classList.remove('hidden');
+                disableBtn.classList.add('hidden');
+                backupSection.classList.add('hidden');
+            }
+        }
+
+        async function start2FASetup() {
+            try {
+                const response = await fetch('/api/2fa/setup', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const data = await response.json();
+
+                // Show QR code and secret
+                document.getElementById('totpQRCode').src = data.qr_code;
+                document.getElementById('totpSecret').textContent = data.secret;
+
+                // Reset form and show modal
+                document.getElementById('setup2FACode').value = '';
+                document.getElementById('setup2FAStep1').classList.remove('hidden');
+                document.getElementById('setup2FAStep2').classList.add('hidden');
+                document.getElementById('setup2FAModal').classList.remove('hidden');
+            } catch (error) {
+                alert('Failed to start 2FA setup: ' + error.message);
+            }
+        }
+
+        function closeSetup2FAModal() {
+            document.getElementById('setup2FAModal').classList.add('hidden');
+        }
+
+        async function verify2FASetup() {
+            const code = document.getElementById('setup2FACode').value.trim();
+
+            if (!code || code.length < 6) {
+                alert('Please enter a valid 6-digit code');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/2fa/enable', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const data = await response.json();
+                backupCodes = data.codes;
+
+                // Show backup codes
+                const codesList = document.getElementById('backupCodesList');
+                codesList.innerHTML = backupCodes.map(code =>
+                    `<div class="p-2 bg-white border rounded text-center">${code}</div>`
+                ).join('');
+
+                // Switch to step 2
+                document.getElementById('setup2FAStep1').classList.add('hidden');
+                document.getElementById('setup2FAStep2').classList.remove('hidden');
+            } catch (error) {
+                alert('Verification failed: ' + error.message);
+            }
+        }
+
+        function copyBackupCodes() {
+            const codesText = backupCodes.join('\n');
+            navigator.clipboard.writeText(codesText).then(() => {
+                alert('Backup codes copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy. Please manually copy the codes.');
+            });
+        }
+
+        function finish2FASetup() {
+            closeSetup2FAModal();
+            load2FAStatus();
+            alert('Two-factor authentication has been enabled successfully!');
+        }
+
+        function showDisable2FAModal() {
+            document.getElementById('disable2FAPassword').value = '';
+            document.getElementById('disable2FACode').value = '';
+            document.getElementById('disable2FAModal').classList.remove('hidden');
+        }
+
+        function closeDisable2FAModal() {
+            document.getElementById('disable2FAModal').classList.add('hidden');
+        }
+
+        async function disable2FA() {
+            const password = document.getElementById('disable2FAPassword').value;
+            const code = document.getElementById('disable2FACode').value.trim();
+
+            if (!password) {
+                alert('Please enter your password');
+                return;
+            }
+            if (!code || code.length < 6) {
+                alert('Please enter a valid 6-digit code');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/2fa/disable', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password, code: code })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                closeDisable2FAModal();
+                load2FAStatus();
+                alert('Two-factor authentication has been disabled.');
+            } catch (error) {
+                alert('Failed to disable 2FA: ' + error.message);
+            }
+        }
+
+        function regenerateBackupCodes() {
+            document.getElementById('regeneratePassword').value = '';
+            document.getElementById('newBackupCodesList').classList.add('hidden');
+            document.getElementById('newBackupCodesList').innerHTML = '';
+            document.getElementById('regenerateButtons').classList.remove('hidden');
+            document.getElementById('regenerateDoneBtn').classList.add('hidden');
+            document.getElementById('regenerateBackupCodesModal').classList.remove('hidden');
+        }
+
+        function closeRegenerateBackupCodesModal() {
+            document.getElementById('regenerateBackupCodesModal').classList.add('hidden');
+        }
+
+        async function confirmRegenerateBackupCodes() {
+            const password = document.getElementById('regeneratePassword').value;
+
+            if (!password) {
+                alert('Please enter your password');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/2fa/backup-codes', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const data = await response.json();
+                backupCodes = data.codes;
+
+                // Show new backup codes
+                const codesList = document.getElementById('newBackupCodesList');
+                codesList.innerHTML = backupCodes.map(code =>
+                    `<div class="p-2 bg-white border rounded text-center">${code}</div>`
+                ).join('');
+                codesList.classList.remove('hidden');
+
+                // Hide regenerate buttons, show done button
+                document.getElementById('regenerateButtons').classList.add('hidden');
+                document.getElementById('regenerateDoneBtn').classList.remove('hidden');
+            } catch (error) {
+                alert('Failed to regenerate backup codes: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>

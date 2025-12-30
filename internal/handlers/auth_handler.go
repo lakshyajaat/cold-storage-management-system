@@ -42,7 +42,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(authResp)
 }
 
-// Login handles user authentication
+// Login handles user authentication (step 1 - may require 2FA)
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,22 +50,28 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authResp, err := h.Service.Login(context.Background(), &req)
+	loginResult, err := h.Service.Login(context.Background(), &req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	// Log the successful login
-	ipAddress := getIPAddress(r)
-	userAgent := r.UserAgent()
-	if _, err := h.LoginLogRepo.CreateLoginLog(context.Background(), authResp.User.ID, ipAddress, userAgent); err != nil {
-		// Log error but don't fail the login
-		// TODO: Add proper logging
+	w.Header().Set("Content-Type", "application/json")
+
+	// Check if 2FA is required
+	if loginResult.Requires2FA {
+		json.NewEncoder(w).Encode(loginResult.Step1Response)
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(authResp)
+	// No 2FA - log the successful login and return full token
+	ipAddress := getIPAddress(r)
+	userAgent := r.UserAgent()
+	if _, err := h.LoginLogRepo.CreateLoginLog(context.Background(), loginResult.AuthResponse.User.ID, ipAddress, userAgent); err != nil {
+		// Log error but don't fail the login
+	}
+
+	json.NewEncoder(w).Encode(loginResult.AuthResponse)
 }
 
 // getIPAddress extracts the real IP address from the request
