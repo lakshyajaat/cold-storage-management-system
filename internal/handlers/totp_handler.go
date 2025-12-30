@@ -32,26 +32,35 @@ func (h *TOTPHandler) SetupTOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Only admins can set up 2FA
 	if claims.Role != "admin" {
-		http.Error(w, "Only admin users can enable 2FA", http.StatusForbidden)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Only admin users can enable 2FA"})
 		return
 	}
 
 	user, err := h.UserRepo.Get(context.Background(), claims.UserID)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		log.Printf("[2FA] Failed to get user %d: %v", claims.UserID, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "User not found: " + err.Error()})
 		return
 	}
 
 	// Check if already enabled
 	if user.TOTPEnabled {
-		http.Error(w, "2FA is already enabled", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "2FA is already enabled"})
 		return
 	}
 
 	response, err := h.TOTPService.GenerateSetup(context.Background(), user)
 	if err != nil {
 		log.Printf("[2FA] Failed to generate setup for user %d: %v", user.ID, err)
-		http.Error(w, "Failed to generate 2FA setup: "+err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to generate 2FA setup: " + err.Error()})
 		return
 	}
 
@@ -125,7 +134,9 @@ func (h *TOTPHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	status, err := h.TOTPService.GetStatus(context.Background(), claims.UserID)
 	if err != nil {
 		log.Printf("[2FA] Failed to get status for user %d: %v", claims.UserID, err)
-		http.Error(w, "Failed to get 2FA status: "+err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to get 2FA status: " + err.Error()})
 		return
 	}
 
