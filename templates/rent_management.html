@@ -2018,7 +2018,7 @@
 
             bulkTransferSearchTimeout = setTimeout(async () => {
                 try {
-                    const response = await fetch(`/api/customers/search?q=${encodeURIComponent(searchTerm)}`, {
+                    const response = await fetch(`/api/customers/search?phone=${encodeURIComponent(searchTerm)}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 
