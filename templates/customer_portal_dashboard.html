@@ -1115,7 +1115,7 @@
         let dashboardData = null;
         const transliterationCache = {};
 
-        // Transliterate English text to Hindi script using Google Translate API
+        // Transliterate English text to Hindi script using backend proxy
         async function transliterateToHindi(text) {
             if (!text || !text.trim()) return text;
 
@@ -1125,11 +1125,9 @@
             }
 
             try {
-                const response = await fetch(
-                    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(text)}`
-                );
+                const response = await fetch(`/api/translate?text=${encodeURIComponent(text)}`);
                 const data = await response.json();
-                const result = data[0]?.[0]?.[0] || text;
+                const result = data.result || text;
                 transliterationCache[text] = result;
                 return result;
             } catch (error) {

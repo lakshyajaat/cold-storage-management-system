@@ -3,7 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 
 	"cold-backend/internal/auth"
 	"cold-backend/internal/middleware"
@@ -350,4 +353,59 @@ func (h *CustomerPortalHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"message": "Logged out successfully",
 	})
+}
+
+// TranslateText handles transliteration from English to Hindi via Google Translate API proxy
+func (h *CustomerPortalHandler) TranslateText(w http.ResponseWriter, r *http.Request) {
+	text := r.URL.Query().Get("text")
+	if text == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": ""})
+		return
+	}
+
+	// Call Google Translate API
+	apiURL := fmt.Sprintf(
+		"https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=%s",
+		url.QueryEscape(text),
+	)
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		// Return original text on error
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": text})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": text})
+		return
+	}
+
+	// Parse the response - it's a nested array like [[["translated","original",...]]]
+	var data []interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": text})
+		return
+	}
+
+	// Extract translated text from data[0][0][0]
+	result := text
+	if len(data) > 0 {
+		if arr1, ok := data[0].([]interface{}); ok && len(arr1) > 0 {
+			if arr2, ok := arr1[0].([]interface{}); ok && len(arr2) > 0 {
+				if translated, ok := arr2[0].(string); ok {
+					result = translated
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"result": result})
 }

@@ -719,6 +719,9 @@ func NewCustomerRouter(
 	r.HandleFunc("/auth/validate-session", customerPortalHandler.ValidateSession).Methods("GET")
 	r.HandleFunc("/auth/logout", customerPortalHandler.Logout).Methods("POST")
 
+	// Public API - Translation proxy for Hindi transliteration
+	r.HandleFunc("/api/translate", customerPortalHandler.TranslateText).Methods("GET")
+
 	// Protected API routes - Customer portal (requires customer JWT)
 	customerAPI := r.PathPrefix("/api").Subrouter()
 	customerAPI.Use(authMiddleware.AuthenticateCustomer)
