@@ -48,6 +48,7 @@ type FamilyMemberAccount struct {
 
 // CustomerAccount represents a customer's complete account info
 type CustomerAccount struct {
+	CustomerID    int                   `json:"customer_id"`
 	Name          string                `json:"name"`
 	Phone         string                `json:"phone"`
 	SO            string                `json:"so"`
@@ -288,12 +289,13 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 		phone := entry.Phone
 		if _, exists := customerMap[phone]; !exists {
 			customerMap[phone] = &CustomerAccount{
-				Name:     entry.Name,
-				Phone:    entry.Phone,
-				SO:       entry.SO,
-				Village:  entry.Village,
-				Thocks:   make([]ThockInfo, 0),
-				Payments: make([]*models.RentPayment, 0),
+				CustomerID: entry.CustomerID,
+				Name:       entry.Name,
+				Phone:      entry.Phone,
+				SO:         entry.SO,
+				Village:    entry.Village,
+				Thocks:     make([]ThockInfo, 0),
+				Payments:   make([]*models.RentPayment, 0),
 			}
 		}
 

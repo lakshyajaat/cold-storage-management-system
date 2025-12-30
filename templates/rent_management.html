@@ -881,6 +881,7 @@
 
                 // Map server response to frontend format
                 allCustomerAccounts = summary.customers.map(customer => ({
+                    customer_id: customer.customer_id,
                     name: customer.name,
                     phone: customer.phone,
                     so: customer.so || '',
