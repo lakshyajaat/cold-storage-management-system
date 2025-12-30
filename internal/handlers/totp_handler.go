@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"cold-backend/internal/auth"
@@ -49,7 +50,8 @@ func (h *TOTPHandler) SetupTOTP(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.TOTPService.GenerateSetup(context.Background(), user)
 	if err != nil {
-		http.Error(w, "Failed to generate 2FA setup", http.StatusInternalServerError)
+		log.Printf("[2FA] Failed to generate setup for user %d: %v", user.ID, err)
+		http.Error(w, "Failed to generate 2FA setup: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -122,7 +124,8 @@ func (h *TOTPHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.TOTPService.GetStatus(context.Background(), claims.UserID)
 	if err != nil {
-		http.Error(w, "Failed to get 2FA status", http.StatusInternalServerError)
+		log.Printf("[2FA] Failed to get status for user %d: %v", claims.UserID, err)
+		http.Error(w, "Failed to get 2FA status: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
