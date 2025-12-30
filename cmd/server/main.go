@@ -520,6 +520,7 @@ func main() {
 		entryHandler.SetSettingService(systemSettingService) // Wire SettingService for skip thock ranges
 		rentPaymentHandler := handlers.NewRentPaymentHandler(rentPaymentService, ledgerService)
 		rentPaymentHandler.SetNotificationService(notificationService)
+		rentPaymentHandler.SetCustomerService(customerService)
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		loginLogHandler := handlers.NewLoginLogHandler(loginLogRepo)
 		roomEntryEditLogHandler := handlers.NewRoomEntryEditLogHandler(roomEntryEditLogRepo)

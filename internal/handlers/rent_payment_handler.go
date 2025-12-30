@@ -18,6 +18,7 @@ type RentPaymentHandler struct {
 	Service             *services.RentPaymentService
 	LedgerService       *services.LedgerService
 	NotificationService *services.NotificationService
+	CustomerService     *services.CustomerService
 }
 
 func NewRentPaymentHandler(service *services.RentPaymentService, ledgerService *services.LedgerService) *RentPaymentHandler {
@@ -30,6 +31,11 @@ func NewRentPaymentHandler(service *services.RentPaymentService, ledgerService *
 // SetNotificationService sets the notification service for payment SMS
 func (h *RentPaymentHandler) SetNotificationService(notifService *services.NotificationService) {
 	h.NotificationService = notifService
+}
+
+// SetCustomerService sets the customer service for S/O lookup
+func (h *RentPaymentHandler) SetCustomerService(customerService *services.CustomerService) {
+	h.CustomerService = customerService
 }
 
 func (h *RentPaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Request) {
@@ -77,10 +83,18 @@ func (h *RentPaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Reques
 
 	// Create ledger entry for payment
 	if h.LedgerService != nil && payment.AmountPaid > 0 {
+		// Lookup customer S/O for ledger entry
+		customerSO := ""
+		if h.CustomerService != nil {
+			if customer, err := h.CustomerService.SearchByPhone(r.Context(), req.CustomerPhone); err == nil && customer != nil {
+				customerSO = customer.SO
+			}
+		}
+
 		ledgerEntry := &models.CreateLedgerEntryRequest{
 			CustomerPhone:   req.CustomerPhone,
 			CustomerName:    req.CustomerName,
-			CustomerSO:      "", // SO is retrieved from customer record if needed
+			CustomerSO:      customerSO,
 			EntryType:       models.LedgerEntryTypePayment,
 			Description:     "Rent payment received",
 			Credit:          payment.AmountPaid,
