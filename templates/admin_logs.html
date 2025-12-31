@@ -590,6 +590,7 @@
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="border-b-2 border-black">
+                            <th class="p-2 text-left">GP ID</th>
                             <th class="p-2 text-left">Thok NO</th>
                             <th class="p-2 text-left">Customer</th>
                             <th class="p-2 text-left">Qty</th>
@@ -624,6 +625,7 @@
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="border-b-2 border-red-600 bg-red-100">
+                            <th class="p-2 text-left text-red-900">GP ID</th>
                             <th class="p-2 text-left text-red-900">Thok NO</th>
                             <th class="p-2 text-left text-red-900">Customer</th>
                             <th class="p-2 text-left text-red-900">Phone</th>
@@ -637,7 +639,7 @@
                     </thead>
                     <tbody id="expiredPassesBody">
                         <tr>
-                            <td colspan="9" class="text-center p-4 text-red-600">Loading...</td>
+                            <td colspan="10" class="text-center p-4 text-red-600">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -786,6 +788,7 @@
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="border-b-2 border-green-600 bg-green-100">
+                            <th class="p-2 text-left">GP ID</th>
                             <th class="p-2 text-left">Thok NO</th>
                             <th class="p-2 text-left">Customer</th>
                             <th class="p-2 text-left">Phone</th>
@@ -798,7 +801,7 @@
                     </thead>
                     <tbody id="customerRequestsBody">
                         <tr>
-                            <td colspan="8" class="text-center p-4 text-gray-500">Loading...</td>
+                            <td colspan="9" class="text-center p-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1921,6 +1924,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-purple-50">
+                        <td class="p-2 font-bold text-purple-600">#${gp.id}</td>
                         <td class="p-2 font-bold ${thockColor}">${gp.thock_number}</td>
                         <td class="p-2">${capitalizeText(gp.customer_name)}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
@@ -2066,6 +2070,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-green-50">
+                        <td class="p-2 font-bold text-green-600">#${gp.id}</td>
                         <td class="p-2 font-bold ${thockColor}">${gp.thock_number}</td>
                         <td class="p-2">${capitalizeText(gp.customer_name)}</td>
                         <td class="p-2">${phone}</td>
@@ -2206,7 +2211,7 @@
             const tbody = document.getElementById('expiredPassesBody');
 
             if (allExpiredPasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-red-600 font-semibold">No expired gate passes in the last 7 days</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4 text-red-600 font-semibold">No expired gate passes in the last 7 days</td></tr>';
                 return;
             }
 
@@ -2232,6 +2237,7 @@
 
                 return `
                     <tr class="border-b-2 border-red-300 hover:bg-red-100 bg-white">
+                        <td class="p-2 font-bold text-red-600">#${exp.id}</td>
                         <td class="p-2 font-bold ${thockColor}">${exp.thock_number}</td>
                         <td class="p-2 font-semibold">${capitalizeText(exp.customer_name)}</td>
                         <td class="p-2 text-sm">${exp.customer_phone}</td>

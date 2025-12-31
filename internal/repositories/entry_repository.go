@@ -164,11 +164,12 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 	// Before: 500 entries = 500 subqueries
 	// After: Single query with JOIN aggregate
 	// Filter out deleted entries
+	// Added LEFT JOIN with users to get created_by_name
 	rows, err := r.DB.Query(ctx,
 		`SELECT e.id, e.customer_id, e.phone, e.name, e.village, e.so, e.expected_quantity,
 		        COALESCE(rq.total_qty, 0) as actual_quantity,
 		        e.thock_category, e.thock_number, COALESCE(e.remark, '') as remark,
-		        e.created_by_user_id, e.created_at, e.updated_at,
+		        e.created_by_user_id, COALESCE(u.name, '') as created_by_name, e.created_at, e.updated_at,
 		        e.family_member_id, COALESCE(e.family_member_name, '') as family_member_name
          FROM entries e
          LEFT JOIN (
@@ -176,6 +177,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
              FROM room_entries
              GROUP BY entry_id
          ) rq ON e.id = rq.entry_id
+         LEFT JOIN users u ON e.created_by_user_id = u.id
          WHERE COALESCE(e.status, 'active') != 'deleted'
          ORDER BY e.created_at DESC`)
 	if err != nil {
@@ -188,7 +190,7 @@ func (r *EntryRepository) List(ctx context.Context) ([]*models.Entry, error) {
 		var entry models.Entry
 		err := rows.Scan(&entry.ID, &entry.CustomerID, &entry.Phone, &entry.Name, &entry.Village, &entry.SO,
 			&entry.ExpectedQuantity, &entry.ActualQuantity, &entry.ThockCategory, &entry.ThockNumber, &entry.Remark, &entry.CreatedByUserID,
-			&entry.CreatedAt, &entry.UpdatedAt, &entry.FamilyMemberID, &entry.FamilyMemberName)
+			&entry.CreatedByName, &entry.CreatedAt, &entry.UpdatedAt, &entry.FamilyMemberID, &entry.FamilyMemberName)
 		if err != nil {
 			return nil, err
 		}

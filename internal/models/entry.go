@@ -22,6 +22,7 @@ type Entry struct {
 	DeletedAt               *time.Time `json:"deleted_at,omitempty"`       // Soft delete timestamp
 	DeletedByUserID         *int       `json:"deleted_by_user_id,omitempty"` // Who deleted it
 	CreatedByUserID         int        `json:"created_by_user_id"`
+	CreatedByName           string     `json:"created_by_name,omitempty"` // Employee name who created this entry
 	CreatedAt               time.Time  `json:"created_at"`
 	UpdatedAt               time.Time  `json:"updated_at"`
 }
