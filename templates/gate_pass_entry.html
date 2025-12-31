@@ -1782,6 +1782,15 @@
                             </button>
                         </div>
                     `;
+                } else if (statusLower === 'approved' && (gp.total_picked_up || 0) === 0) {
+                    // Allow rejecting approved gate passes if no pickups yet
+                    actionButtons = `
+                        <button onclick='declineGatePass(${gp.id}, "${gp.thock_number}")'
+                                class="neu-button bg-red-500 text-white text-xs px-2 py-1"
+                                title="Cancel/Reject">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </button>
+                    `;
                 }
 
                 // Calculate picked up quantity

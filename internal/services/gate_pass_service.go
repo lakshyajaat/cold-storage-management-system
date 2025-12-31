@@ -121,7 +121,15 @@ func (s *GatePassService) ApproveGatePass(ctx context.Context, id int, req *mode
 		return err
 	}
 
-	if gatePass.Status != "pending" {
+	// Allow rejecting approved gate passes if no pickups yet
+	if req.Status == "rejected" {
+		if gatePass.Status != "pending" && gatePass.Status != "approved" {
+			return errors.New("gate pass cannot be rejected - status is " + gatePass.Status)
+		}
+		if gatePass.TotalPickedUp > 0 {
+			return errors.New("cannot reject gate pass - items already picked up")
+		}
+	} else if gatePass.Status != "pending" {
 		return errors.New("gate pass is not pending")
 	}
 
