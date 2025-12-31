@@ -1978,31 +1978,35 @@
         }
 
         function openScopedPaymentModal() {
+            // Check if there's any balance due at the account level
+            if (dashboardData.total_balance <= 0) {
+                alert(i18n.t('no_balance_due', 'No balance due'));
+                return;
+            }
+
             // Determine which truck/entry to use for the payment
+            // Since payments are now per-family-member (not per-thock), just pick the first truck
             let truckNumber = '';
             let entryId = 0;
 
             if (selectedPaymentScope === 'account') {
-                // Use first truck with balance for account-wide payment
-                const truckWithBalance = dashboardData.trucks.find(t => t.balance > 0);
-                if (truckWithBalance) {
-                    truckNumber = truckWithBalance.thock_number;
-                    entryId = truckWithBalance.entry_id;
+                // Use first truck for account-wide payment
+                const firstTruck = dashboardData.trucks[0];
+                if (firstTruck) {
+                    truckNumber = firstTruck.thock_number;
+                    entryId = firstTruck.entry_id;
                 }
             } else {
-                // Use first truck from selected family member with balance
+                // Use first truck from selected family member
                 const memberData = memberBalances[selectedPaymentScope];
                 if (memberData && memberData.trucks.length > 0) {
-                    const truckWithBalance = memberData.trucks.find(t => t.balance > 0);
-                    if (truckWithBalance) {
-                        truckNumber = truckWithBalance.thock_number;
-                        entryId = truckWithBalance.entry_id;
-                    }
+                    truckNumber = memberData.trucks[0].thock_number;
+                    entryId = memberData.trucks[0].entry_id;
                 }
             }
 
             if (!truckNumber) {
-                alert(i18n.t('no_balance_due', 'No balance due'));
+                alert(i18n.t('no_trucks_found', 'No trucks found'));
                 return;
             }
 
