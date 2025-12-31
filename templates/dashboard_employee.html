@@ -15,61 +15,65 @@
     <link href="/static/css/fonts.css" rel="stylesheet">
     <link href="/static/css/dark-mode.css" rel="stylesheet">
     <link href="/static/css/responsive.css" rel="stylesheet">
+    <link href="/static/css/inventory-theme.css" rel="stylesheet">
 
     <style>
         * {
             font-family: 'Space Grotesk', sans-serif;
         }
+        /* Modern card styling */
         .neu-border {
-            border: 3px solid #000;
-            box-shadow: 4px 4px 0 #000;
+            border: 1px solid var(--border-color, #e0e6ed);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-radius: 16px;
             transition: all 0.2s ease;
         }
         .neu-border:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0 #000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         }
+        /* Modern page buttons */
         .page-button {
-            padding: 2rem;
-            border: 3px solid #000;
-            box-shadow: 4px 4px 0 #000;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color, #e0e6ed);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-radius: 12px;
             transition: all 0.2s ease;
             text-align: center;
             font-weight: 600;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
             cursor: pointer;
         }
         .page-button:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0 #000;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
         }
         .page-button i {
-            font-size: 2rem;
+            font-size: 1.75rem;
+            opacity: 0.85;
         }
-        /* Ensure page buttons have dark text for visibility */
-        .page-button {
-            color: #1a1a1a !important;
-        }
-        .page-button i {
-            color: #333 !important;
-        }
-        .page-button small {
-            color: #555 !important;
-        }
+        /* Richer button background colors with gradients */
+        .page-button.bg-\[\#FFE082\] { background: linear-gradient(135deg, #FFD860 0%, #FFC940 100%) !important; color: #7c5c00 !important; }
+        .page-button.bg-\[\#98EECC\] { background: linear-gradient(135deg, #7BE8BB 0%, #5DD9A4 100%) !important; color: #1a5c3d !important; }
+        .page-button.bg-\[\#7DEDFF\] { background: linear-gradient(135deg, #60E5FF 0%, #40D4F0 100%) !important; color: #0a5a6e !important; }
+        .page-button.bg-\[\#DFCCFB\] { background: linear-gradient(135deg, #D0B8F8 0%, #B8A0F0 100%) !important; color: #4a2d7c !important; }
+        .page-button.bg-\[\#A8E6CF\] { background: linear-gradient(135deg, #8EDDB8 0%, #6DD0A0 100%) !important; color: #1a5c3d !important; }
+        .page-button.bg-\[\#B8E8FC\] { background: linear-gradient(135deg, #A0DCFA 0%, #78CCF5 100%) !important; color: #0a4a6e !important; }
+        .page-button.bg-\[\#FFB3BA\] { background: linear-gradient(135deg, #FFA0AA 0%, #FF8090 100%) !important; color: #7c2d35 !important; }
+        .page-button.bg-\[\#FFDFBA\] { background: linear-gradient(135deg, #FFD0A0 0%, #FFC080 100%) !important; color: #7c4a1a !important; }
+        .page-button.bg-\[\#FFD3B6\] { background: linear-gradient(135deg, #FFC4A0 0%, #FFB080 100%) !important; color: #7c3d1a !important; }
+
+        /* Modern employee badge */
         .employee-badge {
             background: linear-gradient(135deg, #3498db 0%, #2ecc71 100%);
             color: white;
             padding: 0.5rem 1rem;
-            border-radius: 0;
-            border: 2px solid #000;
-            box-shadow: 3px 3px 0 #000;
-        }
-        .lang-selector {
-            border: 2px solid #000;
-            box-shadow: 2px 2px 0px #000;
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
         }
 
         /* Tablet/Phone Portrait Optimizations */
@@ -77,6 +81,7 @@
             .page-button {
                 padding: 1rem;
                 gap: 0.5rem;
+                border-radius: 10px;
             }
             .page-button i {
                 font-size: 1.5rem;
@@ -88,8 +93,30 @@
     </style>
     <script src="/static/js/theme.js"></script>
 </head>
-<body class="bg-[#E8F5E9] min-h-screen p-2 sm:p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
+<body class="bg-[#f8fafb] min-h-screen">
+    <!-- Navigation Bar -->
+    <div class="page-nav">
+        <a href="/home" class="nav-btn nav-btn-dashboard">
+            <i class="bi bi-house"></i>
+            <span data-i18n="home">Home</span>
+        </a>
+        <div class="flex items-center gap-2">
+            <select id="langSelector" onchange="i18n.setLanguage(this.value)" class="lang-toggle">
+                <option value="en">EN</option>
+                <option value="hi">हिं</option>
+            </select>
+            <button onclick="theme.toggle()" class="nav-btn nav-btn-back" title="Toggle Dark Mode">
+                <i class="bi bi-moon-fill theme-icon-moon"></i>
+                <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
+            </button>
+            <button onclick="logout()" class="nav-btn" style="background: #FF6B6B; color: white; border: none;">
+                <i class="bi bi-box-arrow-right"></i>
+                <span data-i18n="logout">Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-2 sm:p-4 md:p-8">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-12 neu-border bg-white p-3 md:p-6 gap-3 md:gap-4">
             <div>
                 <div class="flex items-center gap-2 md:gap-3">
@@ -103,28 +130,9 @@
                     <span class="employee-badge inline-block text-sm">
                         <i class="bi bi-person-circle"></i> <span id="employeeName">Loading...</span>
                     </span>
-                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 border-2 border-black shadow-[2px_2px_0px_#000]">v1.5.173</span>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">v1.5.173</span>
                 </div>
             </div>
-            <nav class="flex gap-2 md:gap-4 items-center w-full md:w-auto justify-end flex-wrap">
-                <!-- Language Selector -->
-                <select id="langSelector" onchange="i18n.setLanguage(this.value)"
-                        class="lang-selector bg-white px-2 md:px-3 py-2 text-sm font-medium cursor-pointer">
-                    <option value="en">EN</option>
-                    <option value="hi">हिं</option>
-                </select>
-                <!-- Theme Toggle -->
-                <button onclick="theme.toggle()" class="neu-border bg-gray-200 px-2 md:px-3 py-2" title="Toggle Dark Mode">
-                    <i class="bi bi-moon-fill theme-icon-moon"></i>
-                    <i class="bi bi-sun-fill theme-icon-sun hidden"></i>
-                </button>
-                <button class="neu-border bg-[#81C784] px-3 md:px-6 py-2" onclick="window.location.href='/home'">
-                    <i class="bi bi-house-door"></i> <span class="hidden sm:inline" data-i18n="home">Home</span>
-                </button>
-                <button class="neu-border bg-[#FF6B6B] text-white px-3 md:px-6 py-2" onclick="logout()">
-                    <i class="bi bi-box-arrow-right"></i> <span class="hidden sm:inline" data-i18n="logout">Logout</span>
-                </button>
-            </nav>
         </header>
 
         <!-- Employee Notice -->
@@ -204,35 +212,35 @@
         <div class="neu-border bg-white p-3 md:p-6">
             <h3 class="text-lg md:text-2xl font-bold mb-3 md:mb-4" data-i18n="todays_summary">Today's Summary</h3>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
-                <div class="p-2 md:p-4 bg-blue-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-blue-50 rounded-xl border border-blue-200">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="my_entries_today">My Entries Today</p>
-                    <p id="myEntriesToday" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="myEntriesToday" class="text-xl md:text-3xl font-bold text-blue-700">...</p>
                 </div>
-                <div class="p-2 md:p-4 bg-green-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-green-50 rounded-xl border border-green-200">
                     <p class="text-xs md:text-sm text-gray-600">My Room Entries</p>
-                    <p id="myRoomEntriesToday" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="myRoomEntriesToday" class="text-xl md:text-3xl font-bold text-green-700">...</p>
                 </div>
-                <div class="p-2 md:p-4 bg-yellow-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                     <p class="text-xs md:text-sm text-gray-600">Payments Collected</p>
-                    <p id="myPaymentsToday" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="myPaymentsToday" class="text-xl md:text-3xl font-bold text-yellow-700">...</p>
                 </div>
-                <div class="p-2 md:p-4 bg-purple-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-purple-50 rounded-xl border border-purple-200">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_room_entries">Today's Room Entries</p>
-                    <p id="totalRoomEntries" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="totalRoomEntries" class="text-xl md:text-3xl font-bold text-purple-700">...</p>
                 </div>
-                <div class="p-2 md:p-4 bg-orange-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-orange-50 rounded-xl border border-orange-200">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="todays_bags">Today's Bags</p>
-                    <p id="totalBags" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="totalBags" class="text-xl md:text-3xl font-bold text-orange-700">...</p>
                 </div>
-                <div class="p-2 md:p-4 bg-gray-50 border-2 border-black">
+                <div class="p-2 md:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <p class="text-xs md:text-sm text-gray-600" data-i18n="total_entries">Total Entries</p>
-                    <p id="totalEntries" class="text-xl md:text-3xl font-bold">...</p>
+                    <p id="totalEntries" class="text-xl md:text-3xl font-bold text-gray-700">...</p>
                 </div>
             </div>
         </div>
 
         <!-- Restricted Access Notice -->
-        <div class="mt-4 md:mt-8 p-2 md:p-4 border-2 border-gray-300 bg-gray-50">
+        <div class="mt-4 md:mt-8 p-2 md:p-4 border border-gray-200 bg-gray-50 rounded-xl">
             <p class="text-xs md:text-sm text-gray-600 text-center">
                 <i class="bi bi-lock"></i> <span class="hidden sm:inline" data-i18n="restricted_notice">Some features are restricted to administrators. Contact your admin for access to reports, employee management, and system settings.</span>
                 <span class="sm:hidden">Admin features restricted</span>
