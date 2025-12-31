@@ -53,7 +53,17 @@ button,
 .text-gray-600 { color: #4b5563 !important; }
 .text-gray-700 { color: #374151 !important; }
 
-/* Thock number color coding - high specificity */
+/* Thock number color coding - highest specificity for neu-border tables */
+.neu-border td.text-green-600,
+.neu-border td[class*="text-green-600"],
+table td.text-green-600,
+tbody td.text-green-600 { color: #16a34a !important; }
+
+.neu-border td.text-orange-600,
+.neu-border td[class*="text-orange-600"],
+table td.text-orange-600,
+tbody td.text-orange-600 { color: #ea580c !important; }
+
 [class*="text-green-600"] { color: #16a34a !important; }
 [class*="text-orange-600"] { color: #ea580c !important; }
 
