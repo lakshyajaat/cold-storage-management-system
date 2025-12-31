@@ -10,11 +10,17 @@ import (
 )
 
 type LoginLogHandler struct {
-	Repo *repositories.LoginLogRepository
+	Repo    *repositories.LoginLogRepository
+	OTPRepo *repositories.OTPRepository
 }
 
 func NewLoginLogHandler(repo *repositories.LoginLogRepository) *LoginLogHandler {
 	return &LoginLogHandler{Repo: repo}
+}
+
+// SetOTPRepo sets the OTP repository for customer login logs
+func (h *LoginLogHandler) SetOTPRepo(otpRepo *repositories.OTPRepository) {
+	h.OTPRepo = otpRepo
 }
 
 // ListLoginLogs returns all login/logout logs
@@ -48,4 +54,25 @@ func (h *LoginLogHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Logout recorded successfully",
 	})
+}
+
+// ListCustomerLoginLogs returns customer portal login logs (OTP verifications)
+func (h *LoginLogHandler) ListCustomerLoginLogs(w http.ResponseWriter, r *http.Request) {
+	if h.OTPRepo == nil {
+		utils.RespondError(w, http.StatusInternalServerError, "Customer login logs not configured")
+		return
+	}
+
+	logs, err := h.OTPRepo.GetLoginLogs(context.Background())
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve customer login logs")
+		return
+	}
+
+	if logs == nil {
+		logs = []repositories.CustomerLoginLog{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(logs)
 }

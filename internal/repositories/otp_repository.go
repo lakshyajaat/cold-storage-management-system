@@ -108,3 +108,41 @@ func (r *OTPRepository) CleanupExpiredOTPs(ctx context.Context) error {
 	_, err := r.DB.Exec(ctx, query)
 	return err
 }
+
+// CustomerLoginLog represents a customer login log entry with customer name
+type CustomerLoginLog struct {
+	ID           int       `json:"id"`
+	Phone        string    `json:"phone"`
+	CustomerName string    `json:"customer_name"`
+	IPAddress    *string   `json:"ip_address"`
+	CreatedAt    time.Time `json:"created_at"`
+	Verified     bool      `json:"verified"`
+}
+
+// GetLoginLogs retrieves customer login logs (OTP verifications) for admin view
+func (r *OTPRepository) GetLoginLogs(ctx context.Context) ([]CustomerLoginLog, error) {
+	query := `
+		SELECT o.id, o.phone, COALESCE(c.name, '') as customer_name, o.ip_address, o.created_at, o.verified
+		FROM customer_otps o
+		LEFT JOIN customers c ON o.phone = c.phone
+		ORDER BY o.created_at DESC
+		LIMIT 500
+	`
+
+	rows, err := r.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []CustomerLoginLog
+	for rows.Next() {
+		var log CustomerLoginLog
+		if err := rows.Scan(&log.ID, &log.Phone, &log.CustomerName, &log.IPAddress, &log.CreatedAt, &log.Verified); err != nil {
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+
+	return logs, nil
+}

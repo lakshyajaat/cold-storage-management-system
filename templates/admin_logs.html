@@ -300,8 +300,23 @@
                 </h2>
                 <input type="text" id="loginLogSearch" placeholder="Search login logs..." class="neu-border p-2" onkeyup="filterLoginLogs()">
             </div>
-            <p class="text-sm text-gray-600 mb-4">Track all user login and logout sessions</p>
-            <div class="overflow-x-auto">
+
+            <!-- Toggle between Employee and Customer logins -->
+            <div class="flex gap-2 mb-4">
+                <button onclick="setLoginLogType('employee')" id="loginType-employee"
+                        class="px-4 py-2 rounded border-2 border-black bg-blue-500 text-white text-sm font-bold ring-2 ring-black">
+                    <i class="bi bi-person-badge"></i> Employee Logins
+                </button>
+                <button onclick="setLoginLogType('customer')" id="loginType-customer"
+                        class="px-4 py-2 rounded border-2 border-black bg-teal-100 text-sm font-bold">
+                    <i class="bi bi-person-circle"></i> Customer Logins
+                </button>
+            </div>
+
+            <p class="text-sm text-gray-600 mb-4" id="loginLogDesc">Track all employee login and logout sessions</p>
+
+            <!-- Employee Login Logs Table -->
+            <div id="employeeLoginSection" class="overflow-x-auto">
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="border-b-2 border-black">
@@ -318,6 +333,26 @@
                     <tbody id="loginLogsBody">
                         <tr>
                             <td colspan="8" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Customer Login Logs Table -->
+            <div id="customerLoginSection" class="overflow-x-auto" style="display: none;">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-teal-600 bg-teal-50">
+                            <th class="p-2 text-left">Phone</th>
+                            <th class="p-2 text-left">Customer Name</th>
+                            <th class="p-2 text-left">Login Time</th>
+                            <th class="p-2 text-left">IP Address</th>
+                            <th class="p-2 text-left">Verified</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerLoginLogsBody">
+                        <tr>
+                            <td colspan="5" class="text-center p-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -609,6 +644,7 @@
                             <th class="p-2 text-left">Phone</th>
                             <th class="p-2 text-left">Amount Paid</th>
                             <th class="p-2 text-left">Balance</th>
+                            <th class="p-2 text-left">Remark</th>
                             <th class="p-2 text-left">Processed By</th>
                             <th class="p-2 text-left">Payment Date</th>
                         </tr>
@@ -815,6 +851,7 @@
                             <th class="p-2 text-left">Village</th>
                             <th class="p-2 text-left">Qty</th>
                             <th class="p-2 text-left">Category</th>
+                            <th class="p-2 text-left">Remark</th>
                             <th class="p-2 text-left">Created By</th>
                             <th class="p-2 text-left">Status</th>
                             <th class="p-2 text-left">Created At</th>
@@ -822,7 +859,7 @@
                     </thead>
                     <tbody id="unloadingLogsBody">
                         <tr>
-                            <td colspan="8" class="text-center p-4 text-gray-500">Loading...</td>
+                            <td colspan="9" class="text-center p-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -905,6 +942,8 @@
         let allManagementLogs = [];
         let allUnloadingLogs = [];
         let allCustomerRequests = [];
+        let allCustomerLoginLogs = [];
+        let loginLogType = 'employee';  // Toggle: 'employee' or 'customer'
         let gatePassStatusFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'completed', 'rejected', 'expired', 'customer_portal'
         let customerRequestFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'rejected', 'completed'
         let editLogFilter = 'all';  // Filter for room edits: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
@@ -963,7 +1002,8 @@
                 loadGatePasses(),
                 loadExpiredPasses(),
                 loadUnloadingLogs(),
-                loadCustomerRequests()
+                loadCustomerRequests(),
+                loadCustomerLoginLogs()
             ]);
 
             updateStatistics();
@@ -1082,9 +1122,10 @@
                 if (!response.ok) throw new Error('Failed to load entry edit logs');
 
                 allEntryEditLogs = await response.json() || [];
-                // Refresh display if entry type is selected
-                if (editLogType === 'entry') {
-                    displayEditLogs();
+                // Render entry edit logs
+                const entryTbody = document.getElementById('entryEditLogsBody');
+                if (entryTbody) {
+                    displayEntryEditLogs(entryTbody);
                 }
             } catch (error) {
                 console.error('Error loading entry edit logs:', error);
@@ -1358,7 +1399,7 @@
             const tbody = document.getElementById('paymentsLogBody');
 
             if (allPayments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No payments found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No payments found</td></tr>';
                 return;
             }
 
@@ -1376,6 +1417,7 @@
 
                 const processedBy = userMap[payment.processed_by_user_id] || 'Unknown';
                 const balanceClass = payment.balance < 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+                const notes = payment.notes || '-';
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-green-50">
@@ -1384,6 +1426,7 @@
                         <td class="p-2">${payment.customer_phone}</td>
                         <td class="p-2">₹${payment.amount_paid.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                         <td class="p-2 ${balanceClass}">₹${payment.balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td class="p-2 text-sm text-gray-600">${escapeHtml(notes)}</td>
                         <td class="p-2 font-semibold">${processedBy}</td>
                         <td class="p-2 text-sm">${paymentDate}</td>
                     </tr>
@@ -1482,6 +1525,86 @@
                         <td class="p-2 font-semibold">${duration}</td>
                         <td class="p-2 text-xs">${log.ip_address || 'N/A'}</td>
                         <td class="p-2 text-xs" title="${log.user_agent || 'N/A'}">${(log.user_agent || 'N/A').substring(0, 30)}...</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Toggle between Employee and Customer login logs
+        function setLoginLogType(type) {
+            loginLogType = type;
+
+            const employeeBtn = document.getElementById('loginType-employee');
+            const customerBtn = document.getElementById('loginType-customer');
+            const employeeSection = document.getElementById('employeeLoginSection');
+            const customerSection = document.getElementById('customerLoginSection');
+            const desc = document.getElementById('loginLogDesc');
+
+            if (type === 'employee') {
+                employeeBtn.classList.add('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
+                employeeBtn.classList.remove('bg-blue-100');
+                customerBtn.classList.remove('bg-teal-500', 'text-white', 'ring-2', 'ring-black');
+                customerBtn.classList.add('bg-teal-100');
+                employeeSection.style.display = 'block';
+                customerSection.style.display = 'none';
+                desc.textContent = 'Track all employee login and logout sessions';
+            } else {
+                customerBtn.classList.add('bg-teal-500', 'text-white', 'ring-2', 'ring-black');
+                customerBtn.classList.remove('bg-teal-100');
+                employeeBtn.classList.remove('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
+                employeeBtn.classList.add('bg-blue-100');
+                employeeSection.style.display = 'none';
+                customerSection.style.display = 'block';
+                desc.textContent = 'Track all customer portal login sessions (OTP verified)';
+            }
+        }
+
+        async function loadCustomerLoginLogs() {
+            try {
+                const response = await fetch('/api/customer-login-logs', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load customer login logs');
+
+                allCustomerLoginLogs = await response.json() || [];
+                displayCustomerLoginLogs();
+            } catch (error) {
+                console.error('Error loading customer login logs:', error);
+                allCustomerLoginLogs = [];
+                displayCustomerLoginLogs();
+            }
+        }
+
+        function displayCustomerLoginLogs() {
+            const tbody = document.getElementById('customerLoginLogsBody');
+
+            if (allCustomerLoginLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">No customer login logs found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allCustomerLoginLogs.map(log => {
+                const loginTime = new Date(log.created_at).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                const verifiedBadge = log.verified
+                    ? '<span class="px-2 py-1 bg-green-500 text-white rounded text-xs">VERIFIED</span>'
+                    : '<span class="px-2 py-1 bg-yellow-500 text-white rounded text-xs">PENDING</span>';
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-teal-50">
+                        <td class="p-2 font-semibold">${escapeHtml(log.phone)}</td>
+                        <td class="p-2">${escapeHtml(log.customer_name || '-')}</td>
+                        <td class="p-2 text-sm">${loginTime}</td>
+                        <td class="p-2 text-xs">${escapeHtml(log.ip_address || 'N/A')}</td>
+                        <td class="p-2">${verifiedBadge}</td>
                     </tr>
                 `;
             }).join('');
@@ -2075,6 +2198,7 @@
 
                 const thockColor = getThockColor(entry.thock_number);
                 const createdByName = entry.created_by_name ? capitalizeText(entry.created_by_name) : 'System';
+                const remark = entry.remark || '-';
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-blue-50">
@@ -2083,6 +2207,7 @@
                         <td class="p-2">${escapeHtml(entry.village || '-')}</td>
                         <td class="p-2 font-bold">${entry.expected_quantity}</td>
                         <td class="p-2">${escapeHtml(entry.category || '-')}</td>
+                        <td class="p-2 text-sm text-gray-600">${escapeHtml(remark)}</td>
                         <td class="p-2 font-semibold text-blue-600">${createdByName}</td>
                         <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${(entry.status || 'active').toUpperCase()}</span></td>
                         <td class="p-2 text-sm">${createdAt}</td>

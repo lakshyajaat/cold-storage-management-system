@@ -539,6 +539,9 @@ func main() {
 		rentPaymentHandler.SetCustomerService(customerService)
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		loginLogHandler := handlers.NewLoginLogHandler(loginLogRepo)
+		// Set OTP repo for customer login logs in admin panel
+		otpRepo := repositories.NewOTPRepository(pool)
+		loginLogHandler.SetOTPRepo(otpRepo)
 		roomEntryEditLogHandler := handlers.NewRoomEntryEditLogHandler(roomEntryEditLogRepo)
 		entryEditLogHandler := handlers.NewEntryEditLogHandler(entryEditLogRepo)
 		entryManagementLogHandler := handlers.NewEntryManagementLogHandler(entryManagementLogRepo)

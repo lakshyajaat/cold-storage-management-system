@@ -272,6 +272,11 @@ func NewRouter(
 	loginLogsAPI.Use(authMiddleware.Authenticate)
 	loginLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(loginLogHandler.ListLoginLogs)).ServeHTTP).Methods("GET")
 
+	// Protected API routes - Customer Login Logs (admin only)
+	customerLoginLogsAPI := r.PathPrefix("/api/customer-login-logs").Subrouter()
+	customerLoginLogsAPI.Use(authMiddleware.Authenticate)
+	customerLoginLogsAPI.HandleFunc("", authMiddleware.RequireRole("admin")(http.HandlerFunc(loginLogHandler.ListCustomerLoginLogs)).ServeHTTP).Methods("GET")
+
 	// Protected API routes - Logout
 	logoutAPI := r.PathPrefix("/api/logout").Subrouter()
 	logoutAPI.Use(authMiddleware.Authenticate)
