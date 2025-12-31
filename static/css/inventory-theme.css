@@ -78,10 +78,18 @@ button,
     color: inherit;
 }
 
-.neu-border h1, .neu-border h2, .neu-border h3, .neu-border h4, .neu-border h5, .neu-border h6,
-.neu-border p, .neu-border span, .neu-border label, .neu-border div {
+.neu-border h1:not([class*="text-"]), .neu-border h2:not([class*="text-"]), .neu-border h3:not([class*="text-"]), .neu-border h4:not([class*="text-"]), .neu-border h5:not([class*="text-"]), .neu-border h6:not([class*="text-"]),
+.neu-border p:not([class*="text-"]), .neu-border span:not([class*="text-"]), .neu-border label:not([class*="text-"]), .neu-border div:not([class*="text-"]), .neu-border td:not([class*="text-"]) {
     color: #1a1a1a;
 }
+
+/* Preserve Tailwind text color classes */
+.text-green-600 { color: #16a34a !important; }
+.text-orange-600 { color: #ea580c !important; }
+.text-red-600 { color: #dc2626 !important; }
+.text-blue-600 { color: #2563eb !important; }
+.text-gray-600 { color: #4b5563 !important; }
+.text-gray-700 { color: #374151 !important; }
 
 .neu-border i:not([class*="text-"]) {
     color: #333 !important;
