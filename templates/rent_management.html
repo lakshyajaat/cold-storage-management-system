@@ -1370,9 +1370,10 @@
                     return true;
                 }
 
-                // Search by thock number
+                // Search by thock number or family member name
                 if (customer.thocks && customer.thocks.some(thock =>
-                    thock.thock_number && thock.thock_number.toLowerCase().includes(searchTerm)
+                    (thock.thock_number && thock.thock_number.toLowerCase().includes(searchTerm)) ||
+                    (thock.family_member_name && thock.family_member_name.toLowerCase().includes(searchTerm))
                 )) {
                     return true;
                 }
