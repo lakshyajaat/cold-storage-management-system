@@ -41,18 +41,17 @@ func NewCustomerPortalService(
 
 // ThockInfo represents dashboard data for a single truck
 type ThockInfo struct {
-	ThockNumber       string  `json:"thock_number"`
-	EntryID           int     `json:"entry_id"`
-	FamilyMemberName  string  `json:"family_member_name,omitempty"`
-	ThockCategory     string  `json:"thock_category"`
-	StoredQuantity    int     `json:"stored_quantity"`
-	ExpectedQuantity  int     `json:"expected_quantity"`
-	CurrentInventory  int     `json:"current_inventory"`
-	TotalRent         float64 `json:"total_rent"`
-	TotalPaid         float64 `json:"total_paid"`
-	Balance           float64 `json:"balance"`
-	CanTakeOut        int     `json:"can_take_out"`
-	RentPerItem       float64 `json:"rent_per_item"`
+	ThockNumber      string  `json:"thock_number"`
+	EntryID          int     `json:"entry_id"`
+	FamilyMemberID   *int    `json:"family_member_id,omitempty"`
+	FamilyMemberName string  `json:"family_member_name,omitempty"`
+	ThockCategory    string  `json:"thock_category"`
+	StoredQuantity   int     `json:"stored_quantity"`
+	ExpectedQuantity int     `json:"expected_quantity"`
+	CurrentInventory int     `json:"current_inventory"`
+	TotalRent        float64 `json:"total_rent"`
+	CanTakeOut       int     `json:"can_take_out"`
+	RentPerItem      float64 `json:"rent_per_item"`
 }
 
 // PaymentInfo represents a payment for the customer dashboard
@@ -100,81 +99,100 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		return nil, fmt.Errorf("failed to get entries: %w", err)
 	}
 
-	var trucks []ThockInfo
-	var totalRent, totalPaid, totalBalance float64
+	// Get all payments for this customer to calculate per-family-member totals
+	allPayments, _ := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
 
-	// For each entry, calculate truck info
+	// Calculate total paid per family member (use 0 for entries with no family member)
+	familyMemberPaid := make(map[int]float64)
+	for _, payment := range allPayments {
+		fmID := 0
+		if payment.FamilyMemberID != nil {
+			fmID = *payment.FamilyMemberID
+		}
+		familyMemberPaid[fmID] += payment.AmountPaid
+	}
+
+	// Calculate total picked up per family member
+	familyMemberPickedUp := make(map[int]int)
 	for _, entry := range entries {
-		// Get ORIGINAL entered quantity from room entries
-		// room_entries.quantity stores what was originally entered (never reduced on pickup)
-		originalEntered, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, entry.ThockNumber)
-		if err != nil {
-			// If no room entries, quantity is 0
-			originalEntered = 0
+		fmID := 0
+		if entry.FamilyMemberID != nil {
+			fmID = *entry.FamilyMemberID
 		}
 
-		// Get total picked up quantity
-		var totalPickedUp int
 		if s.GatePassPickupRepo != nil {
 			pickups, pickupErr := s.GatePassPickupRepo.GetPickupsByThockNumber(ctx, entry.ThockNumber)
 			if pickupErr == nil {
 				for _, p := range pickups {
-					totalPickedUp += p.PickupQuantity
+					familyMemberPickedUp[fmID] += p.PickupQuantity
+				}
+			}
+		}
+	}
+
+	var trucks []ThockInfo
+	var totalRent, totalPaid, totalBalance float64
+
+	// For each entry, calculate truck info
+	rentPerItem := systemRentPerItem
+
+	for _, entry := range entries {
+		// Get family member ID (0 if not assigned)
+		fmID := 0
+		if entry.FamilyMemberID != nil {
+			fmID = *entry.FamilyMemberID
+		}
+
+		// Get ORIGINAL entered quantity from room entries
+		originalEntered, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, entry.ThockNumber)
+		if err != nil {
+			originalEntered = 0
+		}
+
+		// Get total picked up quantity for THIS thock
+		var thockPickedUp int
+		if s.GatePassPickupRepo != nil {
+			pickups, pickupErr := s.GatePassPickupRepo.GetPickupsByThockNumber(ctx, entry.ThockNumber)
+			if pickupErr == nil {
+				for _, p := range pickups {
+					thockPickedUp += p.PickupQuantity
 				}
 			}
 		}
 
 		// Calculate CURRENT inventory = original entered - picked up
-		currentInventory := originalEntered - totalPickedUp
+		currentInventory := originalEntered - thockPickedUp
 		if currentInventory < 0 {
 			currentInventory = 0
 		}
 
-		// Get pending quantity from gate passes (approved/pending but not yet picked up)
-		pendingQty, err := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
-		if err != nil {
-			pendingQty = 0
-		}
+		// Get pending quantity from gate passes
+		pendingQty, _ := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
 
-		// Get rent payments for this entry
-		payments, err := s.RentPaymentRepo.GetByEntryID(ctx, entry.ID)
-		if err != nil {
-			// If no payments, continue with 0 paid
-			payments = []*models.RentPayment{}
-		}
-
-		// Calculate total paid (sum of amount_paid from all payments)
-		var entryTotalPaid float64
-		for _, payment := range payments {
-			entryTotalPaid += payment.AmountPaid
-		}
-
-		// Calculate rent based on ORIGINAL ENTERED quantity (never changes)
-		// Use system rent_per_item setting
-		rentPerItem := systemRentPerItem
-
-		// Rent = original entered × rent per item (constant, doesn't change with pickups)
+		// Calculate rent for this entry
 		entryTotalRent := float64(originalEntered) * rentPerItem
 
-		// Calculate balance (rent - paid)
-		entryBalance := entryTotalRent - entryTotalPaid
-		if entryBalance < 0 {
-			entryBalance = 0
-		}
-
-		// Calculate effective available inventory (current - already committed in pending gate passes)
+		// Calculate effective available inventory
 		effectiveInventory := currentInventory - pendingQty
 		if effectiveInventory < 0 {
 			effectiveInventory = 0
 		}
 
-		// Calculate how much customer can take out (considering pending gate passes)
-		// canTakeOut = MIN(effectiveInventory, FLOOR(totalPaid / rentPerItem))
+		// Calculate canTakeOut based on FAMILY MEMBER's total paid and picked up
+		fmTotalPaid := familyMemberPaid[fmID]
+		fmTotalPickedUp := familyMemberPickedUp[fmID]
+
 		canTakeOut := effectiveInventory
 		if rentPerItem > 0 {
-			maxAllowedByPayment := int(entryTotalPaid / rentPerItem)
-			if maxAllowedByPayment < canTakeOut {
-				canTakeOut = maxAllowedByPayment
+			// Items paid for by this family member
+			itemsPaidFor := int(fmTotalPaid / rentPerItem)
+			// Remaining allowance = items paid for - already picked up by family member
+			remainingAllowance := itemsPaidFor - fmTotalPickedUp
+			if remainingAllowance < 0 {
+				remainingAllowance = 0
+			}
+			if remainingAllowance < canTakeOut {
+				canTakeOut = remainingAllowance
 			}
 		}
 		if canTakeOut < 0 {
@@ -182,23 +200,29 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		}
 
 		trucks = append(trucks, ThockInfo{
-			ThockNumber:       entry.ThockNumber,
-			EntryID:           entry.ID,
-			FamilyMemberName:  entry.FamilyMemberName,
-			ThockCategory:     entry.ThockCategory,
-			StoredQuantity:    originalEntered,
-			ExpectedQuantity:  entry.ExpectedQuantity,
-			CurrentInventory:  currentInventory,
-			TotalRent:         entryTotalRent,
-			TotalPaid:         entryTotalPaid,
-			Balance:           entryBalance,
-			CanTakeOut:        canTakeOut,
-			RentPerItem:       rentPerItem,
+			ThockNumber:      entry.ThockNumber,
+			EntryID:          entry.ID,
+			FamilyMemberID:   entry.FamilyMemberID,
+			FamilyMemberName: entry.FamilyMemberName,
+			ThockCategory:    entry.ThockCategory,
+			StoredQuantity:   originalEntered,
+			ExpectedQuantity: entry.ExpectedQuantity,
+			CurrentInventory: currentInventory,
+			TotalRent:        entryTotalRent,
+			CanTakeOut:       canTakeOut,
+			RentPerItem:      rentPerItem,
 		})
 
 		totalRent += entryTotalRent
-		totalPaid += entryTotalPaid
-		totalBalance += entryBalance
+	}
+
+	// Calculate overall totals from family member aggregates
+	for _, paid := range familyMemberPaid {
+		totalPaid += paid
+	}
+	totalBalance = totalRent - totalPaid
+	if totalBalance < 0 {
+		totalBalance = 0
 	}
 
 	// Get gate pass history
@@ -262,34 +286,48 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 		return nil, fmt.Errorf("unauthorized: truck does not belong to customer")
 	}
 
+	// Get customer details for phone lookup
+	customer, err := s.CustomerRepo.Get(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("customer not found")
+	}
+
+	// Get rent_per_item setting
+	var rentPerItem float64 = 0.0
+	if s.SystemSettingRepo != nil {
+		rentSetting, err := s.SystemSettingRepo.Get(ctx, "rent_per_item")
+		if err == nil && rentSetting != nil {
+			if parsed, parseErr := strconv.ParseFloat(rentSetting.SettingValue, 64); parseErr == nil {
+				rentPerItem = parsed
+			}
+		}
+	}
+
 	// Get ORIGINAL entered quantity from room entries
 	originalEntered, err := s.RoomEntryRepo.GetTotalQuantityByThockNumber(ctx, request.ThockNumber)
 	if err != nil {
 		originalEntered = 0
 	}
 
-	// Get total picked up quantity
-	var totalPickedUp int
+	// Get total picked up quantity for this thock
+	var thockPickedUp int
 	if s.GatePassPickupRepo != nil {
 		pickups, pickupErr := s.GatePassPickupRepo.GetPickupsByThockNumber(ctx, request.ThockNumber)
 		if pickupErr == nil {
 			for _, p := range pickups {
-				totalPickedUp += p.PickupQuantity
+				thockPickedUp += p.PickupQuantity
 			}
 		}
 	}
 
 	// Calculate CURRENT inventory = original - picked up
-	currentInventory := originalEntered - totalPickedUp
+	currentInventory := originalEntered - thockPickedUp
 	if currentInventory < 0 {
 		currentInventory = 0
 	}
 
 	// Get pending quantity from existing gate passes
-	pendingQty, err := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
-	if err != nil {
-		pendingQty = 0
-	}
+	pendingQty, _ := s.GatePassRepo.GetPendingQuantityForEntry(ctx, entry.ID)
 
 	// Calculate effective available inventory
 	effectiveInventory := currentInventory - pendingQty
@@ -302,33 +340,56 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 			request.RequestedQuantity, effectiveInventory, currentInventory, pendingQty)
 	}
 
-	// Get rent payments to check payment allowance
-	payments, err := s.RentPaymentRepo.GetByEntryID(ctx, entry.ID)
-	if err != nil {
-		payments = []*models.RentPayment{}
+	// Calculate family member's payment allowance
+	fmID := 0
+	if entry.FamilyMemberID != nil {
+		fmID = *entry.FamilyMemberID
 	}
 
-	// Calculate total paid
-	var totalPaid float64
-	var totalRent float64
-	for _, payment := range payments {
-		totalPaid += payment.AmountPaid
-		if payment.TotalRent > 0 {
-			totalRent = payment.TotalRent
+	// Get all payments for this customer
+	allPayments, _ := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
+
+	// Calculate total paid by this family member
+	var fmTotalPaid float64
+	for _, payment := range allPayments {
+		paymentFmID := 0
+		if payment.FamilyMemberID != nil {
+			paymentFmID = *payment.FamilyMemberID
+		}
+		if paymentFmID == fmID {
+			fmTotalPaid += payment.AmountPaid
 		}
 	}
 
-	// Calculate rent per item
-	var rentPerItem float64
-	if entry.ExpectedQuantity > 0 && totalRent > 0 {
-		rentPerItem = totalRent / float64(entry.ExpectedQuantity)
+	// Calculate total picked up by this family member (across all their thocks)
+	entries, _ := s.EntryRepo.ListByCustomer(ctx, customerID)
+	var fmTotalPickedUp int
+	for _, e := range entries {
+		entryFmID := 0
+		if e.FamilyMemberID != nil {
+			entryFmID = *e.FamilyMemberID
+		}
+		if entryFmID == fmID {
+			if s.GatePassPickupRepo != nil {
+				pickups, pickupErr := s.GatePassPickupRepo.GetPickupsByThockNumber(ctx, e.ThockNumber)
+				if pickupErr == nil {
+					for _, p := range pickups {
+						fmTotalPickedUp += p.PickupQuantity
+					}
+				}
+			}
+		}
 	}
 
-	// Check if customer has paid enough
+	// Check if family member has paid enough
 	if rentPerItem > 0 {
-		maxAllowed := int(totalPaid / rentPerItem)
-		if request.RequestedQuantity > maxAllowed {
-			return nil, fmt.Errorf("payment insufficient: you can take out max %d items based on your payment (requested: %d)", maxAllowed, request.RequestedQuantity)
+		itemsPaidFor := int(fmTotalPaid / rentPerItem)
+		remainingAllowance := itemsPaidFor - fmTotalPickedUp
+		if remainingAllowance < 0 {
+			remainingAllowance = 0
+		}
+		if request.RequestedQuantity > remainingAllowance {
+			return nil, fmt.Errorf("payment insufficient: you can take out max %d items based on your payment (requested: %d)", remainingAllowance, request.RequestedQuantity)
 		}
 	}
 

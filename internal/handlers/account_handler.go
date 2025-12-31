@@ -36,14 +36,16 @@ type AccountHandler struct {
 
 // FamilyMemberAccount represents a family member's account within a customer
 type FamilyMemberAccount struct {
-	ID        int                   `json:"id,omitempty"`
-	Name      string                `json:"name"`
-	Quantity  int                   `json:"quantity"`
-	Rent      float64               `json:"rent"`
-	Paid      float64               `json:"paid"`
-	Balance   float64               `json:"balance"`
-	Thocks    []ThockInfo           `json:"thocks"`
-	Payments  []*models.RentPayment `json:"payments"`
+	ID         int                   `json:"id,omitempty"`
+	Name       string                `json:"name"`
+	Quantity   int                   `json:"quantity"`
+	Outgoing   int                   `json:"outgoing"`
+	Rent       float64               `json:"rent"`
+	Paid       float64               `json:"paid"`
+	Balance    float64               `json:"balance"`
+	CanTakeOut int                   `json:"can_take_out"`
+	Thocks     []ThockInfo           `json:"thocks"`
+	Payments   []*models.RentPayment `json:"payments"`
 }
 
 // CustomerAccount represents a customer's complete account info
@@ -406,14 +408,34 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 			fmPaid := familyMemberPaid[fmName]
 			fmBalance := fmRent - fmPaid
 
+			// Calculate outgoing (items picked up) for this family member
+			fmOutgoing := 0
+			for _, thock := range familyMemberThocks[fmName] {
+				if thock.Type == "outgoing" {
+					fmOutgoing += thock.Quantity
+				}
+			}
+
+			// Calculate canTakeOut: items paid for minus items already picked up
+			fmCanTakeOut := 0
+			if rentPerItem > 0 {
+				itemsPaidFor := int(fmPaid / rentPerItem)
+				fmCanTakeOut = itemsPaidFor - fmOutgoing
+				if fmCanTakeOut < 0 {
+					fmCanTakeOut = 0
+				}
+			}
+
 			familyMembers = append(familyMembers, FamilyMemberAccount{
-				Name:     fmName,
-				Quantity: familyMemberQty[fmName],
-				Rent:     fmRent,
-				Paid:     fmPaid,
-				Balance:  fmBalance,
-				Thocks:   familyMemberThocks[fmName],
-				Payments: familyMemberPayments[fmName],
+				Name:       fmName,
+				Quantity:   familyMemberQty[fmName],
+				Outgoing:   fmOutgoing,
+				Rent:       fmRent,
+				Paid:       fmPaid,
+				Balance:    fmBalance,
+				CanTakeOut: fmCanTakeOut,
+				Thocks:     familyMemberThocks[fmName],
+				Payments:   familyMemberPayments[fmName],
 			})
 		}
 
@@ -421,14 +443,24 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 		for fmName, payments := range familyMemberPayments {
 			if !processedFamilyMembers[fmName] {
 				fmPaid := familyMemberPaid[fmName]
+
+				// Calculate canTakeOut for family members with only payments
+				fmCanTakeOut := 0
+				if rentPerItem > 0 {
+					itemsPaidFor := int(fmPaid / rentPerItem)
+					fmCanTakeOut = itemsPaidFor // No outgoing since no thocks
+				}
+
 				familyMembers = append(familyMembers, FamilyMemberAccount{
-					Name:     fmName,
-					Quantity: 0,
-					Rent:     0,
-					Paid:     fmPaid,
-					Balance:  -fmPaid, // Overpaid
-					Thocks:   []ThockInfo{},
-					Payments: payments,
+					Name:       fmName,
+					Quantity:   0,
+					Outgoing:   0,
+					Rent:       0,
+					Paid:       fmPaid,
+					Balance:    -fmPaid, // Overpaid
+					CanTakeOut: fmCanTakeOut,
+					Thocks:     []ThockInfo{},
+					Payments:   payments,
 				})
 			}
 		}

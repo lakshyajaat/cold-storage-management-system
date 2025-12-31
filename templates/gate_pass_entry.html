@@ -510,6 +510,7 @@
         let balanceDue = 0;
         let selectedThockEntry = null; // Track the selected truck's entry
         let cachedRoomEntries = []; // Cache room entries - ALWAYS use this for inventory, NEVER expected_quantity
+        let cachedFamilyMembers = []; // Cache family member payment data from accounts summary
 
         // Fuzzy match function
         function fuzzyMatch(searchTerm, targetText) {
@@ -898,22 +899,28 @@
                         totalPaid = customerAccount.total_paid || 0;
                         balanceDue = customerAccount.balance || 0;
 
+                        // Cache family members data for per-family-member calculations
+                        cachedFamilyMembers = customerAccount.family_members || [];
+
                         console.log('Customer account from summary:', {
                             phone: phone,
                             totalRentOwed: totalRentOwed,
                             totalPaid: totalPaid,
-                            balanceDue: balanceDue
+                            balanceDue: balanceDue,
+                            familyMembers: cachedFamilyMembers.length
                         });
                     } else {
                         totalRentOwed = 0;
                         totalPaid = 0;
                         balanceDue = 0;
+                        cachedFamilyMembers = [];
                     }
                 } else {
                     customerPayments = [];
                     totalRentOwed = 0;
                     totalPaid = 0;
                     balanceDue = 0;
+                    cachedFamilyMembers = [];
                 }
 
                 // Update availability display
@@ -925,6 +932,7 @@
                 totalRentOwed = 0;
                 totalPaid = 0;
                 balanceDue = 0;
+                cachedFamilyMembers = [];
                 document.getElementById('paymentAllowedQuantity').textContent = 'N/A';
             }
         }
@@ -972,21 +980,51 @@
                 totalInInventory = customerRoomEntries.reduce((sum, re) => sum + (re.quantity || 0), 0);
             }
 
-            // PROPORTIONAL: Customer can take items based on what they've paid
-            // Calculate items paid for
+            // PER-FAMILY-MEMBER: Each family member can take out based on THEIR payment, not the whole customer's
+            const familyMemberId = document.getElementById('familyMemberId').value;
             const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
 
-            // Use configured rent rate (₹160/item) to calculate items paid for
+            // Get per-family-member payment data
+            let fmPaid = totalPaid; // Default to customer total
+            let fmBalance = balanceDue;
+            let fmOutgoing = 0;
+
+            if (familyMemberId && cachedFamilyMembers.length > 0) {
+                const fmData = cachedFamilyMembers.find(fm => fm.id == familyMemberId);
+                if (fmData) {
+                    fmPaid = fmData.paid || 0;
+                    fmBalance = fmData.balance || 0;
+                    if (fmData.thocks) {
+                        fmOutgoing = fmData.thocks
+                            .filter(t => t.type === 'outgoing')
+                            .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                    }
+                }
+            } else if (!familyMemberId && cachedFamilyMembers.length > 0) {
+                const noFmData = cachedFamilyMembers.find(fm => !fm.id || fm.name === 'No Family Member' || fm.name === '');
+                if (noFmData) {
+                    fmPaid = noFmData.paid || 0;
+                    fmBalance = noFmData.balance || 0;
+                    if (noFmData.thocks) {
+                        fmOutgoing = noFmData.thocks
+                            .filter(t => t.type === 'outgoing')
+                            .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                    }
+                }
+            }
+
+            // Use configured rent rate (₹160/item) to calculate items paid for by family member
             let itemsPaidFor = 0;
             if (customerRentRate > 0) {
-                itemsPaidFor = Math.floor(totalPaid / customerRentRate);
-            } else if (balanceDue <= 0) {
+                itemsPaidFor = Math.floor(fmPaid / customerRentRate);
+            } else if (fmBalance <= 0) {
                 // No rent rate configured and no balance - can take all
                 itemsPaidFor = totalExpectedItems;
             }
 
-            // Allowed = min(items paid for, available inventory)
-            const allowedItems = Math.min(itemsPaidFor, totalInInventory);
+            // Remaining allowance = items paid for - already picked up
+            const remainingAllowance = Math.max(0, itemsPaidFor - fmOutgoing);
+            const allowedItems = Math.min(remainingAllowance, totalInInventory);
 
             // Validation checks
             if (requestedQty > totalInInventory) {
@@ -999,24 +1037,25 @@
                 } else {
                     showValidationMessage('⚠️ Requested quantity exceeds available inventory!', 'bg-red-100', 'text-red-700');
                 }
-            } else if (requestedQty > itemsPaidFor) {
-                // Customer requesting more than they've paid for
+            } else if (requestedQty > remainingAllowance) {
+                // Family member requesting more than they've paid for
+                const needMore = requestedQty - remainingAllowance;
                 showValidationMessage(
-                    `⚠️ Customer has paid for ${itemsPaidFor} items only. Pay ₹${balanceDue.toFixed(0)} more to take all.`,
+                    `⚠️ Family member has paid for ${itemsPaidFor} items, taken ${fmOutgoing}. Can take ${remainingAllowance} more.`,
                     'bg-yellow-100',
                     'text-yellow-700'
                 );
             } else {
-                // Approved - customer requesting within what they've paid for
-                if (balanceDue < 0) {
+                // Approved - family member requesting within what they've paid for
+                if (fmBalance < 0) {
                     showValidationMessage(
-                        `✓ Approved! Customer has ₹${Math.abs(balanceDue).toFixed(0)} advance credit.`,
+                        `✓ Approved! Family member has ₹${Math.abs(fmBalance).toFixed(0)} advance credit.`,
                         'bg-green-100',
                         'text-green-700'
                     );
-                } else if (balanceDue > 0) {
+                } else if (fmBalance > 0) {
                     showValidationMessage(
-                        `✓ Approved! Paid for ${itemsPaidFor} items. (₹${balanceDue.toFixed(0)} balance remaining)`,
+                        `✓ Approved! Paid for ${itemsPaidFor} items, can take ${remainingAllowance}. (₹${fmBalance.toFixed(0)} balance)`,
                         'bg-green-100',
                         'text-green-700'
                     );
@@ -1223,31 +1262,68 @@
                 // Update inventory display
                 document.getElementById('availableQuantity').textContent = availableInventory;
 
-                // PROPORTIONAL: Customer can take out items based on how much they paid
+                // PER-FAMILY-MEMBER: Each family member can take out based on THEIR payment, not the whole customer's
+                const familyMemberId = document.getElementById('familyMemberId').value;
                 const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
+
+                // Get per-family-member payment data
+                let fmPaid = totalPaid; // Default to customer total
+                let fmBalance = balanceDue;
+                let fmOutgoing = totalOutgoing;
+
+                if (familyMemberId && cachedFamilyMembers.length > 0) {
+                    // Find the specific family member's payment data
+                    const fmData = cachedFamilyMembers.find(fm => fm.id == familyMemberId);
+                    if (fmData) {
+                        fmPaid = fmData.paid || 0;
+                        fmBalance = fmData.balance || 0;
+                        // Calculate family member's outgoing from their thocks
+                        fmOutgoing = 0;
+                        if (fmData.thocks) {
+                            fmOutgoing = fmData.thocks
+                                .filter(t => t.type === 'outgoing')
+                                .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                        }
+                        console.log('Per-family-member calculation:', { id: familyMemberId, paid: fmPaid, balance: fmBalance, outgoing: fmOutgoing });
+                    }
+                } else if (!familyMemberId && cachedFamilyMembers.length > 0) {
+                    // No family member selected - find entries without family member (null family_member_id)
+                    // These use family member with name like "No Family Member" or ID = 0/null
+                    const noFmData = cachedFamilyMembers.find(fm => !fm.id || fm.name === 'No Family Member' || fm.name === '');
+                    if (noFmData) {
+                        fmPaid = noFmData.paid || 0;
+                        fmBalance = noFmData.balance || 0;
+                        fmOutgoing = 0;
+                        if (noFmData.thocks) {
+                            fmOutgoing = noFmData.thocks
+                                .filter(t => t.type === 'outgoing')
+                                .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                        }
+                    }
+                }
 
                 // Use configured rent rate (₹160/item) to calculate items paid for
                 let canTakeOut = 0;
                 let itemsPaidFor = 0;
                 if (customerRentRate > 0) {
-                    itemsPaidFor = Math.floor(totalPaid / customerRentRate);
+                    itemsPaidFor = Math.floor(fmPaid / customerRentRate);
                     // Can take out = MIN(available inventory, items paid for - items already taken out)
-                    const paidAllowance = Math.max(0, itemsPaidFor - totalOutgoing);
+                    const paidAllowance = Math.max(0, itemsPaidFor - fmOutgoing);
                     canTakeOut = Math.min(availableInventory, paidAllowance);
-                } else if (balanceDue <= 0) {
+                } else if (fmBalance <= 0) {
                     // No rent rate configured and no balance - can take all available
                     canTakeOut = availableInventory;
                     itemsPaidFor = totalExpectedItems;
                 }
 
-                // Update display - show total items customer can take out (based on payment)
+                // Update display - show items family member can take out (based on THEIR payment)
                 const paymentSpan = document.getElementById('paymentAllowedQuantity');
-                if (balanceDue > 0) {
-                    paymentSpan.textContent = `${canTakeOut} (₹${balanceDue.toFixed(0)} due)`;
+                if (fmBalance > 0) {
+                    paymentSpan.textContent = `${canTakeOut} (₹${fmBalance.toFixed(0)} due)`;
                     paymentSpan.classList.remove('text-green-600');
                     paymentSpan.classList.add('text-yellow-600');
-                } else if (balanceDue < 0) {
-                    paymentSpan.textContent = `${canTakeOut} (₹${Math.abs(balanceDue).toFixed(0)} advance)`;
+                } else if (fmBalance < 0) {
+                    paymentSpan.textContent = `${canTakeOut} (₹${Math.abs(fmBalance).toFixed(0)} advance)`;
                     paymentSpan.classList.remove('text-yellow-600');
                     paymentSpan.classList.add('text-green-600');
                 } else {
@@ -1328,20 +1404,53 @@
                 return;
             }
 
-            // PROPORTIONAL: Calculate how many items customer has paid for
+            // PER-FAMILY-MEMBER: Calculate how many items the family member has paid for
+            const familyMemberId = document.getElementById('familyMemberId').value;
             const totalExpectedItems = customerEntries.reduce((sum, e) => sum + (e.expected_quantity || 0), 0);
 
-            // Use configured rent rate (₹160/item) to calculate items paid for
+            // Get per-family-member payment data
+            let fmPaid = totalPaid;
+            let fmBalance = balanceDue;
+            let fmOutgoing = 0;
+
+            if (familyMemberId && cachedFamilyMembers.length > 0) {
+                const fmData = cachedFamilyMembers.find(fm => fm.id == familyMemberId);
+                if (fmData) {
+                    fmPaid = fmData.paid || 0;
+                    fmBalance = fmData.balance || 0;
+                    if (fmData.thocks) {
+                        fmOutgoing = fmData.thocks
+                            .filter(t => t.type === 'outgoing')
+                            .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                    }
+                }
+            } else if (!familyMemberId && cachedFamilyMembers.length > 0) {
+                const noFmData = cachedFamilyMembers.find(fm => !fm.id || fm.name === 'No Family Member' || fm.name === '');
+                if (noFmData) {
+                    fmPaid = noFmData.paid || 0;
+                    fmBalance = noFmData.balance || 0;
+                    if (noFmData.thocks) {
+                        fmOutgoing = noFmData.thocks
+                            .filter(t => t.type === 'outgoing')
+                            .reduce((sum, t) => sum + (t.quantity || 0), 0);
+                    }
+                }
+            }
+
+            // Use configured rent rate (₹160/item) to calculate items paid for by family member
             let itemsPaidFor = 0;
             if (customerRentRate > 0) {
-                itemsPaidFor = Math.floor(totalPaid / customerRentRate);
-            } else if (balanceDue <= 0) {
+                itemsPaidFor = Math.floor(fmPaid / customerRentRate);
+            } else if (fmBalance <= 0) {
                 // No rent rate configured and no balance - can take all
                 itemsPaidFor = totalExpectedItems;
             }
 
-            // If customer requesting MORE than what they've paid for, require debt approval
-            if (requestedQty > itemsPaidFor) {
+            // Remaining allowance = items paid for - already picked up
+            const remainingAllowance = Math.max(0, itemsPaidFor - fmOutgoing);
+
+            // If family member requesting MORE than their remaining allowance, require debt approval
+            if (requestedQty > remainingAllowance) {
                 const phone = document.getElementById('customerPhone').value;
                 const thockNumber = document.getElementById('thockNumber').value.trim();
                 const customerName = document.getElementById('customerName').textContent;
@@ -1354,18 +1463,18 @@
                     pendingDebtData = { debtRequestId: debtCheck.debt_request.id };
 
                     // Show modal with approval status
-                    showDebtModal(customerName, phone, thockNumber, requestedQty, balanceDue);
+                    showDebtModal(customerName, phone, thockNumber, requestedQty, fmBalance);
                     document.getElementById('debtApprovalStatus').classList.remove('hidden');
                     document.getElementById('debtRequestActions').classList.add('hidden');
                     document.getElementById('debtProceedActions').classList.remove('hidden');
                     return;
                 } else {
                     // No approval - show modal to request approval
-                    showDebtModal(customerName, phone, thockNumber, requestedQty, balanceDue);
+                    showDebtModal(customerName, phone, thockNumber, requestedQty, fmBalance);
                     return;
                 }
             }
-            // If requesting <= items paid for, proceed without debt approval
+            // If requesting <= remaining allowance, proceed without debt approval
 
             const recipientName = document.getElementById('recipientName').value.trim();
             const remarks = document.getElementById('remarks').value.trim();
@@ -1382,8 +1491,7 @@
                 finalRemarks += (finalRemarks ? ' | ' : '') + remarks;
             }
 
-            // Get family member if selected
-            const familyMemberId = document.getElementById('familyMemberId').value;
+            // Get family member name (familyMemberId already declared above)
             const familyMemberName = document.getElementById('familyMemberName').value;
 
             const gatePassData = {
