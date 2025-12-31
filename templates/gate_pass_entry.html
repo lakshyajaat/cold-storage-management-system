@@ -186,6 +186,9 @@
                             <p class="text-lg font-bold" id="customerName"></p>
                             <p class="text-sm text-gray-600"><span data-i18n="phone">Phone</span>: <span id="customerPhoneDisplay"></span></p>
                             <p class="text-sm text-gray-600"><span data-i18n="village">Village</span>: <span id="customerVillage"></span></p>
+                            <p id="familyMemberDisplay" class="hidden text-sm font-semibold text-green-700 mt-2">
+                                <i class="bi bi-person-fill"></i> <span data-i18n="family_member">Family Member</span>: <span id="familyMemberNameDisplay"></span>
+                            </p>
                         </div>
 
                         <!-- Family Member Selector -->
@@ -697,6 +700,9 @@
                     if (familyMemberSelect) {
                         familyMemberSelect.value = entry.family_member_id;
                     }
+
+                    // Update the display
+                    updateFamilyMemberDisplay(entry.family_member_name || '');
                 }
 
                 // Pre-fill the thock number and trigger selection
@@ -780,9 +786,13 @@
         function onFamilyMemberChange() {
             const select = document.getElementById('familyMemberSelect');
             const selectedOption = select.options[select.selectedIndex];
+            const familyMemberName = selectedOption.dataset.name || '';
 
             document.getElementById('familyMemberId').value = select.value || '';
-            document.getElementById('familyMemberName').value = selectedOption.dataset.name || '';
+            document.getElementById('familyMemberName').value = familyMemberName;
+
+            // Update family member display
+            updateFamilyMemberDisplay(familyMemberName);
 
             // Clear thock number when family member changes
             document.getElementById('thockNumber').value = '';
@@ -790,6 +800,19 @@
 
             // Update availability displays
             updateAvailabilityDisplay();
+        }
+
+        // Update the family member display in customer info
+        function updateFamilyMemberDisplay(name) {
+            const display = document.getElementById('familyMemberDisplay');
+            const nameSpan = document.getElementById('familyMemberNameDisplay');
+
+            if (name) {
+                nameSpan.textContent = name;
+                display.classList.remove('hidden');
+            } else {
+                display.classList.add('hidden');
+            }
         }
 
         // Calculate available inventory for customer (from accounts summary - same as rent management)
@@ -1103,10 +1126,11 @@
                     selectedThockEntry = matchingEntries[0];
                 }
 
-                // If entry has family member info, update the hidden fields
+                // If entry has family member info, update the hidden fields and display
                 if (selectedThockEntry && selectedThockEntry.family_member_id) {
                     document.getElementById('familyMemberId').value = selectedThockEntry.family_member_id;
                     document.getElementById('familyMemberName').value = selectedThockEntry.family_member_name || '';
+                    updateFamilyMemberDisplay(selectedThockEntry.family_member_name || '');
                 }
 
                 // Update availability displays
@@ -1441,6 +1465,7 @@
             document.getElementById('truckDropdown').classList.add('hidden');
             document.getElementById('validationMessage').classList.add('hidden');
             document.getElementById('familyMemberSection').classList.add('hidden');
+            document.getElementById('familyMemberDisplay').classList.add('hidden');
             document.getElementById('familyMemberId').value = '';
             document.getElementById('familyMemberName').value = '';
             document.getElementById('availableQuantity').textContent = '-';
