@@ -21,6 +21,12 @@ var client *redis.Client
 
 // Init initializes the Redis connection with auto-discovery
 func Init() error {
+	// Check if Redis is disabled via environment variable
+	if os.Getenv("REDIS_DISABLED") == "true" || os.Getenv("DISABLE_REDIS") == "true" {
+		client = nil
+		return nil // Return nil (no error) - app works without cache
+	}
+
 	// Try hosts in order of preference
 	hosts := []string{}
 
