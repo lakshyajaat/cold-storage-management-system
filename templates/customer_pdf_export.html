@@ -175,6 +175,17 @@
         let allPayments = [];
         let userMap = {};
 
+        // Get thock color based on seed/sell range - returns inline style
+        function getThockColor(thockNumber) {
+            if (!thockNumber) return 'color: #374151; font-weight: bold;';
+            const numMatch = String(thockNumber).match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num <= 1500 ? 'color: #16a34a; font-weight: bold;' : 'color: #ea580c; font-weight: bold;';
+            }
+            return 'color: #374151; font-weight: bold;';
+        }
+
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const phone = urlParams.get('phone');
@@ -560,7 +571,7 @@
                             : re.quantity;
                         storageRows += `
                             <tr class="border-b hover:bg-gray-50">
-                                <td class="p-2 font-medium">${re.thock_number}</td>
+                                <td class="p-2 font-medium" style="${getThockColor(re.thock_number)}">${re.thock_number}</td>
                                 <td class="p-2">${re.room_no || '-'}</td>
                                 <td class="p-2">${re.floor || '0'}</td>
                                 <td class="p-2">${re.gate_no || '-'}</td>
@@ -806,7 +817,7 @@
 
                             return `
                                 <tr class="border-b hover:bg-gray-50">
-                                    <td class="border border-black p-2 font-mono font-bold">${entry.thock_number || '-'}</td>
+                                    <td class="border border-black p-2 font-mono" style="${getThockColor(entry.thock_number)}">${entry.thock_number || '-'}</td>
                                     <td class="border border-black p-2 font-semibold">${entry.name || '-'}</td>
                                     <td class="border border-black p-2">${entry.phone || '-'}</td>
                                     <td class="border border-black p-2">${entry.village || '-'}</td>
