@@ -191,6 +191,9 @@
                         <button class="tab-button text-xs py-1" onclick="switchTab('rooms')">
                             <i class="bi bi-door-closed text-blue-600"></i> Room Logs
                         </button>
+                        <button class="tab-button text-xs py-1" onclick="switchTab('roomeditlogs')">
+                            <i class="bi bi-pencil-square text-blue-600"></i> Room Edit Logs
+                        </button>
                         <button class="tab-button text-xs py-1" onclick="switchTab('entries')">
                             <i class="bi bi-box text-blue-600"></i> Inventory
                         </button>
@@ -321,59 +324,19 @@
             </div>
         </div>
 
-        <!-- Edit Logs Tab (Room Entry & Entry Edits) -->
+        <!-- Entry Edit Logs Tab (Entry field edits only) -->
         <div id="editlogs-tab" class="tab-content neu-border bg-white p-6">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i class="bi bi-pencil-square"></i>
-                    <span id="editLogTitle">Room Entry Edit History</span>
+                    <i class="bi bi-pencil-square text-green-600"></i>
+                    Entry Edit History
                 </h2>
-                <input type="text" id="editLogSearch" placeholder="Search edit logs..." class="neu-border p-2" onkeyup="filterEditLogs()">
+                <input type="text" id="editLogSearch" placeholder="Search entry edits..." class="neu-border p-2" onkeyup="filterEntryEditLogs()">
             </div>
-            <p class="text-sm text-gray-600 mb-4" id="editLogDesc">Track all changes made to room entries with who edited what and when</p>
-
-            <!-- Toggle between Room Entry Edits and Entry Edits -->
-            <div class="flex gap-2 mb-4">
-                <button onclick="setEditLogType('room')" id="editType-room"
-                        class="px-4 py-2 rounded border-2 border-black bg-blue-500 text-white text-sm font-bold ring-2 ring-black">
-                    <i class="bi bi-door-open"></i> Room Entry Edits
-                </button>
-                <button onclick="setEditLogType('entry')" id="editType-entry"
-                        class="px-4 py-2 rounded border-2 border-black bg-green-100 text-sm font-bold">
-                    <i class="bi bi-box-seam"></i> Entry Edits
-                </button>
-            </div>
-
-            <!-- Filter by Change Type (Room Entry) -->
-            <div class="flex gap-2 mb-4 flex-wrap" id="roomEditFilters">
-                <button onclick="setEditLogFilter('all')" id="editFilter-all"
-                        class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
-                    All
-                </button>
-                <button onclick="setEditLogFilter('quantity')" id="editFilter-quantity"
-                        class="px-3 py-1 rounded border-2 border-black bg-purple-100 text-sm font-bold">
-                    Quantity
-                </button>
-                <button onclick="setEditLogFilter('room')" id="editFilter-room"
-                        class="px-3 py-1 rounded border-2 border-black bg-blue-100 text-sm font-bold">
-                    Room No
-                </button>
-                <button onclick="setEditLogFilter('floor')" id="editFilter-floor"
-                        class="px-3 py-1 rounded border-2 border-black bg-green-100 text-sm font-bold">
-                    Floor
-                </button>
-                <button onclick="setEditLogFilter('gate')" id="editFilter-gate"
-                        class="px-3 py-1 rounded border-2 border-black bg-yellow-100 text-sm font-bold">
-                    Gate No
-                </button>
-                <button onclick="setEditLogFilter('remark')" id="editFilter-remark"
-                        class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
-                    Remark
-                </button>
-            </div>
+            <p class="text-sm text-gray-600 mb-4">Track all changes made to entry details (name, phone, village, quantity, category)</p>
 
             <!-- Filter by Change Type (Entry) -->
-            <div class="flex gap-2 mb-4 flex-wrap" id="entryEditFilters" style="display: none;">
+            <div class="flex gap-2 mb-4 flex-wrap">
                 <button onclick="setEntryEditLogFilter('all')" id="entryEditFilter-all"
                         class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
                     All
@@ -420,9 +383,69 @@
                             <th class="p-2 text-left">Edited At</th>
                         </tr>
                     </thead>
-                    <tbody id="editLogsBody">
+                    <tbody id="entryEditLogsBody">
                         <tr>
-                            <td colspan="7" class="text-center p-4 text-gray-500">Loading...</td>
+                            <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Room Entry Edit Logs Tab (Room configuration edits) -->
+        <div id="roomeditlogs-tab" class="tab-content neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-door-open text-blue-600"></i>
+                    Room Entry Edit History
+                </h2>
+                <input type="text" id="roomEditLogSearch" placeholder="Search room edits..." class="neu-border p-2" onkeyup="filterRoomEditLogs()">
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Track all changes made to room configurations (room number, floor, gate, quantity)</p>
+
+            <!-- Filter by Change Type (Room Entry) -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="setRoomEditLogFilter('all')" id="roomEditFilter-all"
+                        class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
+                    All
+                </button>
+                <button onclick="setRoomEditLogFilter('quantity')" id="roomEditFilter-quantity"
+                        class="px-3 py-1 rounded border-2 border-black bg-purple-100 text-sm font-bold">
+                    Quantity
+                </button>
+                <button onclick="setRoomEditLogFilter('room')" id="roomEditFilter-room"
+                        class="px-3 py-1 rounded border-2 border-black bg-blue-100 text-sm font-bold">
+                    Room No
+                </button>
+                <button onclick="setRoomEditLogFilter('floor')" id="roomEditFilter-floor"
+                        class="px-3 py-1 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    Floor
+                </button>
+                <button onclick="setRoomEditLogFilter('gate')" id="roomEditFilter-gate"
+                        class="px-3 py-1 rounded border-2 border-black bg-yellow-100 text-sm font-bold">
+                    Gate No
+                </button>
+                <button onclick="setRoomEditLogFilter('remark')" id="roomEditFilter-remark"
+                        class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
+                    Remark
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="p-2 text-left">Thok NO</th>
+                            <th class="p-2 text-left">Edited By</th>
+                            <th class="p-2 text-left">Field Changed</th>
+                            <th class="p-2 text-left">Old Value</th>
+                            <th class="p-2 text-left">New Value</th>
+                            <th class="p-2 text-left">Edited At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomEditLogsBody">
+                        <tr>
+                            <td colspan="6" class="text-center p-4 text-gray-500">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -554,6 +577,7 @@
                             <th class="p-2 text-left">Floor</th>
                             <th class="p-2 text-left">Gatar</th>
                             <th class="p-2 text-left">Qty</th>
+                            <th class="p-2 text-left">Remark</th>
                             <th class="p-2 text-left">Assigned By</th>
                             <th class="p-2 text-left">Assigned At</th>
                         </tr>
@@ -634,6 +658,11 @@
                 <button onclick="setGatePassStatusFilter('expired')" id="gpStatus-expired"
                         class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
                     Expired
+                </button>
+                <span class="border-l-2 border-gray-400 mx-2"></span>
+                <button onclick="setGatePassStatusFilter('customer_portal')" id="gpStatus-customer_portal"
+                        class="px-3 py-1 rounded border-2 border-black bg-teal-100 text-sm font-bold">
+                    <i class="bi bi-person-circle"></i> Customer Portal
                 </button>
             </div>
 
@@ -876,10 +905,9 @@
         let allManagementLogs = [];
         let allUnloadingLogs = [];
         let allCustomerRequests = [];
-        let gatePassStatusFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'completed', 'rejected', 'expired'
+        let gatePassStatusFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'completed', 'rejected', 'expired', 'customer_portal'
         let customerRequestFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'rejected', 'completed'
-        let editLogFilter = 'all';  // Filter: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
-        let editLogType = 'room';  // Filter: 'room' for room entries, 'entry' for entries
+        let editLogFilter = 'all';  // Filter for room edits: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
         let entryEditLogFilter = 'all';  // Filter for entry edits: 'all', 'name', 'phone', 'village', 'so', 'quantity', 'category', 'remark'
         let managementLogType = 'all';  // Filter: 'all', 'reassign', 'merge'
 
@@ -1309,6 +1337,7 @@
                 const thockColor = getThockColor(room.thock_number);
                 const assignedBy = userMap[room.created_by_user_id] || 'Unknown';
                 const breakdownDisplay = room.quantity_breakdown ? `<span class="text-xs text-gray-500 block">(${room.quantity_breakdown})</span>` : '';
+                const remark = room.remark || '-';
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-purple-50">
@@ -1317,6 +1346,7 @@
                         <td class="p-2">${room.floor}</td>
                         <td class="p-2">${room.gate_no}</td>
                         <td class="p-2">${room.quantity} ${breakdownDisplay}</td>
+                        <td class="p-2 text-sm text-gray-600">${escapeHtml(remark)}</td>
                         <td class="p-2 font-semibold">${assignedBy}</td>
                         <td class="p-2 text-sm">${createdDate}</td>
                     </tr>
@@ -1457,48 +1487,13 @@
             }).join('');
         }
 
-        // Set edit log type (room vs entry)
-        function setEditLogType(type) {
-            editLogType = type;
-
-            // Update type toggle button styles
-            const roomBtn = document.getElementById('editType-room');
-            const entryBtn = document.getElementById('editType-entry');
-            const roomFilters = document.getElementById('roomEditFilters');
-            const entryFilters = document.getElementById('entryEditFilters');
-            const title = document.getElementById('editLogTitle');
-            const desc = document.getElementById('editLogDesc');
-
-            if (type === 'room') {
-                roomBtn.classList.add('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
-                roomBtn.classList.remove('bg-blue-100');
-                entryBtn.classList.remove('bg-green-500', 'text-white', 'ring-2', 'ring-black');
-                entryBtn.classList.add('bg-green-100');
-                roomFilters.style.display = 'flex';
-                entryFilters.style.display = 'none';
-                title.textContent = 'Room Entry Edit History';
-                desc.textContent = 'Track all changes made to room entries with who edited what and when';
-            } else {
-                entryBtn.classList.add('bg-green-500', 'text-white', 'ring-2', 'ring-black');
-                entryBtn.classList.remove('bg-green-100');
-                roomBtn.classList.remove('bg-blue-500', 'text-white', 'ring-2', 'ring-black');
-                roomBtn.classList.add('bg-blue-100');
-                roomFilters.style.display = 'none';
-                entryFilters.style.display = 'flex';
-                title.textContent = 'Entry Edit History';
-                desc.textContent = 'Track all changes made to entries (customer info, quantity, category) with who edited what and when';
-            }
-
-            displayEditLogs();  // Re-render
-        }
-
-        // Set edit log filter and update display (room entry edits)
-        function setEditLogFilter(filterType) {
+        // Set room edit log filter and update display (room entry edits)
+        function setRoomEditLogFilter(filterType) {
             editLogFilter = filterType;
 
-            // Update button styles
+            // Update button styles for room edit filter
             ['all', 'quantity', 'room', 'floor', 'gate', 'remark'].forEach(type => {
-                const btn = document.getElementById(`editFilter-${type}`);
+                const btn = document.getElementById(`roomEditFilter-${type}`);
                 if (btn) {
                     if (type === filterType) {
                         btn.classList.add('ring-2', 'ring-black');
@@ -1508,7 +1503,11 @@
                 }
             });
 
-            displayEditLogs();  // Re-render with filter
+            // Re-render room edit logs only
+            const roomTbody = document.getElementById('roomEditLogsBody');
+            if (roomTbody) {
+                displayRoomEntryEditLogs(roomTbody);
+            }
         }
 
         // Set entry edit log filter
@@ -1527,17 +1526,24 @@
                 }
             });
 
-            displayEditLogs();  // Re-render with filter
+            // Re-render entry edit logs only
+            const entryTbody = document.getElementById('entryEditLogsBody');
+            if (entryTbody) {
+                displayEntryEditLogs(entryTbody);
+            }
         }
 
         function displayEditLogs() {
-            const tbody = document.getElementById('editLogsBody');
+            // Entry Edit Logs go to entryEditLogsBody (in ITEM IN section)
+            const entryTbody = document.getElementById('entryEditLogsBody');
+            if (entryTbody) {
+                displayEntryEditLogs(entryTbody);
+            }
 
-            // Display based on type toggle
-            if (editLogType === 'room') {
-                displayRoomEntryEditLogs(tbody);
-            } else {
-                displayEntryEditLogs(tbody);
+            // Room Entry Edit Logs go to roomEditLogsBody (in ROOM CONFIG section)
+            const roomTbody = document.getElementById('roomEditLogsBody');
+            if (roomTbody) {
+                displayRoomEntryEditLogs(roomTbody);
             }
         }
 
@@ -1929,9 +1935,12 @@
         function displayGatePasses() {
             const tbody = document.getElementById('gatePassesLogBody');
 
-            // Filter by status
+            // Filter by status or source
             let filteredPasses = allGatePasses;
-            if (gatePassStatusFilter !== 'all') {
+            if (gatePassStatusFilter === 'customer_portal') {
+                // Filter by request source (customer portal)
+                filteredPasses = allGatePasses.filter(gp => gp.request_source === 'customer_portal');
+            } else if (gatePassStatusFilter !== 'all') {
                 filteredPasses = allGatePasses.filter(gp => gp.status === gatePassStatusFilter);
             }
 
@@ -1993,7 +2002,7 @@
         function setGatePassStatusFilter(status) {
             gatePassStatusFilter = status;
             // Update button styling
-            ['all', 'pending', 'approved', 'completed', 'rejected', 'expired'].forEach(s => {
+            ['all', 'pending', 'approved', 'completed', 'rejected', 'expired', 'customer_portal'].forEach(s => {
                 const btn = document.getElementById(`gpStatus-${s}`);
                 if (btn) {
                     btn.classList.remove('ring-2', 'ring-black');
@@ -2228,9 +2237,19 @@
             });
         }
 
-        function filterEditLogs() {
+        function filterEntryEditLogs() {
             const search = document.getElementById('editLogSearch').value.toLowerCase();
-            const rows = document.querySelectorAll('#editLogsBody tr');
+            const rows = document.querySelectorAll('#entryEditLogsBody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        function filterRoomEditLogs() {
+            const search = document.getElementById('roomEditLogSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#roomEditLogsBody tr');
 
             rows.forEach(row => {
                 const text = row.textContent.toLowerCase();
