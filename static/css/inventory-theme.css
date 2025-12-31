@@ -45,6 +45,18 @@ button,
     border-radius: var(--radius-md) !important;
 }
 
+/* Ensure page buttons have dark text for visibility */
+.page-button {
+    color: #1a1a1a !important;
+}
+.page-button i {
+    color: #333 !important;
+}
+.page-button span,
+.page-button small {
+    color: #444 !important;
+}
+
 /* All cards and containers */
 .card,
 .panel,
@@ -199,6 +211,11 @@ button[type="submit"] {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
     border: none !important;
     transition: all 0.2s ease !important;
+}
+
+/* Ensure neu-buttons have dark text for visibility (unless they have specific colors) */
+.neu-button:not([class*="text-white"]):not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]) {
+    color: #1a1a1a !important;
 }
 
 .neu-button:hover,
