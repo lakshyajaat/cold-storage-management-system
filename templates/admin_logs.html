@@ -198,6 +198,12 @@
             <button class="tab-button" onclick="switchTab('entrymanagement')">
                 <i class="bi bi-arrow-left-right text-purple-600"></i> Entry Management
             </button>
+            <button class="tab-button" onclick="switchTab('unloading')">
+                <i class="bi bi-truck text-blue-600"></i> Unloading Tickets
+            </button>
+            <button class="tab-button" onclick="switchTab('customerrequests')">
+                <i class="bi bi-person-plus text-green-600"></i> Customer Requests
+            </button>
         </div>
 
         <!-- Employee Activity Tab -->
@@ -551,6 +557,35 @@
                 <input type="text" id="gatePassSearch" placeholder="Search gate passes..." class="neu-border p-2" onkeyup="filterGatePasses()">
             </div>
             <p class="text-sm text-gray-600 mb-4">Track all gate pass creation, approvals, and completions with employee information</p>
+
+            <!-- Status Filter -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="setGatePassStatusFilter('all')" id="gpStatus-all"
+                        class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
+                    All
+                </button>
+                <button onclick="setGatePassStatusFilter('pending')" id="gpStatus-pending"
+                        class="px-3 py-1 rounded border-2 border-black bg-yellow-100 text-sm font-bold">
+                    Pending
+                </button>
+                <button onclick="setGatePassStatusFilter('approved')" id="gpStatus-approved"
+                        class="px-3 py-1 rounded border-2 border-black bg-blue-100 text-sm font-bold">
+                    Approved
+                </button>
+                <button onclick="setGatePassStatusFilter('completed')" id="gpStatus-completed"
+                        class="px-3 py-1 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    Completed
+                </button>
+                <button onclick="setGatePassStatusFilter('rejected')" id="gpStatus-rejected"
+                        class="px-3 py-1 rounded border-2 border-black bg-red-100 text-sm font-bold">
+                    Rejected
+                </button>
+                <button onclick="setGatePassStatusFilter('expired')" id="gpStatus-expired"
+                        class="px-3 py-1 rounded border-2 border-black bg-orange-100 text-sm font-bold">
+                    Expired
+                </button>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse">
                     <thead>
@@ -561,6 +596,7 @@
                             <th class="p-2 text-left">Status</th>
                             <th class="p-2 text-left">Issued By</th>
                             <th class="p-2 text-left">Approved By</th>
+                            <th class="p-2 text-left">Remarks</th>
                             <th class="p-2 text-left">Expires In</th>
                             <th class="p-2 text-left">Issued At</th>
                         </tr>
@@ -678,6 +714,97 @@
             </div>
         </div>
 
+        <!-- Unloading Tickets Tab -->
+        <div id="unloading-tab" class="tab-content neu-border bg-white p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-truck text-blue-600"></i>
+                    Unloading Tickets Logs
+                </h2>
+                <input type="text" id="unloadingSearch" placeholder="Search unloading tickets..." class="neu-border p-2" onkeyup="filterUnloadingLogs()">
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Track all unloading ticket entries with employee information</p>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="p-2 text-left">Thok NO</th>
+                            <th class="p-2 text-left">Customer</th>
+                            <th class="p-2 text-left">Village</th>
+                            <th class="p-2 text-left">Qty</th>
+                            <th class="p-2 text-left">Category</th>
+                            <th class="p-2 text-left">Created By</th>
+                            <th class="p-2 text-left">Status</th>
+                            <th class="p-2 text-left">Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unloadingLogsBody">
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Customer Requests Tab -->
+        <div id="customerrequests-tab" class="tab-content neu-border bg-green-50 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="bi bi-person-plus text-green-600"></i>
+                    Customer Generated Requests
+                </h2>
+                <input type="text" id="customerRequestSearch" placeholder="Search customer requests..." class="neu-border p-2" onkeyup="filterCustomerRequests()">
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Gate pass requests submitted by customers via the customer portal</p>
+
+            <!-- Status Filter -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="setCustomerRequestFilter('all')" id="crStatus-all"
+                        class="px-3 py-1 rounded border-2 border-black bg-gray-200 text-sm font-bold ring-2 ring-black">
+                    All
+                </button>
+                <button onclick="setCustomerRequestFilter('pending')" id="crStatus-pending"
+                        class="px-3 py-1 rounded border-2 border-black bg-yellow-100 text-sm font-bold">
+                    Pending
+                </button>
+                <button onclick="setCustomerRequestFilter('approved')" id="crStatus-approved"
+                        class="px-3 py-1 rounded border-2 border-black bg-blue-100 text-sm font-bold">
+                    Approved
+                </button>
+                <button onclick="setCustomerRequestFilter('rejected')" id="crStatus-rejected"
+                        class="px-3 py-1 rounded border-2 border-black bg-red-100 text-sm font-bold">
+                    Rejected
+                </button>
+                <button onclick="setCustomerRequestFilter('completed')" id="crStatus-completed"
+                        class="px-3 py-1 rounded border-2 border-black bg-green-100 text-sm font-bold">
+                    Completed
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-green-600 bg-green-100">
+                            <th class="p-2 text-left">Thok NO</th>
+                            <th class="p-2 text-left">Customer</th>
+                            <th class="p-2 text-left">Phone</th>
+                            <th class="p-2 text-left">Qty</th>
+                            <th class="p-2 text-left">Status</th>
+                            <th class="p-2 text-left">Approved By</th>
+                            <th class="p-2 text-left">Remarks</th>
+                            <th class="p-2 text-left">Requested At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerRequestsBody">
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-gray-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -693,6 +820,10 @@
         let allGatePasses = [];
         let allExpiredPasses = [];
         let allManagementLogs = [];
+        let allUnloadingLogs = [];
+        let allCustomerRequests = [];
+        let gatePassStatusFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'completed', 'rejected', 'expired'
+        let customerRequestFilter = 'all';  // Filter: 'all', 'pending', 'approved', 'rejected', 'completed'
         let editLogFilter = 'all';  // Filter: 'all', 'quantity', 'room', 'floor', 'gate', 'remark'
         let editLogType = 'room';  // Filter: 'room' for room entries, 'entry' for entries
         let entryEditLogFilter = 'all';  // Filter for entry edits: 'all', 'name', 'phone', 'village', 'so', 'quantity', 'category', 'remark'
@@ -748,7 +879,9 @@
                 loadAdminActions(),
                 loadManagementLogs(),
                 loadGatePasses(),
-                loadExpiredPasses()
+                loadExpiredPasses(),
+                loadUnloadingLogs(),
+                loadCustomerRequests()
             ]);
 
             updateStatistics();
@@ -945,6 +1078,42 @@
                 console.error('Error loading expired gate passes:', error);
                 allExpiredPasses = [];
                 displayExpiredPasses();
+            }
+        }
+
+        async function loadUnloadingLogs() {
+            try {
+                const response = await fetch('/api/entries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load unloading tickets');
+
+                allUnloadingLogs = await response.json() || [];
+                displayUnloadingLogs();
+            } catch (error) {
+                console.error('Error loading unloading tickets:', error);
+                allUnloadingLogs = [];
+                displayUnloadingLogs();
+            }
+        }
+
+        async function loadCustomerRequests() {
+            try {
+                const response = await fetch('/api/gate-passes', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load customer requests');
+
+                const allPasses = await response.json() || [];
+                // Filter only customer portal requests
+                allCustomerRequests = allPasses.filter(gp => gp.request_source === 'customer_portal');
+                displayCustomerRequests();
+            } catch (error) {
+                console.error('Error loading customer requests:', error);
+                allCustomerRequests = [];
+                displayCustomerRequests();
             }
         }
 
@@ -1706,12 +1875,18 @@
         function displayGatePasses() {
             const tbody = document.getElementById('gatePassesLogBody');
 
-            if (allGatePasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4 text-gray-500">No gate passes found</td></tr>';
+            // Filter by status
+            let filteredPasses = allGatePasses;
+            if (gatePassStatusFilter !== 'all') {
+                filteredPasses = allGatePasses.filter(gp => gp.status === gatePassStatusFilter);
+            }
+
+            if (filteredPasses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-gray-500">No gate passes found</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = allGatePasses.map(gp => {
+            tbody.innerHTML = filteredPasses.map(gp => {
                 const issuedAt = new Date(gp.issued_at).toLocaleString('en-IN', {
                     day: '2-digit',
                     month: '2-digit',
@@ -1724,13 +1899,14 @@
                     'pending': 'bg-yellow-100 text-yellow-700',
                     'approved': 'bg-blue-100 text-blue-700',
                     'completed': 'bg-green-100 text-green-700',
-                    'expired': 'bg-red-100 text-red-700'
+                    'rejected': 'bg-red-200 text-red-800',
+                    'expired': 'bg-orange-100 text-orange-700'
                 };
 
                 const statusColor = statusColors[gp.status] || 'bg-gray-100 text-gray-700';
 
                 // Calculate remaining time
-                const remaining = gp.status === 'pending' ? getRemainingTime(gp.expires_at) : { text: '-', color: 'text-gray-400' };
+                const remaining = (gp.status === 'pending' || gp.status === 'approved') ? getRemainingTime(gp.approval_expires_at || gp.expires_at) : { text: '-', color: 'text-gray-400' };
 
                 const thockColor = getThockColor(gp.thock_number);
                 // Handle issued_by for customer portal vs employee issued gate passes
@@ -1741,6 +1917,7 @@
                     issuedByName = gp.issued_by_name ? capitalizeText(gp.issued_by_name) : 'System';
                 }
                 const approvedByName = gp.approved_by_name ? capitalizeText(gp.approved_by_name) : '-';
+                const remarks = gp.remarks || '-';
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-purple-50">
@@ -1750,11 +1927,27 @@
                         <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${gp.status.toUpperCase()}</span></td>
                         <td class="p-2 font-semibold">${issuedByName}</td>
                         <td class="p-2 font-semibold">${approvedByName}</td>
+                        <td class="p-2 text-sm text-gray-600">${escapeHtml(remarks)}</td>
                         <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
                         <td class="p-2 text-sm">${issuedAt}</td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        function setGatePassStatusFilter(status) {
+            gatePassStatusFilter = status;
+            // Update button styling
+            ['all', 'pending', 'approved', 'completed', 'rejected', 'expired'].forEach(s => {
+                const btn = document.getElementById(`gpStatus-${s}`);
+                if (btn) {
+                    btn.classList.remove('ring-2', 'ring-black');
+                    if (s === status) {
+                        btn.classList.add('ring-2', 'ring-black');
+                    }
+                }
+            });
+            displayGatePasses();
         }
 
         function getRemainingTime(expiresAt) {
@@ -1790,6 +1983,135 @@
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700';
+        }
+
+        function displayUnloadingLogs() {
+            const tbody = document.getElementById('unloadingLogsBody');
+
+            if (allUnloadingLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No unloading tickets found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allUnloadingLogs.map(entry => {
+                const createdAt = new Date(entry.created_at).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const statusColors = {
+                    'active': 'bg-green-100 text-green-700',
+                    'completed': 'bg-blue-100 text-blue-700',
+                    'pending': 'bg-yellow-100 text-yellow-700'
+                };
+                const statusColor = statusColors[entry.status] || 'bg-gray-100 text-gray-700';
+
+                const thockColor = getThockColor(entry.thock_number);
+                const createdByName = entry.created_by_name ? capitalizeText(entry.created_by_name) : 'System';
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-blue-50">
+                        <td class="p-2 font-bold ${thockColor}">${entry.thock_number}</td>
+                        <td class="p-2">${capitalizeText(entry.name)}</td>
+                        <td class="p-2">${escapeHtml(entry.village || '-')}</td>
+                        <td class="p-2 font-bold">${entry.expected_quantity}</td>
+                        <td class="p-2">${escapeHtml(entry.category || '-')}</td>
+                        <td class="p-2 font-semibold text-blue-600">${createdByName}</td>
+                        <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${(entry.status || 'active').toUpperCase()}</span></td>
+                        <td class="p-2 text-sm">${createdAt}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function displayCustomerRequests() {
+            const tbody = document.getElementById('customerRequestsBody');
+
+            // Filter by status
+            let filteredRequests = allCustomerRequests;
+            if (customerRequestFilter !== 'all') {
+                filteredRequests = allCustomerRequests.filter(gp => gp.status === customerRequestFilter);
+            }
+
+            if (filteredRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No customer requests found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredRequests.map(gp => {
+                const requestedAt = new Date(gp.issued_at).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const statusColors = {
+                    'pending': 'bg-yellow-100 text-yellow-700',
+                    'approved': 'bg-blue-100 text-blue-700',
+                    'completed': 'bg-green-100 text-green-700',
+                    'rejected': 'bg-red-200 text-red-800',
+                    'expired': 'bg-orange-100 text-orange-700'
+                };
+                const statusColor = statusColors[gp.status] || 'bg-gray-100 text-gray-700';
+
+                const thockColor = getThockColor(gp.thock_number);
+                const approvedByName = gp.approved_by_name ? capitalizeText(gp.approved_by_name) : '-';
+                const remarks = gp.remarks || '-';
+                const phone = gp.customer_phone || '-';
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-green-50">
+                        <td class="p-2 font-bold ${thockColor}">${gp.thock_number}</td>
+                        <td class="p-2">${capitalizeText(gp.customer_name)}</td>
+                        <td class="p-2">${phone}</td>
+                        <td class="p-2 font-bold">${gp.requested_quantity}</td>
+                        <td class="p-2"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${gp.status.toUpperCase()}</span></td>
+                        <td class="p-2 font-semibold">${approvedByName}</td>
+                        <td class="p-2 text-sm text-gray-600">${escapeHtml(remarks)}</td>
+                        <td class="p-2 text-sm">${requestedAt}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setCustomerRequestFilter(status) {
+            customerRequestFilter = status;
+            // Update button styling
+            ['all', 'pending', 'approved', 'rejected', 'completed'].forEach(s => {
+                const btn = document.getElementById(`crStatus-${s}`);
+                if (btn) {
+                    btn.classList.remove('ring-2', 'ring-black');
+                    if (s === status) {
+                        btn.classList.add('ring-2', 'ring-black');
+                    }
+                }
+            });
+            displayCustomerRequests();
+        }
+
+        function filterUnloadingLogs() {
+            const search = document.getElementById('unloadingSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#unloadingLogsBody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        function filterCustomerRequests() {
+            const search = document.getElementById('customerRequestSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#customerRequestsBody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
         }
 
         function switchTab(tabName) {
