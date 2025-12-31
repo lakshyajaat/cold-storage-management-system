@@ -426,18 +426,19 @@
                             <i class="bi bi-clock-history text-orange-600"></i>
                             <span data-i18n="pickup_expiration">Pickup Expiration</span>
                         </label>
-                        <p class="text-xs text-gray-500 mb-2">
-                            <span data-i18n="default_expiration_note">Default: 40 hours from approval. Set custom time if needed.</span>
-                        </p>
-                        <input
-                            type="datetime-local"
-                            id="approvalExpiresAt"
-                            class="w-full neu-input"
-                        >
-                        <p class="text-xs text-gray-500 mt-2">
-                            <i class="bi bi-info-circle"></i>
-                            <span data-i18n="expiration_visible_to_customer">This expiration time will be visible to the customer in their portal.</span>
-                        </p>
+                        <!-- Quick hour buttons -->
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" onclick="setExpirationHours(24)" class="px-3 py-1 text-sm neu-border bg-white hover:bg-orange-100">24h</button>
+                            <button type="button" onclick="setExpirationHours(40)" class="px-3 py-1 text-sm neu-border bg-orange-200 hover:bg-orange-300">40h</button>
+                            <button type="button" onclick="setExpirationHours(48)" class="px-3 py-1 text-sm neu-border bg-white hover:bg-orange-100">48h</button>
+                            <button type="button" onclick="setExpirationHours(72)" class="px-3 py-1 text-sm neu-border bg-white hover:bg-orange-100">72h</button>
+                        </div>
+                        <!-- Date and Time in row -->
+                        <div class="flex gap-2">
+                            <input type="date" id="approvalExpiresDate" class="flex-1 neu-input text-sm" onchange="updateExpiresAtHidden()">
+                            <input type="time" id="approvalExpiresTime" class="w-28 neu-input text-sm" onchange="updateExpiresAtHidden()">
+                        </div>
+                        <input type="hidden" id="approvalExpiresAt">
                     </div>
 
                     <div class="flex gap-4">
@@ -1836,6 +1837,29 @@
             }).join('');
         }
 
+        // Set expiration time based on hours from now
+        function setExpirationHours(hours) {
+            const expiration = new Date(Date.now() + hours * 60 * 60 * 1000);
+            const year = expiration.getFullYear();
+            const month = String(expiration.getMonth() + 1).padStart(2, '0');
+            const day = String(expiration.getDate()).padStart(2, '0');
+            const hrs = String(expiration.getHours()).padStart(2, '0');
+            const mins = String(expiration.getMinutes()).padStart(2, '0');
+
+            document.getElementById('approvalExpiresDate').value = `${year}-${month}-${day}`;
+            document.getElementById('approvalExpiresTime').value = `${hrs}:${mins}`;
+            updateExpiresAtHidden();
+        }
+
+        // Update hidden field when date/time changes
+        function updateExpiresAtHidden() {
+            const date = document.getElementById('approvalExpiresDate').value;
+            const time = document.getElementById('approvalExpiresTime').value;
+            if (date && time) {
+                document.getElementById('approvalExpiresAt').value = `${date}T${time}`;
+            }
+        }
+
         async function openApprovalModal(request) {
             document.getElementById('approvalGatePassId').value = request.id;
             document.getElementById('approvalCustomerName').textContent = request.customer_name;
@@ -1846,13 +1870,7 @@
             document.getElementById('approvalRemarks').value = '';
 
             // Set default expiration to 40 hours from now
-            const defaultExpiration = new Date(Date.now() + 40 * 60 * 60 * 1000);
-            const year = defaultExpiration.getFullYear();
-            const month = String(defaultExpiration.getMonth() + 1).padStart(2, '0');
-            const day = String(defaultExpiration.getDate()).padStart(2, '0');
-            const hours = String(defaultExpiration.getHours()).padStart(2, '0');
-            const minutes = String(defaultExpiration.getMinutes()).padStart(2, '0');
-            document.getElementById('approvalExpiresAt').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            setExpirationHours(40);
 
             document.getElementById('approvalModal').classList.remove('hidden');
 
