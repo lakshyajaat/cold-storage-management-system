@@ -538,15 +538,15 @@
         }
 
         // Calculate remaining time until expiration
-        // Get thock color based on seed/sell range
+        // Get thock color based on seed/sell range - returns inline style
         function getThockColor(thockNumber) {
-            if (!thockNumber) return 'text-gray-700';
+            if (!thockNumber) return 'color: #374151; font-weight: bold;';
             const numMatch = String(thockNumber).match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num <= 1500 ? 'text-green-600 font-bold' : 'text-orange-600 font-bold';
+                return num <= 1500 ? 'color: #16a34a; font-weight: bold;' : 'color: #ea580c; font-weight: bold;';
             }
-            return 'text-gray-700';
+            return 'color: #374151; font-weight: bold;';
         }
 
         function getRemainingTime(expiresAt) {
@@ -599,7 +599,7 @@
                 return `
                     <tr class="${rowClass} cursor-pointer"
                         onclick='selectTicket(${JSON.stringify(gp)})'>
-                        <td class="p-2 ${truckColor}">${gp.thock_number}</td>
+                        <td class="p-2" style="${truckColor}">${gp.thock_number}</td>
                         <td class="p-2 text-sm truncate max-w-[120px]" title="${gp.customer_name}">${gp.customer_name}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
                         <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
@@ -1148,7 +1148,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 ${getThockColor(gp.thock_number)}">${gp.thock_number}</td>
+                        <td class="p-2" style="${getThockColor(gp.thock_number)}">${gp.thock_number}</td>
                         <td class="p-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-bold ${remaining === 0 ? 'text-green-600' : 'text-orange-600'}">${pickedUp}/${approvedQty}</span>

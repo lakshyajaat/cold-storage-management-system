@@ -1304,7 +1304,7 @@
                 const escapedVariety = entryVariety.replace(/'/g, "\\'");
                 return `
                     <tr class="border-b border-gray-200 clickable-row" onclick="selectEntry(${entry.id}, '${entry.thock_number}', '${entry.name}', ${entry.expected_quantity}, '${entrySO}', ${actualQty}, '${escapedVariety}')">
-                        <td class="p-2 font-bold ${thockColor}">${entry.thock_number}</td>
+                        <td class="p-2 font-bold" style="${thockColor}">${entry.thock_number}</td>
                         <td class="p-2">${entry.name}${entryVariety ? '<br><span class="text-xs text-green-600"><i class="bi bi-tag"></i> ' + entryVariety + '</span>' : ''}</td>
                         <td class="p-2">${qtyDisplay}</td>
                     </tr>
@@ -1399,7 +1399,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold ${thockColor}">${entry.thock_number}${varietyDisplay}</td>
+                        <td class="p-2 font-bold" style="${thockColor}">${entry.thock_number}${varietyDisplay}</td>
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no}</td>
@@ -1571,9 +1571,9 @@
             const numMatch = thockNumber.match(/^(\d+)/);
             if (numMatch) {
                 const num = parseInt(numMatch[1]);
-                return num <= 1500 ? 'text-green-600' : 'text-orange-600';
+                return num <= 1500 ? 'color: #16a34a; font-weight: bold;' : 'color: #ea580c; font-weight: bold;';
             }
-            return 'text-gray-700';
+            return 'color: #374151; font-weight: bold;';
         }
 
         function selectRoom(roomNumber) {
