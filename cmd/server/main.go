@@ -534,7 +534,7 @@ func main() {
 		entryEventHandler := handlers.NewEntryEventHandler(entryEventRepo)
 		systemSettingHandler := handlers.NewSystemSettingHandler(systemSettingService)
 		entryHandler.SetSettingService(systemSettingService) // Wire SettingService for skip thock ranges
-		rentPaymentHandler := handlers.NewRentPaymentHandler(rentPaymentService, ledgerService)
+		rentPaymentHandler := handlers.NewRentPaymentHandler(rentPaymentService, ledgerService, adminActionLogRepo)
 		rentPaymentHandler.SetNotificationService(notificationService)
 		rentPaymentHandler.SetCustomerService(customerService)
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)

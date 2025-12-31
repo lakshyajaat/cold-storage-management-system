@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"cold-backend/internal/cache"
 	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
+	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -19,12 +21,14 @@ type RentPaymentHandler struct {
 	LedgerService       *services.LedgerService
 	NotificationService *services.NotificationService
 	CustomerService     *services.CustomerService
+	AdminActionRepo     *repositories.AdminActionLogRepository
 }
 
-func NewRentPaymentHandler(service *services.RentPaymentService, ledgerService *services.LedgerService) *RentPaymentHandler {
+func NewRentPaymentHandler(service *services.RentPaymentService, ledgerService *services.LedgerService, adminActionRepo *repositories.AdminActionLogRepository) *RentPaymentHandler {
 	return &RentPaymentHandler{
-		Service:       service,
-		LedgerService: ledgerService,
+		Service:         service,
+		LedgerService:   ledgerService,
+		AdminActionRepo: adminActionRepo,
 	}
 }
 
@@ -106,6 +110,20 @@ func (h *RentPaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Reques
 		// Create ledger entry (don't fail the payment if this fails)
 		_, _ = h.LedgerService.CreateEntry(r.Context(), ledgerEntry)
 	}
+
+	// Log payment creation
+	description := fmt.Sprintf("Payment received: ₹%.2f from %s (%s) - Balance: ₹%.2f",
+		payment.AmountPaid, req.CustomerName, req.CustomerPhone, payment.Balance)
+	if req.Notes != "" {
+		description += " | Notes: " + req.Notes
+	}
+	h.AdminActionRepo.CreateActionLog(context.Background(), &models.AdminActionLog{
+		AdminUserID: userID,
+		ActionType:  "PAYMENT",
+		TargetType:  "rent_payment",
+		TargetID:    &payment.ID,
+		Description: description,
+	})
 
 	// Invalidate payment caches
 	cache.InvalidatePaymentCaches(r.Context())
