@@ -1727,7 +1727,7 @@
                 // Get issued by name
                 let issuedBy = gp.issued_by_name || '-';
                 if (gp.request_source === 'customer_portal') {
-                    issuedBy = 'Customer Portal';
+                    issuedBy = `<span class="text-purple-600">Customer Portal</span><br><span class="text-xs text-gray-500">${gp.customer_name} (#${gp.customer_id})</span>`;
                 }
 
                 return `
