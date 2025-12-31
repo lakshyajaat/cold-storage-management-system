@@ -538,6 +538,17 @@
         }
 
         // Calculate remaining time until expiration
+        // Get thock color based on seed/sell range
+        function getThockColor(thockNumber) {
+            if (!thockNumber) return 'text-gray-700';
+            const numMatch = String(thockNumber).match(/^(\d+)/);
+            if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                return num <= 1500 ? 'text-green-600 font-bold' : 'text-orange-600 font-bold';
+            }
+            return 'text-gray-700';
+        }
+
         function getRemainingTime(expiresAt) {
             if (!expiresAt) return { text: 'N/A', color: 'text-gray-500' };
 
@@ -582,13 +593,13 @@
                 // If expired, add visual indicator
                 const rowClass = gp.is_expired ? 'clickable-row border-b border-gray-200 bg-red-50 hover:bg-red-100' : 'clickable-row border-b border-gray-200 hover:bg-blue-50';
 
-                // Color code truck number based on expiration time
-                const truckColor = remaining.color;
+                // Color code truck number based on seed/sell
+                const truckColor = getThockColor(gp.thock_number);
 
                 return `
                     <tr class="${rowClass} cursor-pointer"
                         onclick='selectTicket(${JSON.stringify(gp)})'>
-                        <td class="p-2 font-bold ${truckColor}">${gp.thock_number}</td>
+                        <td class="p-2 ${truckColor}">${gp.thock_number}</td>
                         <td class="p-2 text-sm truncate max-w-[120px]" title="${gp.customer_name}">${gp.customer_name}</td>
                         <td class="p-2 font-bold">${gp.requested_quantity}</td>
                         <td class="p-2 text-xs font-bold ${remaining.color}">${remaining.text}</td>
@@ -1137,7 +1148,7 @@
 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-2 font-bold text-blue-600">${gp.thock_number}</td>
+                        <td class="p-2 ${getThockColor(gp.thock_number)}">${gp.thock_number}</td>
                         <td class="p-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-bold ${remaining === 0 ? 'text-green-600' : 'text-orange-600'}">${pickedUp}/${approvedQty}</span>
