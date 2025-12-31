@@ -613,9 +613,10 @@
                 });
             });
 
-            // Also search in entries by thock number
+            // Also search in entries by thock number OR family member name
             const entriesFiltered = allEntries.filter(entry =>
-                fuzzyMatch(searchTerm, entry.thock_number)
+                fuzzyMatch(searchTerm, entry.thock_number) ||
+                fuzzyMatch(searchTerm, entry.family_member_name)
             );
 
             // Add entries with family member info to results
@@ -641,9 +642,9 @@
                 }
             });
 
-            // Remove duplicate customers (keep entry-specific ones if thock search)
+            // Remove duplicate customers (keep entry-specific ones if searching by thock/family member)
             if (searchTerm && entriesFiltered.length > 0) {
-                // If searching by thock, prioritize entry-specific results
+                // If searching by thock or family member, prioritize entry-specific results
                 const entryCustomerIds = entriesFiltered.map(e => {
                     const c = allCustomers.find(c => c.phone === e.phone);
                     return c ? c.id : null;
