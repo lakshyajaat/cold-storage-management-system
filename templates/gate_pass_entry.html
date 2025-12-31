@@ -594,38 +594,112 @@
         function filterCustomers() {
             const searchTerm = document.getElementById('customerSearch').value;
 
-            const filtered = allCustomers.filter(customer => {
+            // Results will be objects with customer info and optional entry/family member info
+            let searchResults = [];
+
+            // Search by customer name, phone, village
+            const filteredCustomers = allCustomers.filter(customer => {
                 return fuzzyMatch(searchTerm, customer.phone) ||
                        fuzzyMatch(searchTerm, customer.name) ||
                        fuzzyMatch(searchTerm, customer.village);
             });
 
-            // Also search in entries by truck number to find customers
+            // Add customers to results
+            filteredCustomers.forEach(customer => {
+                searchResults.push({
+                    customer: customer,
+                    entry: null,
+                    displayText: `${customer.name} - ${customer.phone}${customer.village ? ' (' + customer.village + ')' : ''}`
+                });
+            });
+
+            // Also search in entries by thock number
             const entriesFiltered = allEntries.filter(entry =>
                 fuzzyMatch(searchTerm, entry.thock_number)
             );
 
-            // Merge customer IDs from entries
+            // Add entries with family member info to results
             entriesFiltered.forEach(entry => {
                 const customer = allCustomers.find(c => c.phone === entry.phone);
-                if (customer && !filtered.find(c => c.id === customer.id)) {
-                    filtered.push(customer);
+                if (customer) {
+                    // Check if this customer+entry combination already exists
+                    const existingIndex = searchResults.findIndex(r =>
+                        r.customer.id === customer.id && r.entry && r.entry.thock_number === entry.thock_number
+                    );
+
+                    if (existingIndex === -1) {
+                        // Show family member name if available, otherwise customer name
+                        const ownerName = entry.family_member_name || customer.name;
+                        const displayText = `${ownerName} - ${entry.thock_number} (${customer.name}, ${customer.phone})`;
+
+                        searchResults.push({
+                            customer: customer,
+                            entry: entry,
+                            displayText: displayText
+                        });
+                    }
                 }
             });
 
+            // Remove duplicate customers (keep entry-specific ones if thock search)
+            if (searchTerm && entriesFiltered.length > 0) {
+                // If searching by thock, prioritize entry-specific results
+                const entryCustomerIds = entriesFiltered.map(e => {
+                    const c = allCustomers.find(c => c.phone === e.phone);
+                    return c ? c.id : null;
+                }).filter(id => id);
+
+                searchResults = searchResults.filter(r => {
+                    // Keep if it has entry info
+                    if (r.entry) return true;
+                    // Keep if customer not in entry results
+                    return !entryCustomerIds.includes(r.customer.id);
+                });
+            }
+
             // Limit to 50 results
-            const displayCustomers = filtered.slice(0, 50);
+            const displayResults = searchResults.slice(0, 50);
 
             const customerList = document.getElementById('customerList');
-            customerList.innerHTML = displayCustomers.map(customer => {
-                const displayText = `${customer.name} - ${customer.phone}${customer.village ? ' (' + customer.village + ')' : ''}`;
-                return `<div class="search-item" onclick='selectCustomer(${JSON.stringify(customer)})'>${displayText}</div>`;
+            customerList.innerHTML = displayResults.map(result => {
+                const selectData = JSON.stringify({
+                    customer: result.customer,
+                    entry: result.entry
+                });
+                return `<div class="search-item" onclick='selectCustomerWithEntry(${selectData})'>${result.displayText}</div>`;
             }).join('');
 
-            if (displayCustomers.length === 0 && searchTerm.length >= 2) {
+            if (displayResults.length === 0 && searchTerm.length >= 2) {
                 customerList.innerHTML = '<div class="search-item" style="color: #999;">' + i18n.t('no_customers_found', 'No customers found') + '</div>';
             } else if (searchTerm.length === 0) {
                 customerList.innerHTML = '<div class="search-item" style="color: #999;">' + i18n.t('start_typing_to_search', 'Start typing to search...') + '</div>';
+            }
+        }
+
+        // Select customer with optional pre-selected entry
+        async function selectCustomerWithEntry(data) {
+            const customer = data.customer;
+            const entry = data.entry;
+
+            // First select the customer
+            await selectCustomer(customer);
+
+            // If entry was provided, pre-select the family member and thock
+            if (entry) {
+                // Set family member if available
+                if (entry.family_member_id) {
+                    document.getElementById('familyMemberId').value = entry.family_member_id;
+                    document.getElementById('familyMemberName').value = entry.family_member_name || '';
+
+                    // Select in dropdown if visible
+                    const familyMemberSelect = document.getElementById('familyMemberSelect');
+                    if (familyMemberSelect) {
+                        familyMemberSelect.value = entry.family_member_id;
+                    }
+                }
+
+                // Pre-fill the thock number and trigger selection
+                selectThockNumber(entry.thock_number);
             }
         }
 
@@ -1012,10 +1086,27 @@
 
             // Find the entry for this truck
             const customerId = document.getElementById('customerId').value;
+            const familyMemberId = document.getElementById('familyMemberId').value;
+
             if (customerId) {
-                selectedThockEntry = allEntries.find(entry =>
+                // Find entry matching customer and thock, preferring family member match
+                let matchingEntries = allEntries.filter(entry =>
                     entry.customer_id == customerId && entry.thock_number === thockNumber
                 );
+
+                if (familyMemberId && matchingEntries.length > 1) {
+                    // If family member is selected, prefer that entry
+                    const familyMatch = matchingEntries.find(e => e.family_member_id == familyMemberId);
+                    selectedThockEntry = familyMatch || matchingEntries[0];
+                } else {
+                    selectedThockEntry = matchingEntries[0];
+                }
+
+                // If entry has family member info, update the hidden fields
+                if (selectedThockEntry && selectedThockEntry.family_member_id) {
+                    document.getElementById('familyMemberId').value = selectedThockEntry.family_member_id;
+                    document.getElementById('familyMemberName').value = selectedThockEntry.family_member_name || '';
+                }
 
                 // Update availability displays
                 updateAvailabilityDisplay();
