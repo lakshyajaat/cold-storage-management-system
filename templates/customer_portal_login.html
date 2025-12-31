@@ -381,9 +381,9 @@
                 <div id="errorMessage" class="error-message"></div>
                 <div id="successMessage" class="success-message"></div>
 
-                <!-- Step 1A: Phone Number (OTP Login) -->
-                <div id="step1-otp" class="hidden">
-                    <form id="phoneForm" onsubmit="handleSendOTP(event)">
+                <!-- Step 1: Phone Number (Always shown first) -->
+                <div id="step1">
+                    <form id="phoneForm" onsubmit="handlePhoneSubmit(event)">
                         <div class="form-group">
                             <label class="form-label" data-i18n="phone_number">Phone Number</label>
                             <input
@@ -400,46 +400,19 @@
                             <p class="input-hint" data-i18n="enter_10_digit">Enter 10-digit mobile number</p>
                         </div>
 
-                        <button type="submit" class="neu-button" id="sendOtpBtn" data-i18n="send_otp">
-                            Send OTP
+                        <button type="submit" class="neu-button" id="continueBtn" data-i18n="continue">
+                            Continue
                         </button>
                     </form>
                 </div>
 
-                <!-- Step 1B: Thock Number Login -->
-                <div id="step1-thock" class="hidden">
-                    <form id="thockForm" onsubmit="handleThockLogin(event)">
-                        <div class="form-group">
-                            <label class="form-label" data-i18n="thock_number">Thock Number</label>
-                            <input
-                                type="text"
-                                id="thockNumber"
-                                class="neu-input"
-                                data-i18n-placeholder="enter_thock"
-                                placeholder="Enter your Thock number"
-                                required
-                            />
-                            <p class="input-hint" data-i18n="enter_thock_hint">Enter the Thock number registered to your account</p>
-                        </div>
-
-                        <div class="remember-me">
-                            <input type="checkbox" id="rememberMeThock">
-                            <label for="rememberMeThock" data-i18n="remember_30_days">Remember me for 30 days</label>
-                        </div>
-
-                        <button type="submit" class="neu-button" id="thockLoginBtn" data-i18n="login">
-                            Login
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Step 2: OTP Verification -->
-                <div id="step2" class="hidden">
+                <!-- Step 2A: OTP Verification -->
+                <div id="step2-otp" class="hidden">
                     <form id="otpForm" onsubmit="handleVerifyOTP(event)">
                         <div class="otp-section">
                             <div class="otp-info">
                                 <p data-i18n="otp_sent_to">OTP sent to</p>
-                                <p class="otp-phone" id="displayPhone"></p>
+                                <p class="otp-phone" id="displayPhoneOtp"></p>
                                 <button type="button" onclick="goBackToPhone()" class="change-number" data-i18n="change_number">Change number</button>
                             </div>
 
@@ -456,8 +429,8 @@
                         </div>
 
                         <div class="remember-me">
-                            <input type="checkbox" id="rememberMe">
-                            <label for="rememberMe" data-i18n="remember_30_days">Remember me for 30 days</label>
+                            <input type="checkbox" id="rememberMeOtp">
+                            <label for="rememberMeOtp" data-i18n="remember_30_days">Remember me for 30 days</label>
                         </div>
 
                         <button type="submit" class="neu-button" id="verifyOtpBtn" data-i18n="verify_login">
@@ -470,6 +443,41 @@
                                 Resend OTP
                             </button>
                         </div>
+                    </form>
+                </div>
+
+                <!-- Step 2B: Thock Number Verification -->
+                <div id="step2-thock" class="hidden">
+                    <form id="thockForm" onsubmit="handleVerifyThock(event)">
+                        <div class="otp-section">
+                            <div class="otp-info">
+                                <p data-i18n="verify_identity">Verify your identity</p>
+                                <p class="otp-phone" id="displayPhoneThock"></p>
+                                <button type="button" onclick="goBackToPhone()" class="change-number" data-i18n="change_number">Change number</button>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label class="form-label" data-i18n="thock_number">Thock Number</label>
+                                <input
+                                    type="text"
+                                    id="thockNumber"
+                                    class="neu-input"
+                                    data-i18n-placeholder="enter_thock"
+                                    placeholder="Enter your Thock number"
+                                    required
+                                />
+                                <p class="input-hint" data-i18n="enter_thock_hint">Enter any Thock number registered to your account</p>
+                            </div>
+                        </div>
+
+                        <div class="remember-me">
+                            <input type="checkbox" id="rememberMeThock">
+                            <label for="rememberMeThock" data-i18n="remember_30_days">Remember me for 30 days</label>
+                        </div>
+
+                        <button type="submit" class="neu-button" id="verifyThockBtn" data-i18n="verify_login">
+                            Verify & Login
+                        </button>
                     </form>
                 </div>
             </div>
@@ -488,7 +496,7 @@
         let savedPhone = '';
         let currentLoginMethod = 'otp';
 
-        // Check if already logged in and load login method
+        // Check if already logged in
         window.addEventListener('load', async function() {
             // Check existing session
             try {
@@ -508,57 +516,90 @@
             } catch (error) {
                 console.log('No active session');
             }
-
-            // Load login method setting
-            await loadLoginMethod();
         });
 
-        // Load login method from settings
-        async function loadLoginMethod() {
-            try {
-                const response = await fetch('/api/customer-login-method');
-                if (response.ok) {
-                    const data = await response.json();
-                    currentLoginMethod = data.login_method || 'otp';
-                }
-            } catch (error) {
-                console.log('Using default OTP login');
-                currentLoginMethod = 'otp';
+        // Handle phone submit - server will determine validation method
+        async function handlePhoneSubmit(event) {
+            event.preventDefault();
+            hideMessages();
+
+            const phone = document.getElementById('phone').value.trim();
+            const continueBtn = document.getElementById('continueBtn');
+
+            if (!phone || phone.length !== 10) {
+                showError(i18n ? i18n.t('enter_valid_phone', 'Please enter a valid 10-digit phone number') : 'Please enter a valid 10-digit phone number');
+                return;
             }
 
-            // Show appropriate login form
-            if (currentLoginMethod === 'thock') {
-                document.getElementById('step1-otp').classList.add('hidden');
-                document.getElementById('step1-thock').classList.remove('hidden');
-            } else {
-                document.getElementById('step1-otp').classList.remove('hidden');
-                document.getElementById('step1-thock').classList.add('hidden');
+            continueBtn.disabled = true;
+            continueBtn.textContent = i18n ? i18n.t('please_wait', 'Please wait...') : 'Please wait...';
+
+            try {
+                const response = await fetch('/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    savedPhone = phone;
+                    currentLoginMethod = data.method || 'otp';
+
+                    // Hide step 1
+                    document.getElementById('step1').classList.add('hidden');
+
+                    if (currentLoginMethod === 'thock') {
+                        // Show Thock verification
+                        document.getElementById('displayPhoneThock').textContent = '+91 ' + phone;
+                        document.getElementById('step2-thock').classList.remove('hidden');
+                        document.getElementById('thockNumber').focus();
+                        showSuccess(data.message || 'Enter your Thock number to verify');
+                    } else {
+                        // Show OTP verification
+                        document.getElementById('displayPhoneOtp').textContent = '+91 ' + phone;
+                        document.getElementById('step2-otp').classList.remove('hidden');
+                        startCountdown(120);
+                        document.getElementById('otp1').focus();
+                        showSuccess(data.message || 'OTP sent successfully!');
+                    }
+                } else {
+                    showError(data.message || 'Invalid credentials');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(i18n ? i18n.t('network_error', 'Network error. Please try again.') : 'Network error. Please try again.');
+            } finally {
+                continueBtn.disabled = false;
+                continueBtn.textContent = i18n ? i18n.t('continue', 'Continue') : 'Continue';
             }
         }
 
-        // Handle Thock Number Login
-        async function handleThockLogin(event) {
+        // Handle Thock number verification
+        async function handleVerifyThock(event) {
             event.preventDefault();
             hideMessages();
 
             const thockNumber = document.getElementById('thockNumber').value.trim();
             const rememberMe = document.getElementById('rememberMeThock').checked;
-            const loginBtn = document.getElementById('thockLoginBtn');
+            const verifyBtn = document.getElementById('verifyThockBtn');
 
             if (!thockNumber) {
                 showError(i18n ? i18n.t('enter_thock_number', 'Please enter your Thock number') : 'Please enter your Thock number');
                 return;
             }
 
-            loginBtn.disabled = true;
-            loginBtn.textContent = i18n ? i18n.t('logging_in', 'Logging in...') : 'Logging in...';
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = i18n ? i18n.t('verifying', 'Verifying...') : 'Verifying...';
 
             try {
-                const response = await fetch('/auth/login', {
+                const response = await fetch('/auth/verify-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({
+                        phone: savedPhone,
                         thock_number: thockNumber,
                         remember_me: rememberMe
                     })
@@ -566,22 +607,76 @@
 
                 const data = await response.json();
 
-                if (response.ok) {
+                if (response.ok && data.success) {
                     localStorage.setItem('customer_token', data.token);
                     localStorage.setItem('customer_info', JSON.stringify(data.customer));
+                    localStorage.setItem('customer_trucks', JSON.stringify(data.trucks || []));
                     showSuccess(i18n ? i18n.t('login_successful', 'Login successful! Redirecting...') : 'Login successful! Redirecting...');
                     setTimeout(() => {
                         window.location.href = '/dashboard';
                     }, 500);
                 } else {
-                    showError(data.error || (i18n ? i18n.t('invalid_thock', 'Invalid Thock number') : 'Invalid Thock number'));
+                    showError(data.message || (i18n ? i18n.t('invalid_thock', 'Invalid Thock number') : 'Invalid Thock number'));
                 }
             } catch (error) {
                 console.error('Error:', error);
                 showError(i18n ? i18n.t('network_error', 'Network error. Please try again.') : 'Network error. Please try again.');
             } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = i18n ? i18n.t('login', 'Login') : 'Login';
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
+            }
+        }
+
+        // Handle OTP verification
+        async function handleVerifyOTP(event) {
+            event.preventDefault();
+            hideMessages();
+
+            const otp = getOTP();
+            const verifyBtn = document.getElementById('verifyOtpBtn');
+            const rememberMe = document.getElementById('rememberMeOtp').checked;
+
+            if (otp.length !== 6) {
+                showError('Please enter the complete 6-digit OTP');
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = i18n ? i18n.t('verifying', 'Verifying...') : 'Verifying...';
+
+            try {
+                const response = await fetch('/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: savedPhone,
+                        otp: otp,
+                        remember_me: rememberMe
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    localStorage.setItem('customer_token', data.token);
+                    localStorage.setItem('customer_info', JSON.stringify(data.customer));
+                    localStorage.setItem('customer_trucks', JSON.stringify(data.trucks || []));
+
+                    showSuccess('Login successful! Redirecting...');
+
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    showError(data.message || 'Invalid OTP. Please try again.');
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
             }
         }
 
@@ -659,53 +754,13 @@
 
         function goBackToPhone() {
             document.getElementById('step1').classList.remove('hidden');
-            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step2-otp').classList.add('hidden');
+            document.getElementById('step2-thock').classList.add('hidden');
             hideMessages();
             clearInterval(countdownInterval);
-        }
-
-        async function handleSendOTP(event) {
-            event.preventDefault();
-
-            const phone = document.getElementById('phone').value;
-            const sendOtpBtn = document.getElementById('sendOtpBtn');
-
-            hideMessages();
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.textContent = i18n ? i18n.t('sending', 'Sending...') : 'Sending...';
-
-            try {
-                const response = await fetch('/auth/send-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone })
-                });
-
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    data = { message: text };
-                }
-
-                if (response.ok && data.success) {
-                    savedPhone = phone;
-                    document.getElementById('displayPhone').textContent = '+91 ' + phone;
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                    showSuccess(data.message || 'OTP sent successfully!');
-                    startCountdown(120);
-                    document.getElementById('otp1').focus();
-                } else {
-                    showError(data.message || 'Failed to send OTP. Please try again.');
-                }
-            } catch (error) {
-                showError('Network error. Please check your connection.');
-            }
-
-            sendOtpBtn.disabled = false;
-            sendOtpBtn.textContent = i18n ? i18n.t('send_otp', 'Send OTP') : 'Send OTP';
+            // Clear inputs
+            document.getElementById('thockNumber').value = '';
+            clearOTP();
         }
 
         async function handleResendOTP() {
@@ -721,15 +776,9 @@
                     body: JSON.stringify({ phone: savedPhone })
                 });
 
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    data = { message: text };
-                }
+                const data = await response.json();
 
-                if (response.ok && data.success) {
+                if (response.ok && data.success && data.method === 'otp') {
                     showSuccess('OTP resent successfully!');
                     startCountdown(120);
                     clearOTP();
@@ -741,64 +790,6 @@
             }
 
             resendBtn.disabled = false;
-        }
-
-        async function handleVerifyOTP(event) {
-            event.preventDefault();
-
-            const otp = getOTP();
-            const verifyBtn = document.getElementById('verifyOtpBtn');
-            const rememberMe = document.getElementById('rememberMe').checked;
-
-            if (otp.length !== 6) {
-                showError('Please enter the complete 6-digit OTP');
-                return;
-            }
-
-            hideMessages();
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = i18n ? i18n.t('verifying', 'Verifying...') : 'Verifying...';
-
-            try {
-                const response = await fetch('/auth/verify-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        phone: savedPhone,
-                        otp: otp,
-                        remember_me: rememberMe
-                    })
-                });
-
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    data = { message: text };
-                }
-
-                if (response.ok && data.success) {
-                    localStorage.setItem('customer_token', data.token);
-                    localStorage.setItem('customer_info', JSON.stringify(data.customer));
-                    localStorage.setItem('customer_trucks', JSON.stringify(data.trucks));
-
-                    showSuccess('Login successful! Redirecting...');
-
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1000);
-                } else {
-                    showError(data.message || 'Invalid OTP. Please try again.');
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
-                }
-            } catch (error) {
-                showError('Network error. Please try again.');
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = i18n ? i18n.t('verify_login', 'Verify & Login') : 'Verify & Login';
-            }
         }
     </script>
 </body>

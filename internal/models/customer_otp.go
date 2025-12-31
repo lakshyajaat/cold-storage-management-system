@@ -20,11 +20,12 @@ type SendOTPRequest struct {
 	CaptchaToken string `json:"captcha_token,omitempty"`
 }
 
-// VerifyOTPRequest represents a request to verify OTP
+// VerifyOTPRequest represents a request to verify OTP or Thock number
 type VerifyOTPRequest struct {
-	Phone      string `json:"phone" binding:"required"`
-	OTP        string `json:"otp" binding:"required"`
-	RememberMe bool   `json:"remember_me"`
+	Phone       string `json:"phone" binding:"required"`
+	OTP         string `json:"otp"`
+	ThockNumber string `json:"thock_number"`
+	RememberMe  bool   `json:"remember_me"`
 }
 
 // CustomerAuthResponse is returned after successful OTP verification

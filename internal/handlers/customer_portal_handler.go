@@ -119,7 +119,7 @@ func (h *CustomerPortalHandler) SimpleLogin(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(response)
 }
 
-// SendOTP handles OTP generation and SMS sending
+// SendOTP handles OTP generation and SMS sending (or thock mode check)
 func (h *CustomerPortalHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	var req models.SendOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -127,6 +127,39 @@ func (h *CustomerPortalHandler) SendOTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	ctx := context.Background()
+
+	// Check login method setting
+	loginMethod := "otp" // default
+	setting, err := h.CustomerPortalService.SystemSettingRepo.Get(ctx, models.SettingCustomerLoginMethod)
+	if err == nil && setting != nil && setting.SettingValue != "" {
+		loginMethod = setting.SettingValue
+	}
+
+	// If thock login mode, just validate phone exists and return
+	if loginMethod == "thock" {
+		// Verify customer exists with this phone
+		_, err := h.CustomerPortalService.CustomerRepo.GetByPhone(ctx, req.Phone)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"message": "Invalid credentials",
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"method":  "thock",
+			"message": "Enter your Thock number to verify",
+		})
+		return
+	}
+
+	// OTP mode - send OTP
 	// Get IP address for rate limiting
 	ipAddress := r.RemoteAddr
 	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
@@ -137,8 +170,7 @@ func (h *CustomerPortalHandler) SendOTP(w http.ResponseWriter, r *http.Request) 
 	userAgent := r.Header.Get("User-Agent")
 
 	// Send OTP
-	ctx := context.Background()
-	err := h.OTPService.SendOTP(ctx, req.Phone, ipAddress, userAgent)
+	err = h.OTPService.SendOTP(ctx, req.Phone, ipAddress, userAgent)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -152,17 +184,20 @@ func (h *CustomerPortalHandler) SendOTP(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
+		"method":  "otp",
 		"message": "OTP sent successfully to your phone",
 	})
 }
 
-// VerifyOTP handles OTP verification and login
+// VerifyOTP handles OTP or Thock number verification and login
 func (h *CustomerPortalHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req models.VerifyOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	ctx := context.Background()
 
 	// Get IP address and user agent for logging
 	ipAddress := r.RemoteAddr
@@ -171,17 +206,72 @@ func (h *CustomerPortalHandler) VerifyOTP(w http.ResponseWriter, r *http.Request
 	}
 	userAgent := r.Header.Get("User-Agent")
 
-	// Verify OTP
-	ctx := context.Background()
-	customer, err := h.OTPService.VerifyOTP(ctx, req.Phone, req.OTP, ipAddress, userAgent)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
+	var customer *models.Customer
+	var err error
+
+	// Check login method setting
+	loginMethod := "otp" // default
+	setting, settingErr := h.CustomerPortalService.SystemSettingRepo.Get(ctx, models.SettingCustomerLoginMethod)
+	if settingErr == nil && setting != nil && setting.SettingValue != "" {
+		loginMethod = setting.SettingValue
+	}
+
+	// Handle Thock number verification
+	if loginMethod == "thock" && req.ThockNumber != "" {
+		// Get customer by phone
+		customer, err = h.CustomerPortalService.CustomerRepo.GetByPhone(ctx, req.Phone)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"message": "Invalid credentials",
+			})
+			return
+		}
+
+		// Verify thock number belongs to this customer
+		entries, err := h.CustomerPortalService.EntryRepo.ListByCustomer(ctx, customer.ID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"message": "Invalid credentials",
+			})
+			return
+		}
+
+		// Check if any entry matches the thock number
+		thockValid := false
+		for _, entry := range entries {
+			if entry.ThockNumber == req.ThockNumber {
+				thockValid = true
+				break
+			}
+		}
+
+		if !thockValid {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"message": "Invalid Thock number for this phone",
+			})
+			return
+		}
+	} else {
+		// OTP verification
+		customer, err = h.OTPService.VerifyOTP(ctx, req.Phone, req.OTP, ipAddress, userAgent)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
 	}
 
 	// Generate JWT token
