@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"cold-backend/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -380,6 +381,22 @@ func (r *GatePassRepository) UpdateGatePassWithSource(ctx context.Context, id in
 	`
 
 	_, err := r.DB.Exec(ctx, query, approvedQty, gateNo, status, requestSource, remarks, approvedByUserID, id)
+	return err
+}
+
+// UpdateGatePassWithExpiration updates gate pass with custom expiration time
+func (r *GatePassRepository) UpdateGatePassWithExpiration(ctx context.Context, id int, approvedQty int, gateNo, status, remarks string, approvedByUserID int, expiresAt *time.Time) error {
+	query := `
+		UPDATE gate_passes
+		SET approved_quantity = $1, gate_no = $2, status = $3::text, remarks = $4,
+		    approved_by_user_id = $5,
+		    expires_at = $6,
+		    approval_expires_at = $6,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7
+	`
+
+	_, err := r.DB.Exec(ctx, query, approvedQty, gateNo, status, remarks, approvedByUserID, expiresAt, id)
 	return err
 }
 

@@ -407,7 +407,7 @@
                         </p>
                     </div>
 
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="remarks_optional_lower">
                             Remarks (optional)
                         </label>
@@ -418,6 +418,26 @@
                             data-i18n-placeholder="add_any_remarks"
                             placeholder="Add any remarks"
                         ></textarea>
+                    </div>
+
+                    <!-- Custom Expiration Time -->
+                    <div class="mb-6 p-4 bg-orange-50 neu-border">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-clock-history text-orange-600"></i>
+                            <span data-i18n="pickup_expiration">Pickup Expiration</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mb-2">
+                            <span data-i18n="default_expiration_note">Default: 40 hours from approval. Set custom time if needed.</span>
+                        </p>
+                        <input
+                            type="datetime-local"
+                            id="approvalExpiresAt"
+                            class="w-full neu-input"
+                        >
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="bi bi-info-circle"></i>
+                            <span data-i18n="expiration_visible_to_customer">This expiration time will be visible to the customer in their portal.</span>
+                        </p>
                     </div>
 
                     <div class="flex gap-4">
@@ -1824,6 +1844,16 @@
             document.getElementById('approvalApprovedQty').value = request.requested_quantity;
             document.getElementById('approvalGateNo').value = '';
             document.getElementById('approvalRemarks').value = '';
+
+            // Set default expiration to 40 hours from now
+            const defaultExpiration = new Date(Date.now() + 40 * 60 * 60 * 1000);
+            const year = defaultExpiration.getFullYear();
+            const month = String(defaultExpiration.getMonth() + 1).padStart(2, '0');
+            const day = String(defaultExpiration.getDate()).padStart(2, '0');
+            const hours = String(defaultExpiration.getHours()).padStart(2, '0');
+            const minutes = String(defaultExpiration.getMinutes()).padStart(2, '0');
+            document.getElementById('approvalExpiresAt').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+
             document.getElementById('approvalModal').classList.remove('hidden');
 
             // Load and display gatar storage locations
@@ -1966,6 +1996,7 @@
             const approvedQty = parseInt(document.getElementById('approvalApprovedQty').value);
             const gateNo = document.getElementById('approvalGateNo').value.trim();
             const remarks = document.getElementById('approvalRemarks').value;
+            const expiresAtInput = document.getElementById('approvalExpiresAt').value;
 
             // Validate gatar selection
             const selectedCheckboxes = document.querySelectorAll('.gatar-checkbox:checked');
@@ -2000,9 +2031,10 @@
                     body: JSON.stringify({
                         approved_quantity: approvedQty,
                         gate_no: gateNo || 'PICKUP',
-                        status: 'pending',
-                        request_source: 'employee',
-                        remarks: remarks
+                        status: 'approved',
+                        request_source: 'customer_portal',
+                        remarks: remarks,
+                        expires_at: expiresAtInput || null
                     })
                 });
 

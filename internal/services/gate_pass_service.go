@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
@@ -161,8 +162,35 @@ func (s *GatePassService) ApproveGatePass(ctx context.Context, id int, req *mode
 		}
 	}
 
-	// Use UpdateGatePassWithSource if request_source is provided
-	if req.RequestSource != "" {
+	// Determine expiration time for approval
+	var expiresAt *time.Time
+	if req.Status == "approved" {
+		if req.ExpiresAt != nil && *req.ExpiresAt != "" {
+			// Custom expiration time set by employee
+			parsedTime, parseErr := time.Parse(time.RFC3339, *req.ExpiresAt)
+			if parseErr != nil {
+				// Try parsing without timezone
+				parsedTime, parseErr = time.Parse("2006-01-02T15:04", *req.ExpiresAt)
+				if parseErr != nil {
+					return errors.New("invalid expiration time format")
+				}
+			}
+			expiresAt = &parsedTime
+		} else if gatePass.RequestSource == "customer_portal" {
+			// Customer-issued gate pass: 40 hours from now
+			expTime := timeutil.Now().Add(40 * time.Hour)
+			expiresAt = &expTime
+		} else {
+			// Employee-issued: 30 hours from now (should already be set, but update if needed)
+			expTime := timeutil.Now().Add(30 * time.Hour)
+			expiresAt = &expTime
+		}
+	}
+
+	// Use UpdateGatePassWithExpiration if expiration is set
+	if expiresAt != nil {
+		err = s.GatePassRepo.UpdateGatePassWithExpiration(ctx, id, req.ApprovedQuantity, req.GateNo, req.Status, req.Remarks, userID, expiresAt)
+	} else if req.RequestSource != "" {
 		err = s.GatePassRepo.UpdateGatePassWithSource(ctx, id, req.ApprovedQuantity, req.GateNo, req.Status, req.RequestSource, req.Remarks, userID)
 	} else {
 		err = s.GatePassRepo.UpdateGatePass(ctx, id, req.ApprovedQuantity, req.GateNo, req.Status, req.Remarks, userID)

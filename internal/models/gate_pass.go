@@ -43,11 +43,12 @@ type CreateGatePassRequest struct {
 }
 
 type UpdateGatePassRequest struct {
-	ApprovedQuantity int    `json:"approved_quantity"`
-	GateNo           string `json:"gate_no"`
-	Status           string `json:"status"`
-	RequestSource    string `json:"request_source,omitempty"`
-	Remarks          string `json:"remarks"`
+	ApprovedQuantity int     `json:"approved_quantity"`
+	GateNo           string  `json:"gate_no"`
+	Status           string  `json:"status"`
+	RequestSource    string  `json:"request_source,omitempty"`
+	Remarks          string  `json:"remarks"`
+	ExpiresAt        *string `json:"expires_at,omitempty"` // Custom expiration datetime (ISO format)
 }
 
 type RecordPickupRequest struct {
