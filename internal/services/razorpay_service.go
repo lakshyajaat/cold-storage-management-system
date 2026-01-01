@@ -381,15 +381,16 @@ func (s *RazorpayService) createRentPaymentAndLedgerEntry(ctx context.Context, t
 	}
 
 	ledgerEntry, err := s.ledgerRepo.Create(ctx, &models.CreateLedgerEntryRequest{
-		CustomerPhone: tx.CustomerPhone,
-		CustomerName:  tx.CustomerName,
-		CustomerSO:    customerSO,
-		EntryType:     models.LedgerEntryTypeOnlinePayment,
-		Description:   description,
-		Credit:        tx.Amount,
-		ReferenceID:   &rentPayment.ID,
-		ReferenceType: "online_transaction",
-		Notes:         fmt.Sprintf("Razorpay Payment ID: %s, Fee: ₹%.2f", tx.RazorpayPaymentID, tx.FeeAmount),
+		CustomerPhone:   tx.CustomerPhone,
+		CustomerName:    tx.CustomerName,
+		CustomerSO:      customerSO,
+		EntryType:       models.LedgerEntryTypeOnlinePayment,
+		Description:     description,
+		Credit:          tx.Amount,
+		ReferenceID:     &rentPayment.ID,
+		ReferenceType:   "online_transaction",
+		Notes:           fmt.Sprintf("Razorpay Payment ID: %s, Fee: ₹%.2f", tx.RazorpayPaymentID, tx.FeeAmount),
+		CreatedByUserID: 0, // System - Online payment
 	})
 	if err != nil {
 		log.Printf("[Razorpay] Failed to create ledger entry: %v", err)

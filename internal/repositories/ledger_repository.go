@@ -31,11 +31,15 @@ func (r *LedgerRepository) Create(ctx context.Context, entry *models.CreateLedge
 	// Calculate new running balance
 	runningBalance := currentBalance + entry.Debit - entry.Credit
 
-	// Get user name
+	// Get user name (ID 0 = System for automated entries like online payments)
 	var createdByName string
-	err = r.DB.QueryRow(ctx, "SELECT name FROM users WHERE id = $1", entry.CreatedByUserID).Scan(&createdByName)
-	if err != nil {
+	if entry.CreatedByUserID == 0 {
 		createdByName = "System"
+	} else {
+		err = r.DB.QueryRow(ctx, "SELECT name FROM users WHERE id = $1", entry.CreatedByUserID).Scan(&createdByName)
+		if err != nil {
+			createdByName = "Unknown"
+		}
 	}
 
 	query := `
