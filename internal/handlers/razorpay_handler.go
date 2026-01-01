@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"cold-backend/internal/middleware"
 	"cold-backend/internal/models"
 	"cold-backend/internal/repositories"
 	"cold-backend/internal/services"
@@ -37,7 +38,7 @@ func (h *RazorpayHandler) CheckPaymentStatus(w http.ResponseWriter, r *http.Requ
 // POST /api/payment/create-order
 func (h *RazorpayHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	// Get customer ID from context (set by auth middleware)
-	customerID, ok := r.Context().Value("customer_id").(int)
+	customerID, ok := middleware.GetCustomerIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -83,7 +84,7 @@ func (h *RazorpayHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 // POST /api/payment/verify
 func (h *RazorpayHandler) VerifyPayment(w http.ResponseWriter, r *http.Request) {
 	// Get customer ID from context
-	customerID, ok := r.Context().Value("customer_id").(int)
+	customerID, ok := middleware.GetCustomerIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -121,7 +122,7 @@ func (h *RazorpayHandler) VerifyPayment(w http.ResponseWriter, r *http.Request) 
 // GetMyTransactions returns customer's online payment history
 // GET /api/payment/transactions
 func (h *RazorpayHandler) GetMyTransactions(w http.ResponseWriter, r *http.Request) {
-	customerID, ok := r.Context().Value("customer_id").(int)
+	customerID, ok := middleware.GetCustomerIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
