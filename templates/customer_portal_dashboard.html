@@ -911,8 +911,8 @@
         }
     </style>
     <script src="/static/js/theme.js"></script>
-    <!-- Razorpay Checkout Script (loaded only when needed) -->
-    <script id="razorpayScript" src="https://checkout.razorpay.com/v1/checkout.js" async></script>
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -1803,6 +1803,16 @@
 
         // ========== Razorpay Integration ==========
         async function initiateRazorpayPayment() {
+            // Check if Razorpay SDK is loaded
+            if (typeof Razorpay === 'undefined') {
+                alert(i18n.t('razorpay_loading', 'Payment system is loading. Please wait a moment and try again.'));
+                // Try to reload the script
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                document.head.appendChild(script);
+                return;
+            }
+
             const amount = parseFloat(document.getElementById('paymentAmount').value);
 
             if (!amount || amount <= 0) {
