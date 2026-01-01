@@ -96,16 +96,18 @@ func (h *RentPaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Reques
 		}
 
 		ledgerEntry := &models.CreateLedgerEntryRequest{
-			CustomerPhone:   req.CustomerPhone,
-			CustomerName:    req.CustomerName,
-			CustomerSO:      customerSO,
-			EntryType:       models.LedgerEntryTypePayment,
-			Description:     "Rent payment received",
-			Credit:          payment.AmountPaid,
-			ReferenceID:     &payment.ID,
-			ReferenceType:   "payment",
-			CreatedByUserID: userID,
-			Notes:           req.Notes,
+			CustomerPhone:    req.CustomerPhone,
+			CustomerName:     req.CustomerName,
+			CustomerSO:       customerSO,
+			EntryType:        models.LedgerEntryTypePayment,
+			Description:      "Rent payment received",
+			Credit:           payment.AmountPaid,
+			ReferenceID:      &payment.ID,
+			ReferenceType:    "payment",
+			FamilyMemberID:   req.FamilyMemberID,
+			FamilyMemberName: req.FamilyMemberName,
+			CreatedByUserID:  userID,
+			Notes:            req.Notes,
 		}
 		// Create ledger entry (don't fail the payment if this fails)
 		_, _ = h.LedgerService.CreateEntry(r.Context(), ledgerEntry)

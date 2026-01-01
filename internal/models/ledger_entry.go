@@ -16,36 +16,40 @@ const (
 
 // LedgerEntry represents a single entry in the accounting ledger
 type LedgerEntry struct {
-	ID              int             `json:"id"`
-	CustomerPhone   string          `json:"customer_phone"`
-	CustomerName    string          `json:"customer_name"`
-	CustomerSO      string          `json:"customer_so"` // S/O (Son Of / Father's Name)
-	EntryType       LedgerEntryType `json:"entry_type"`
-	Description     string          `json:"description"`
-	Debit           float64         `json:"debit"`           // Money owed (increases balance)
-	Credit          float64         `json:"credit"`          // Money paid/credited (decreases balance)
-	RunningBalance  float64         `json:"running_balance"` // Balance after this entry
-	ReferenceID     *int            `json:"reference_id"`    // Links to entry_id, payment_id, gate_pass_id, debt_request_id
-	ReferenceType   string          `json:"reference_type"`  // 'entry', 'payment', 'gate_pass', 'debt_request'
-	CreatedByUserID int             `json:"created_by_user_id"`
-	CreatedByName   string          `json:"created_by_name"`
-	CreatedAt       time.Time       `json:"created_at"`
-	Notes           string          `json:"notes"`
+	ID               int             `json:"id"`
+	CustomerPhone    string          `json:"customer_phone"`
+	CustomerName     string          `json:"customer_name"`
+	CustomerSO       string          `json:"customer_so"` // S/O (Son Of / Father's Name)
+	EntryType        LedgerEntryType `json:"entry_type"`
+	Description      string          `json:"description"`
+	Debit            float64         `json:"debit"`           // Money owed (increases balance)
+	Credit           float64         `json:"credit"`          // Money paid/credited (decreases balance)
+	RunningBalance   float64         `json:"running_balance"` // Balance after this entry
+	ReferenceID      *int            `json:"reference_id"`    // Links to entry_id, payment_id, gate_pass_id, debt_request_id
+	ReferenceType    string          `json:"reference_type"`  // 'entry', 'payment', 'gate_pass', 'debt_request'
+	FamilyMemberID   *int            `json:"family_member_id,omitempty"`
+	FamilyMemberName string          `json:"family_member_name,omitempty"`
+	CreatedByUserID  int             `json:"created_by_user_id"`
+	CreatedByName    string          `json:"created_by_name"`
+	CreatedAt        time.Time       `json:"created_at"`
+	Notes            string          `json:"notes"`
 }
 
 // CreateLedgerEntryRequest is used when creating a new ledger entry
 type CreateLedgerEntryRequest struct {
-	CustomerPhone   string          `json:"customer_phone" validate:"required"`
-	CustomerName    string          `json:"customer_name" validate:"required"`
-	CustomerSO      string          `json:"customer_so"`
-	EntryType       LedgerEntryType `json:"entry_type" validate:"required"`
-	Description     string          `json:"description"`
-	Debit           float64         `json:"debit"`
-	Credit          float64         `json:"credit"`
-	ReferenceID     *int            `json:"reference_id"`
-	ReferenceType   string          `json:"reference_type"`
-	CreatedByUserID int             `json:"created_by_user_id" validate:"required"`
-	Notes           string          `json:"notes"`
+	CustomerPhone    string          `json:"customer_phone" validate:"required"`
+	CustomerName     string          `json:"customer_name" validate:"required"`
+	CustomerSO       string          `json:"customer_so"`
+	EntryType        LedgerEntryType `json:"entry_type" validate:"required"`
+	Description      string          `json:"description"`
+	Debit            float64         `json:"debit"`
+	Credit           float64         `json:"credit"`
+	ReferenceID      *int            `json:"reference_id"`
+	ReferenceType    string          `json:"reference_type"`
+	FamilyMemberID   *int            `json:"family_member_id"`
+	FamilyMemberName string          `json:"family_member_name"`
+	CreatedByUserID  int             `json:"created_by_user_id" validate:"required"`
+	Notes            string          `json:"notes"`
 }
 
 // LedgerSummary provides summary statistics for a customer

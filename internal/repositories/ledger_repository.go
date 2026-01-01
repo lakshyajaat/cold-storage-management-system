@@ -46,8 +46,9 @@ func (r *LedgerRepository) Create(ctx context.Context, entry *models.CreateLedge
 		INSERT INTO ledger_entries (
 			customer_phone, customer_name, customer_so, entry_type, description,
 			debit, credit, running_balance, reference_id, reference_type,
+			family_member_id, family_member_name,
 			created_by_user_id, created_by_name, notes
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at
 	`
 
@@ -64,6 +65,8 @@ func (r *LedgerRepository) Create(ctx context.Context, entry *models.CreateLedge
 		runningBalance,
 		entry.ReferenceID,
 		entry.ReferenceType,
+		entry.FamilyMemberID,
+		entry.FamilyMemberName,
 		entry.CreatedByUserID,
 		createdByName,
 		entry.Notes,
@@ -74,21 +77,23 @@ func (r *LedgerRepository) Create(ctx context.Context, entry *models.CreateLedge
 	}
 
 	return &models.LedgerEntry{
-		ID:              id,
-		CustomerPhone:   entry.CustomerPhone,
-		CustomerName:    entry.CustomerName,
-		CustomerSO:      entry.CustomerSO,
-		EntryType:       entry.EntryType,
-		Description:     entry.Description,
-		Debit:           entry.Debit,
-		Credit:          entry.Credit,
-		RunningBalance:  runningBalance,
-		ReferenceID:     entry.ReferenceID,
-		ReferenceType:   entry.ReferenceType,
-		CreatedByUserID: entry.CreatedByUserID,
-		CreatedByName:   createdByName,
-		CreatedAt:       createdAt,
-		Notes:           entry.Notes,
+		ID:               id,
+		CustomerPhone:    entry.CustomerPhone,
+		CustomerName:     entry.CustomerName,
+		CustomerSO:       entry.CustomerSO,
+		EntryType:        entry.EntryType,
+		Description:      entry.Description,
+		Debit:            entry.Debit,
+		Credit:           entry.Credit,
+		RunningBalance:   runningBalance,
+		ReferenceID:      entry.ReferenceID,
+		ReferenceType:    entry.ReferenceType,
+		FamilyMemberID:   entry.FamilyMemberID,
+		FamilyMemberName: entry.FamilyMemberName,
+		CreatedByUserID:  entry.CreatedByUserID,
+		CreatedByName:    createdByName,
+		CreatedAt:        createdAt,
+		Notes:            entry.Notes,
 	}, nil
 }
 
@@ -419,7 +424,8 @@ func (r *LedgerRepository) GetAllTotalCredits(ctx context.Context) (map[string]f
 // GetAllPaymentHistory returns payment history for all customers (bulk query)
 func (r *LedgerRepository) GetAllPaymentHistory(ctx context.Context) (map[string][]PaymentHistoryItem, error) {
 	query := `
-		SELECT customer_phone, id, credit, entry_type, COALESCE(description, ''), COALESCE(notes, ''), created_at
+		SELECT customer_phone, id, credit, entry_type, COALESCE(description, ''), COALESCE(notes, ''),
+		       family_member_id, COALESCE(family_member_name, ''), created_at
 		FROM ledger_entries
 		WHERE credit > 0
 		ORDER BY created_at DESC
@@ -435,7 +441,8 @@ func (r *LedgerRepository) GetAllPaymentHistory(ctx context.Context) (map[string
 	for rows.Next() {
 		var phone string
 		var p PaymentHistoryItem
-		if err := rows.Scan(&phone, &p.ID, &p.Amount, &p.EntryType, &p.Description, &p.Notes, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&phone, &p.ID, &p.Amount, &p.EntryType, &p.Description, &p.Notes,
+			&p.FamilyMemberID, &p.FamilyMemberName, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		result[phone] = append(result[phone], p)
@@ -446,12 +453,50 @@ func (r *LedgerRepository) GetAllPaymentHistory(ctx context.Context) (map[string
 
 // PaymentHistoryItem represents a payment in the history
 type PaymentHistoryItem struct {
-	ID          int       `json:"id"`
-	Amount      float64   `json:"amount"`
-	EntryType   string    `json:"entry_type"`
-	Description string    `json:"description"`
-	Notes       string    `json:"notes"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID               int       `json:"id"`
+	Amount           float64   `json:"amount"`
+	EntryType        string    `json:"entry_type"`
+	Description      string    `json:"description"`
+	Notes            string    `json:"notes"`
+	FamilyMemberID   *int      `json:"family_member_id,omitempty"`
+	FamilyMemberName string    `json:"family_member_name,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// FamilyMemberCredit represents total credit for a family member
+type FamilyMemberCredit struct {
+	FamilyMemberID   *int    `json:"family_member_id"`
+	FamilyMemberName string  `json:"family_member_name"`
+	TotalCredit      float64 `json:"total_credit"`
+}
+
+// GetCreditsByFamilyMember returns total credits grouped by family member for a customer
+func (r *LedgerRepository) GetCreditsByFamilyMember(ctx context.Context, customerPhone string) ([]FamilyMemberCredit, error) {
+	query := `
+		SELECT family_member_id, COALESCE(family_member_name, '') as family_member_name,
+		       COALESCE(SUM(credit), 0) as total_credit
+		FROM ledger_entries
+		WHERE customer_phone = $1 AND credit > 0
+		GROUP BY family_member_id, family_member_name
+		ORDER BY total_credit DESC
+	`
+
+	rows, err := r.DB.Query(ctx, query, customerPhone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []FamilyMemberCredit
+	for rows.Next() {
+		var fc FamilyMemberCredit
+		if err := rows.Scan(&fc.FamilyMemberID, &fc.FamilyMemberName, &fc.TotalCredit); err != nil {
+			return nil, err
+		}
+		results = append(results, fc)
+	}
+
+	return results, nil
 }
 
 // GetPaymentHistory returns recent payments (credits) for a customer
@@ -461,7 +506,8 @@ func (r *LedgerRepository) GetPaymentHistory(ctx context.Context, customerPhone 
 	}
 
 	query := `
-		SELECT id, credit, entry_type, COALESCE(description, ''), COALESCE(notes, ''), created_at
+		SELECT id, credit, entry_type, COALESCE(description, ''), COALESCE(notes, ''),
+		       family_member_id, COALESCE(family_member_name, ''), created_at
 		FROM ledger_entries
 		WHERE customer_phone = $1 AND credit > 0
 		ORDER BY created_at DESC
@@ -477,7 +523,8 @@ func (r *LedgerRepository) GetPaymentHistory(ctx context.Context, customerPhone 
 	var payments []PaymentHistoryItem
 	for rows.Next() {
 		var p PaymentHistoryItem
-		if err := rows.Scan(&p.ID, &p.Amount, &p.EntryType, &p.Description, &p.Notes, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Amount, &p.EntryType, &p.Description, &p.Notes,
+			&p.FamilyMemberID, &p.FamilyMemberName, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		payments = append(payments, p)
