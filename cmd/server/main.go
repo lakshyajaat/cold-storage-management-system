@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"cold-backend/internal/auth"
@@ -513,14 +514,64 @@ func main() {
 
 		// Initialize SMS service for employee mode (for bulk SMS, notifications)
 		fast2smsAPIKey := os.Getenv("FAST2SMS_API_KEY")
-		var employeeSMSService sms.SMSProvider
+		var baseSMSService sms.SMSProvider
 		if fast2smsAPIKey != "" {
-			employeeSMSService = sms.NewFast2SMSService(fast2smsAPIKey)
-			employeeSMSService.SetLogRepository(smsLogRepo)
+			baseSMSService = sms.NewFast2SMSService(fast2smsAPIKey)
 		} else {
-			employeeSMSService = sms.NewMockSMSService()
-			employeeSMSService.SetLogRepository(smsLogRepo)
+			baseSMSService = sms.NewMockSMSService()
 		}
+
+		// Create unified messaging service (WhatsApp-first with SMS fallback)
+		employeeSMSService := sms.NewUnifiedMessagingService(baseSMSService)
+		employeeSMSService.SetLogRepository(smsLogRepo)
+
+		// Load WhatsApp settings from database
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			// Check if WhatsApp is enabled
+			enabledSetting, _ := systemSettingRepo.Get(ctx, "whatsapp_enabled")
+			if enabledSetting != nil && enabledSetting.SettingValue == "true" {
+				providerSetting, _ := systemSettingRepo.Get(ctx, "whatsapp_provider")
+				apiKeySetting, _ := systemSettingRepo.Get(ctx, "whatsapp_api_key")
+				phoneIDSetting, _ := systemSettingRepo.Get(ctx, "whatsapp_phone_number_id")
+				costSetting, _ := systemSettingRepo.Get(ctx, "whatsapp_cost_per_msg")
+
+				provider := "generic"
+				if providerSetting != nil {
+					provider = providerSetting.SettingValue
+				}
+
+				apiKey := ""
+				if apiKeySetting != nil {
+					apiKey = apiKeySetting.SettingValue
+				}
+
+				phoneID := ""
+				if phoneIDSetting != nil {
+					phoneID = phoneIDSetting.SettingValue
+				}
+
+				cost := 0.08
+				if costSetting != nil {
+					if c, err := strconv.ParseFloat(costSetting.SettingValue, 64); err == nil {
+						cost = c
+					}
+				}
+
+				if apiKey != "" {
+					employeeSMSService.SetWhatsAppConfig(&sms.WhatsAppConfig{
+						Enabled:       true,
+						Provider:      provider,
+						APIKey:        apiKey,
+						PhoneNumberID: phoneID,
+						CostPerMsg:    cost,
+					})
+					log.Printf("WhatsApp enabled with provider: %s", provider)
+				}
+			}
+		}()
 
 		// Initialize notification service for transaction SMS
 		notificationService := services.NewNotificationService(employeeSMSService, systemSettingRepo)

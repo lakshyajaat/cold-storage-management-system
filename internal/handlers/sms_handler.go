@@ -301,6 +301,7 @@ func (h *SMSHandler) GetNotificationSettings(w http.ResponseWriter, r *http.Requ
 		models.SettingWhatsAppEnabled,
 		models.SettingWhatsAppProvider,
 		models.SettingWhatsAppAPIKey,
+		models.SettingWhatsAppPhoneNumberID,
 		models.SettingWhatsAppCostPerMsg,
 		// Customer portal settings
 		models.SettingCustomerLoginMethod,

@@ -1,10 +1,12 @@
 package sms
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -274,4 +276,313 @@ func (s *MockSMSService) SendBulkSMS(phones []string, message string, customerID
 		s.SendSMS(phone, message, models.SMSTypeBulk, customerID)
 	}
 	return len(phones), 0, nil
+}
+
+// =============================================================================
+// UnifiedMessagingService - WhatsApp-first with SMS fallback
+// =============================================================================
+
+// WhatsAppConfig holds WhatsApp provider configuration
+type WhatsAppConfig struct {
+	Enabled       bool
+	Provider      string // "generic", "aisensy", "interakt", "gupshup"
+	APIKey        string
+	PhoneNumberID string // Required for generic/gupshup
+	CostPerMsg    float64
+}
+
+// UnifiedMessagingService handles WhatsApp-first with SMS fallback
+type UnifiedMessagingService struct {
+	smsProvider     SMSProvider
+	whatsappConfig  *WhatsAppConfig
+	whatsappClient  *http.Client
+	LogRepo         SMSLogRepo
+}
+
+// NewUnifiedMessagingService creates a new unified messaging service
+func NewUnifiedMessagingService(smsProvider SMSProvider) *UnifiedMessagingService {
+	return &UnifiedMessagingService{
+		smsProvider:    smsProvider,
+		whatsappConfig: &WhatsAppConfig{Enabled: false},
+		whatsappClient: &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// SetLogRepository sets the SMS log repository
+func (s *UnifiedMessagingService) SetLogRepository(repo SMSLogRepo) {
+	s.LogRepo = repo
+	// Also set for underlying SMS provider
+	if s.smsProvider != nil {
+		s.smsProvider.SetLogRepository(repo)
+	}
+}
+
+// SetConfig sets the SMS configuration
+func (s *UnifiedMessagingService) SetConfig(config *SMSConfig) {
+	if s.smsProvider != nil {
+		s.smsProvider.SetConfig(config)
+	}
+}
+
+// SetWhatsAppConfig configures WhatsApp settings
+func (s *UnifiedMessagingService) SetWhatsAppConfig(config *WhatsAppConfig) {
+	if config != nil {
+		s.whatsappConfig = config
+	}
+}
+
+// SendOTP sends OTP via WhatsApp first, falls back to SMS
+func (s *UnifiedMessagingService) SendOTP(phone, otp string) error {
+	message := fmt.Sprintf("Your Cold Storage OTP is %s. Valid for 5 minutes. Do not share this code with anyone.", otp)
+	return s.SendSMS(phone, message, models.SMSTypeOTP, 0)
+}
+
+// SendSMS tries WhatsApp first, falls back to SMS
+func (s *UnifiedMessagingService) SendSMS(phone, message, messageType string, customerID int) error {
+	// If WhatsApp is enabled, try it first
+	if s.whatsappConfig != nil && s.whatsappConfig.Enabled && s.whatsappConfig.APIKey != "" {
+		err := s.sendWhatsApp(phone, message, messageType, customerID)
+		if err == nil {
+			return nil // WhatsApp succeeded
+		}
+		log.Printf("[UnifiedMessaging] WhatsApp failed for %s, falling back to SMS: %v", phone, err)
+	}
+
+	// Fall back to SMS
+	return s.smsProvider.SendSMS(phone, message, messageType, customerID)
+}
+
+// SendBulkSMS sends to multiple recipients
+func (s *UnifiedMessagingService) SendBulkSMS(phones []string, message string, customerIDs []int) (int, int, error) {
+	success := 0
+	failed := 0
+
+	for i, phone := range phones {
+		customerID := 0
+		if i < len(customerIDs) {
+			customerID = customerIDs[i]
+		}
+
+		err := s.SendSMS(phone, message, models.SMSTypeBulk, customerID)
+		if err != nil {
+			failed++
+		} else {
+			success++
+		}
+
+		// Rate limit
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return success, failed, nil
+}
+
+// sendWhatsApp sends message via WhatsApp
+func (s *UnifiedMessagingService) sendWhatsApp(phone, message, messageType string, customerID int) error {
+	cfg := s.whatsappConfig
+
+	// Log entry
+	smsLog := &models.SMSLog{
+		CustomerID:  customerID,
+		Phone:       phone,
+		MessageType: messageType,
+		Message:     message,
+		Status:      models.SMSStatusPending,
+		Cost:        cfg.CostPerMsg,
+		Channel:     "whatsapp",
+	}
+
+	var err error
+	switch cfg.Provider {
+	case "generic", "meta", "cloud", "":
+		err = s.sendGenericWhatsApp(phone, message)
+	case "aisensy":
+		err = s.sendAiSensyWhatsApp(phone, message)
+	case "interakt":
+		err = s.sendInteraktWhatsApp(phone, message)
+	case "gupshup":
+		err = s.sendGupshupWhatsApp(phone, message)
+	default:
+		err = s.sendGenericWhatsApp(phone, message)
+	}
+
+	if err != nil {
+		smsLog.Status = models.SMSStatusFailed
+		smsLog.ErrorMessage = err.Error()
+		s.logMessage(smsLog)
+		return err
+	}
+
+	smsLog.Status = models.SMSStatusSent
+	s.logMessage(smsLog)
+	return nil
+}
+
+// sendGenericWhatsApp sends via Meta Cloud API
+func (s *UnifiedMessagingService) sendGenericWhatsApp(phone, message string) error {
+	cfg := s.whatsappConfig
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                formatPhone(phone),
+		"type":              "text",
+		"text": map[string]string{
+			"preview_url": "false",
+			"body":        message,
+		},
+	}
+
+	jsonData, _ := json.Marshal(payload)
+	url := fmt.Sprintf("https://graph.facebook.com/v18.0/%s/messages", cfg.PhoneNumberID)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+
+	resp, err := s.whatsappClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("WhatsApp API error: %s", string(body))
+	}
+
+	return nil
+}
+
+// sendAiSensyWhatsApp sends via AiSensy
+func (s *UnifiedMessagingService) sendAiSensyWhatsApp(phone, message string) error {
+	cfg := s.whatsappConfig
+
+	payload := map[string]interface{}{
+		"apiKey":      cfg.APIKey,
+		"destination": formatPhone(phone),
+		"message":     message,
+	}
+
+	jsonData, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", "https://backend.aisensy.com/campaign/t1/api/v2", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.whatsappClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("AiSensy error: %s", string(body))
+	}
+
+	return nil
+}
+
+// sendInteraktWhatsApp sends via Interakt
+func (s *UnifiedMessagingService) sendInteraktWhatsApp(phone, message string) error {
+	cfg := s.whatsappConfig
+
+	payload := map[string]interface{}{
+		"countryCode":  "+91",
+		"phoneNumber":  formatPhone(phone),
+		"callbackData": "cold_storage",
+		"type":         "Text",
+		"data": map[string]string{
+			"message": message,
+		},
+	}
+
+	jsonData, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", "https://api.interakt.ai/v1/public/message/", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Basic "+cfg.APIKey)
+
+	resp, err := s.whatsappClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("Interakt error: %s", string(body))
+	}
+
+	return nil
+}
+
+// sendGupshupWhatsApp sends via Gupshup
+func (s *UnifiedMessagingService) sendGupshupWhatsApp(phone, message string) error {
+	cfg := s.whatsappConfig
+
+	formData := fmt.Sprintf("channel=whatsapp&source=%s&destination=%s&message=%s&src.name=ColdStorage",
+		cfg.PhoneNumberID,
+		formatPhone(phone),
+		url.QueryEscape(message),
+	)
+
+	req, err := http.NewRequest("POST", "https://api.gupshup.io/sm/api/v1/msg", strings.NewReader(formData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("apikey", cfg.APIKey)
+
+	resp, err := s.whatsappClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("Gupshup error: %s", string(body))
+	}
+
+	return nil
+}
+
+// logMessage logs to database
+func (s *UnifiedMessagingService) logMessage(log *models.SMSLog) {
+	if s.LogRepo == nil {
+		return
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.LogRepo.Create(ctx, log)
+	}()
+}
+
+// formatPhone formats phone number for WhatsApp
+func formatPhone(phone string) string {
+	cleaned := ""
+	for _, c := range phone {
+		if c >= '0' && c <= '9' {
+			cleaned += string(c)
+		}
+	}
+	if len(cleaned) == 10 {
+		return "91" + cleaned
+	}
+	return cleaned
 }

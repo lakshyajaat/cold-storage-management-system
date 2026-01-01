@@ -58,10 +58,11 @@ const (
 
 // WhatsApp setting keys
 const (
-	SettingWhatsAppEnabled    = "whatsapp_enabled"
-	SettingWhatsAppProvider   = "whatsapp_provider"  // "aisensy", "interakt"
-	SettingWhatsAppAPIKey     = "whatsapp_api_key"
-	SettingWhatsAppCostPerMsg = "whatsapp_cost_per_msg"
+	SettingWhatsAppEnabled       = "whatsapp_enabled"
+	SettingWhatsAppProvider      = "whatsapp_provider" // "generic", "aisensy", "interakt", "gupshup"
+	SettingWhatsAppAPIKey        = "whatsapp_api_key"
+	SettingWhatsAppPhoneNumberID = "whatsapp_phone_number_id" // Required for generic/gupshup
+	SettingWhatsAppCostPerMsg    = "whatsapp_cost_per_msg"
 )
 
 // Customer portal setting keys

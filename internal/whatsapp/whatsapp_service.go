@@ -297,3 +297,260 @@ func mapToSlice(m map[string]string) []string {
 	}
 	return result
 }
+
+// GenericWhatsAppService implements WhatsApp via Meta Cloud API (works with any BSP)
+// This is the standard WhatsApp Business Cloud API that most providers support
+type GenericWhatsAppService struct {
+	config *WhatsAppConfig
+	client *http.Client
+}
+
+// NewGenericWhatsAppService creates a new Generic WhatsApp service
+// apiKey: Access Token from Meta Business Suite or BSP
+// phoneNumberID: WhatsApp Business Phone Number ID
+func NewGenericWhatsAppService(apiKey, phoneNumberID string) *GenericWhatsAppService {
+	return &GenericWhatsAppService{
+		config: &WhatsAppConfig{
+			Provider:      "generic",
+			APIKey:        apiKey,
+			PhoneNumberID: phoneNumberID,
+			BaseURL:       "https://graph.facebook.com/v18.0",
+		},
+		client: &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// SetBaseURL allows overriding the API base URL (for BSP proxies)
+func (s *GenericWhatsAppService) SetBaseURL(url string) {
+	s.config.BaseURL = url
+}
+
+// SendMessage sends a text message via WhatsApp Cloud API
+func (s *GenericWhatsAppService) SendMessage(phone, message string, templateName string, params map[string]string) error {
+	// If template is specified, use template message
+	if templateName != "" {
+		return s.SendTemplateMessage(phone, templateName, mapToSlice(params))
+	}
+
+	// Otherwise send a regular text message (only works within 24hr window)
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                formatPhoneNumber(phone),
+		"type":              "text",
+		"text": map[string]string{
+			"preview_url": "false",
+			"body":        message,
+		},
+	}
+
+	return s.sendRequest(payload)
+}
+
+// SendTemplateMessage sends a template message via WhatsApp Cloud API
+func (s *GenericWhatsAppService) SendTemplateMessage(phone, templateName string, params []string) error {
+	// Build template components
+	components := []map[string]interface{}{}
+
+	if len(params) > 0 {
+		bodyParams := make([]map[string]string, len(params))
+		for i, param := range params {
+			bodyParams[i] = map[string]string{"type": "text", "text": param}
+		}
+		components = append(components, map[string]interface{}{
+			"type":       "body",
+			"parameters": bodyParams,
+		})
+	}
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                formatPhoneNumber(phone),
+		"type":              "template",
+		"template": map[string]interface{}{
+			"name": templateName,
+			"language": map[string]string{
+				"code": "en",
+			},
+			"components": components,
+		},
+	}
+
+	return s.sendRequest(payload)
+}
+
+// sendRequest sends the API request
+func (s *GenericWhatsAppService) sendRequest(payload map[string]interface{}) error {
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/%s/messages", s.config.BaseURL, s.config.PhoneNumberID)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.config.APIKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		// Parse error response
+		var errResp map[string]interface{}
+		if json.Unmarshal(body, &errResp) == nil {
+			if errObj, ok := errResp["error"].(map[string]interface{}); ok {
+				if msg, ok := errObj["message"].(string); ok {
+					return fmt.Errorf("WhatsApp API error: %s", msg)
+				}
+			}
+		}
+		return fmt.Errorf("WhatsApp API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// CheckNumberExists checks if a number is registered on WhatsApp
+func (s *GenericWhatsAppService) CheckNumberExists(phone string) (bool, error) {
+	// The Cloud API doesn't have a direct number check
+	// We assume it exists and handle errors gracefully
+	return true, nil
+}
+
+// GetName returns the provider name
+func (s *GenericWhatsAppService) GetName() string {
+	return "Generic (Meta Cloud API)"
+}
+
+// GupshupService implements WhatsApp via Gupshup
+type GupshupService struct {
+	config *WhatsAppConfig
+	client *http.Client
+}
+
+// NewGupshupService creates a new Gupshup WhatsApp service
+func NewGupshupService(apiKey, sourcePhone string) *GupshupService {
+	return &GupshupService{
+		config: &WhatsAppConfig{
+			Provider:      "gupshup",
+			APIKey:        apiKey,
+			PhoneNumberID: sourcePhone, // Source phone number
+			BaseURL:       "https://api.gupshup.io/sm/api/v1",
+		},
+		client: &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// SendMessage sends a message via Gupshup
+func (s *GupshupService) SendMessage(phone, message string, templateName string, params map[string]string) error {
+	if templateName != "" {
+		return s.SendTemplateMessage(phone, templateName, mapToSlice(params))
+	}
+
+	// Send session message
+	formData := fmt.Sprintf("channel=whatsapp&source=%s&destination=%s&message=%s&src.name=ColdStorage",
+		s.config.PhoneNumberID,
+		formatPhoneNumber(phone),
+		message,
+	)
+
+	req, err := http.NewRequest("POST", s.config.BaseURL+"/msg", bytes.NewBufferString(formData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("apikey", s.config.APIKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("Gupshup API error: %s", string(body))
+	}
+
+	return nil
+}
+
+// SendTemplateMessage sends a template message via Gupshup
+func (s *GupshupService) SendTemplateMessage(phone, templateName string, params []string) error {
+	// Gupshup template format
+	templateData := map[string]interface{}{
+		"id":     templateName,
+		"params": params,
+	}
+	templateJSON, _ := json.Marshal(templateData)
+
+	formData := fmt.Sprintf("channel=whatsapp&source=%s&destination=%s&template=%s&src.name=ColdStorage",
+		s.config.PhoneNumberID,
+		formatPhoneNumber(phone),
+		string(templateJSON),
+	)
+
+	req, err := http.NewRequest("POST", s.config.BaseURL+"/template/msg", bytes.NewBufferString(formData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("apikey", s.config.APIKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("Gupshup API error: %s", string(body))
+	}
+
+	return nil
+}
+
+// CheckNumberExists checks if number is on WhatsApp via Gupshup
+func (s *GupshupService) CheckNumberExists(phone string) (bool, error) {
+	return true, nil
+}
+
+// GetName returns the provider name
+func (s *GupshupService) GetName() string {
+	return "Gupshup"
+}
+
+// CreateWhatsAppProvider creates a WhatsApp provider based on provider name
+func CreateWhatsAppProvider(provider, apiKey, phoneNumberID string) WhatsAppProvider {
+	switch provider {
+	case "aisensy":
+		return NewAiSensyService(apiKey)
+	case "interakt":
+		return NewInteraktService(apiKey)
+	case "gupshup":
+		return NewGupshupService(apiKey, phoneNumberID)
+	case "generic", "meta", "cloud":
+		return NewGenericWhatsAppService(apiKey, phoneNumberID)
+	default:
+		// Default to generic if provider not recognized
+		if apiKey != "" && phoneNumberID != "" {
+			return NewGenericWhatsAppService(apiKey, phoneNumberID)
+		}
+		return nil
+	}
+}
