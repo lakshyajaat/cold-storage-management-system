@@ -1911,6 +1911,22 @@
             try {
                 const token = localStorage.getItem('customer_token');
 
+                // Determine family member info for the payment
+                let paymentFamilyMemberId = null;
+                let paymentFamilyMemberName = '';
+                let paymentScope = 'account';
+
+                if (selectedPaymentScope !== 'account') {
+                    // Payment is for a specific family member
+                    paymentFamilyMemberName = selectedPaymentScope;
+                    paymentScope = 'family_member';
+                    // Get family_member_id if available
+                    const memberData = memberBalances[selectedPaymentScope];
+                    if (memberData && memberData.trucks.length > 0) {
+                        paymentFamilyMemberId = memberData.trucks[0].family_member_id || null;
+                    }
+                }
+
                 // Create order on backend
                 const response = await fetch('/api/payment/create-order', {
                     method: 'POST',
@@ -1922,7 +1938,9 @@
                         amount: amount,
                         entry_id: currentPaymentEntryId,
                         thock_number: currentPaymentTruck,
-                        payment_scope: 'truck'
+                        payment_scope: paymentScope,
+                        family_member_id: paymentFamilyMemberId,
+                        family_member_name: paymentFamilyMemberName
                     })
                 });
 

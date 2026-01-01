@@ -37,12 +37,14 @@ type AccountHandler struct {
 
 // LedgerPayment represents a payment from the ledger (for display)
 type LedgerPayment struct {
-	ID          int       `json:"id"`
-	Amount      float64   `json:"amount"`
-	EntryType   string    `json:"entry_type"`
-	Description string    `json:"description"`
-	Notes       string    `json:"notes"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID               int       `json:"id"`
+	Amount           float64   `json:"amount"`
+	EntryType        string    `json:"entry_type"`
+	Description      string    `json:"description"`
+	Notes            string    `json:"notes"`
+	FamilyMemberID   *int      `json:"family_member_id,omitempty"`
+	FamilyMemberName string    `json:"family_member_name,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // FamilyMemberAccount represents a family member's account within a customer
@@ -469,40 +471,28 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 			}
 		}
 
-		// Group payments by family member (from rent_payments table)
-		familyMemberPayments := make(map[string][]*models.RentPayment)
+		// Group ALL payments from ledger by family member (single source of truth)
 		familyMemberPaid := make(map[string]float64)
-
-		for _, payment := range customer.Payments {
-			fmName := payment.FamilyMemberName
-			if fmName == "" {
-				fmName = customer.Name // Default to customer name if no family member
-			}
-			familyMemberPayments[fmName] = append(familyMemberPayments[fmName], payment)
-			familyMemberPaid[fmName] += payment.AmountPaid
-		}
-
-		// Add ledger payments (online payments) - attributed to customer name since they don't have family member info
-		customerLedgerPayments := ledgerPayments[customer.Phone]
 		familyMemberLedgerPayments := make(map[string][]LedgerPayment)
-		if len(customerLedgerPayments) > 0 {
-			// Add ledger credits to customer name (online payments don't track family members)
-			// Only add ledger credits that aren't already counted in rent_payments
-			for _, lp := range customerLedgerPayments {
-				familyMemberLedgerPayments[customer.Name] = append(familyMemberLedgerPayments[customer.Name], LedgerPayment{
-					ID:          lp.ID,
-					Amount:      lp.Amount,
-					EntryType:   lp.EntryType,
-					Description: lp.Description,
-					Notes:       lp.Notes,
-					CreatedAt:   lp.CreatedAt,
-				})
-				// For ONLINE_PAYMENT entries, add to familyMemberPaid (customer name)
-				// PAYMENT entries are already in rent_payments, so skip them to avoid double counting
-				if lp.EntryType == "ONLINE_PAYMENT" {
-					familyMemberPaid[customer.Name] += lp.Amount
-				}
+
+		customerLedgerPayments := ledgerPayments[customer.Phone]
+		for _, lp := range customerLedgerPayments {
+			// Use family_member_name from ledger, default to customer name
+			fmName := lp.FamilyMemberName
+			if fmName == "" {
+				fmName = customer.Name
 			}
+			familyMemberLedgerPayments[fmName] = append(familyMemberLedgerPayments[fmName], LedgerPayment{
+				ID:               lp.ID,
+				Amount:           lp.Amount,
+				EntryType:        lp.EntryType,
+				Description:      lp.Description,
+				Notes:            lp.Notes,
+				FamilyMemberID:   lp.FamilyMemberID,
+				FamilyMemberName: lp.FamilyMemberName,
+				CreatedAt:        lp.CreatedAt,
+			})
+			familyMemberPaid[fmName] += lp.Amount
 		}
 
 		// Build family member accounts
@@ -553,47 +543,12 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 				Balance:        fmBalance,
 				CanTakeOut:     fmCanTakeOut,
 				Thocks:         familyMemberThocks[fmName],
-				Payments:       familyMemberPayments[fmName],
+				Payments:       []*models.RentPayment{}, // Deprecated: use LedgerPayments
 				LedgerPayments: familyMemberLedgerPayments[fmName],
 			})
 		}
 
-		// Add family members who only have payments (no thocks)
-		for fmName, payments := range familyMemberPayments {
-			if !processedFamilyMembers[fmName] {
-				processedFamilyMembers[fmName] = true
-				fmPaid := familyMemberPaid[fmName]
-
-				// Calculate canTakeOut for family members with only payments
-				fmCanTakeOut := 0
-				if rentPerItem > 0 {
-					itemsPaidFor := int(fmPaid / rentPerItem)
-					fmCanTakeOut = itemsPaidFor // No outgoing since no thocks
-				}
-
-				// Get relation for this family member
-				fmRelation := ""
-				if customerFamilyRelations != nil {
-					fmRelation = customerFamilyRelations[fmName]
-				}
-
-				familyMembers = append(familyMembers, FamilyMemberAccount{
-					Name:           fmName,
-					Relation:       fmRelation,
-					Quantity:       0,
-					Outgoing:       0,
-					Rent:           0,
-					Paid:           fmPaid,
-					Balance:        -fmPaid, // Overpaid
-					CanTakeOut:     fmCanTakeOut,
-					Thocks:         []ThockInfo{},
-					Payments:       payments,
-					LedgerPayments: familyMemberLedgerPayments[fmName],
-				})
-			}
-		}
-
-		// Add family members who only have ledger payments (no rent_payments or thocks)
+		// Add family members who only have ledger payments (no thocks)
 		for fmName, ledgerPmts := range familyMemberLedgerPayments {
 			if !processedFamilyMembers[fmName] {
 				fmPaid := familyMemberPaid[fmName]

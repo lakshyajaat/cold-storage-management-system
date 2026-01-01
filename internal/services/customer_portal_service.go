@@ -102,28 +102,18 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		return nil, fmt.Errorf("failed to get entries: %w", err)
 	}
 
-	// Get all payments for this customer to calculate per-family-member totals
-	allPayments, _ := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
-
-	// Calculate total paid per family member (use 0 for entries with no family member)
+	// Calculate total paid per family member from ledger (single source of truth)
 	familyMemberPaid := make(map[int]float64)
-	for _, payment := range allPayments {
-		fmID := 0
-		if payment.FamilyMemberID != nil {
-			fmID = *payment.FamilyMemberID
-		}
-		familyMemberPaid[fmID] += payment.AmountPaid
-	}
-
-	// Add online payments from ledger (attributed to family_member_id = 0 since online payments don't track family members)
 	if s.LedgerRepo != nil {
-		ledgerPayments, err := s.LedgerRepo.GetPaymentHistory(ctx, customer.Phone, 1000)
+		// Get all credits grouped by family member from ledger
+		fmCredits, err := s.LedgerRepo.GetCreditsByFamilyMember(ctx, customer.Phone)
 		if err == nil {
-			for _, lp := range ledgerPayments {
-				// Only add ONLINE_PAYMENT entries to avoid double counting with rent_payments
-				if lp.EntryType == "ONLINE_PAYMENT" {
-					familyMemberPaid[0] += lp.Amount // 0 = customer level (no family member)
+			for _, fmc := range fmCredits {
+				fmID := 0
+				if fmc.FamilyMemberID != nil {
+					fmID = *fmc.FamilyMemberID
 				}
+				familyMemberPaid[fmID] += fmc.TotalCredit
 			}
 		}
 	}
@@ -365,53 +355,30 @@ func (s *CustomerPortalService) CreateGatePassRequest(ctx context.Context, custo
 		fmID = *entry.FamilyMemberID
 	}
 
-	// Get all payments for this customer
-	allPayments, _ := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
-
-	// Calculate total paid by this family member
+	// Calculate total paid by this family member from ledger (single source of truth)
 	var fmTotalPaid float64
-	var generalPaid float64 // Online payments (fmID=0)
-	for _, payment := range allPayments {
-		paymentFmID := 0
-		if payment.FamilyMemberID != nil {
-			paymentFmID = *payment.FamilyMemberID
-		}
-		if paymentFmID == fmID {
-			fmTotalPaid += payment.AmountPaid
-		}
-		if paymentFmID == 0 {
-			generalPaid += payment.AmountPaid
-		}
-	}
-
-	// Add online payments from ledger (they don't have family member info, so they're general)
+	var generalPaid float64 // Payments with no family member (fmID=0)
 	if s.LedgerRepo != nil {
-		ledgerPayments, err := s.LedgerRepo.GetPaymentHistory(ctx, customer.Phone, 1000)
+		fmCredits, err := s.LedgerRepo.GetCreditsByFamilyMember(ctx, customer.Phone)
 		if err == nil {
-			for _, lp := range ledgerPayments {
-				if lp.EntryType == "ONLINE_PAYMENT" {
-					generalPaid += lp.Amount
+			for _, fmc := range fmCredits {
+				paymentFmID := 0
+				if fmc.FamilyMemberID != nil {
+					paymentFmID = *fmc.FamilyMemberID
+				}
+				if paymentFmID == fmID {
+					fmTotalPaid += fmc.TotalCredit
+				}
+				if paymentFmID == 0 {
+					generalPaid += fmc.TotalCredit
 				}
 			}
 		}
 	}
 
-	// Include general/online payments for family members
+	// Include general payments for specific family members (they apply to whole account)
 	if fmID != 0 {
 		fmTotalPaid += generalPaid
-	} else {
-		// For entries without family member, generalPaid is already in fmTotalPaid
-		// but we need to add online payments separately
-		if s.LedgerRepo != nil {
-			ledgerPayments, err := s.LedgerRepo.GetPaymentHistory(ctx, customer.Phone, 1000)
-			if err == nil {
-				for _, lp := range ledgerPayments {
-					if lp.EntryType == "ONLINE_PAYMENT" {
-						fmTotalPaid += lp.Amount
-					}
-				}
-			}
-		}
 	}
 
 	// Calculate total picked up by this family member (across all their thocks)

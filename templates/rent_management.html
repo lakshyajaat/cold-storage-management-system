@@ -1122,6 +1122,7 @@
                                                 <div>
                                                     <p class="font-bold text-sm">${capitalizeText(fm.name)}${fm.relation ? ` <span class="font-normal text-purple-600">(${fm.relation})</span>` : ''}</p>
                                                     <p class="text-xs text-gray-600">${fm.quantity} items | ₹${fm.rent.toLocaleString('en-IN')}</p>
+                                                    <p class="text-xs text-gray-600">Paid: ₹${fm.paid.toLocaleString('en-IN')} | Can Take: <span class="font-bold ${fm.canTakeOut > 0 ? 'text-green-600' : 'text-gray-400'}">${fm.canTakeOut}</span></p>
                                                     <p class="text-sm ${fm.balance > 0 ? 'text-red-600' : 'text-green-600'} font-bold">
                                                         ${fm.balance > 0 ? 'Due: ₹' + fm.balance.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '✓ Paid'}
                                                     </p>
@@ -1288,45 +1289,25 @@
                                     </h4>
                                     <div id="paymentHistory${index}" class="space-y-2">
                                         ${(() => {
-                                            // Get ledger payments from all family members
-                                            const ledgerPayments = [];
+                                            // Get ALL payments from ledger (single source of truth)
+                                            const allPayments = [];
                                             (customer.familyMembers || []).forEach(fm => {
                                                 (fm.ledgerPayments || []).forEach(lp => {
-                                                    ledgerPayments.push({
+                                                    allPayments.push({
                                                         type: 'ledger',
                                                         amount: lp.amount,
                                                         date: new Date(lp.created_at),
                                                         isOnline: lp.entry_type === 'ONLINE_PAYMENT',
                                                         processedBy: 'System',
                                                         notes: lp.notes || lp.description || '',
-                                                        entryType: lp.entry_type
+                                                        entryType: lp.entry_type,
+                                                        familyMemberName: lp.family_member_name || fm.name || ''
                                                     });
                                                 });
                                             });
 
-                                            // Filter rent_payments to exclude online payments (they're already in ledger)
-                                            const rentPayments = (customer.payments || [])
-                                                .filter(p => {
-                                                    // Exclude if it looks like an online payment
-                                                    const notes = (p.notes || '').toLowerCase();
-                                                    const isOnlinePayment = notes.includes('razorpay') ||
-                                                        notes.includes('online payment') ||
-                                                        notes.includes('utr:');
-                                                    return !isOnlinePayment;
-                                                })
-                                                .map(p => ({
-                                                    type: 'rent',
-                                                    amount: p.amount_paid,
-                                                    date: new Date(p.payment_date),
-                                                    isOnline: false,
-                                                    processedBy: p.processed_by_name || 'Unknown',
-                                                    receiptNumber: p.receipt_number,
-                                                    notes: p.notes || ''
-                                                }));
-
-                                            // Combine and sort by date (newest first)
-                                            const allPayments = [...rentPayments, ...ledgerPayments]
-                                                .sort((a, b) => b.date - a.date);
+                                            // Sort by date (newest first)
+                                            allPayments.sort((a, b) => b.date - a.date);
 
                                             if (allPayments.length === 0) {
                                                 return '<p class="text-gray-500 text-sm p-4 bg-gray-50 border-2 border-gray-200">No payments yet</p>';
@@ -1341,19 +1322,20 @@
                                                     ? `<button onclick="viewReceipt('${payment.receiptNumber}')" class="text-xs neu-button bg-blue-500 text-white py-1 px-2" style="padding: 0.25rem 0.5rem;"><i class="bi bi-printer"></i> Receipt</button>`
                                                     : '';
 
+                                                const familyBadge = payment.familyMemberName
+                                                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800"><i class="bi bi-person"></i> ${capitalizeText(payment.familyMemberName)}</span>`
+                                                    : '';
+
                                                 return `
                                                 <div class="p-3 ${payment.isOnline ? 'bg-cyan-50 border-2 border-cyan-200' : 'bg-green-50 border-2 border-green-200'}">
                                                     <div class="flex justify-between items-start mb-2">
                                                         <div class="flex-1">
-                                                            <div class="flex items-center gap-2 mb-1">
+                                                            <div class="flex items-center gap-2 mb-1 flex-wrap">
                                                                 <p class="font-bold ${payment.isOnline ? 'text-cyan-700' : 'text-green-700'}">₹${payment.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</p>
                                                                 ${methodBadge}
+                                                                ${familyBadge}
                                                             </div>
                                                             <p class="text-xs text-gray-600">${payment.date.toLocaleDateString('en-IN')} ${payment.date.toLocaleTimeString('en-IN')}</p>
-                                                            <p class="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                                                                <i class="bi bi-person-badge"></i>
-                                                                <span>${capitalizeText(payment.processedBy)}</span>
-                                                            </p>
                                                         </div>
                                                         ${receiptBtn}
                                                     </div>
