@@ -17,6 +17,7 @@ type CustomerPortalService struct {
 	RentPaymentRepo    *repositories.RentPaymentRepository
 	SystemSettingRepo  *repositories.SystemSettingRepository
 	GatePassPickupRepo *repositories.GatePassPickupRepository
+	LedgerRepo         *repositories.LedgerRepository
 }
 
 func NewCustomerPortalService(
@@ -27,6 +28,7 @@ func NewCustomerPortalService(
 	rentPaymentRepo *repositories.RentPaymentRepository,
 	systemSettingRepo *repositories.SystemSettingRepository,
 	gatePassPickupRepo *repositories.GatePassPickupRepository,
+	ledgerRepo *repositories.LedgerRepository,
 ) *CustomerPortalService {
 	return &CustomerPortalService{
 		CustomerRepo:       customerRepo,
@@ -36,6 +38,7 @@ func NewCustomerPortalService(
 		RentPaymentRepo:    rentPaymentRepo,
 		SystemSettingRepo:  systemSettingRepo,
 		GatePassPickupRepo: gatePassPickupRepo,
+		LedgerRepo:         ledgerRepo,
 	}
 }
 
@@ -216,9 +219,17 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		totalRent += entryTotalRent
 	}
 
-	// Calculate overall totals from family member aggregates
-	for _, paid := range familyMemberPaid {
-		totalPaid += paid
+	// Calculate total paid from ledger entries (includes both manual + online payments)
+	if s.LedgerRepo != nil {
+		ledgerPaid, err := s.LedgerRepo.GetTotalCredit(ctx, customer.Phone)
+		if err == nil {
+			totalPaid = ledgerPaid
+		}
+	} else {
+		// Fallback to rent payments if ledger not available
+		for _, paid := range familyMemberPaid {
+			totalPaid += paid
+		}
 	}
 	totalBalance = totalRent - totalPaid
 	if totalBalance < 0 {
@@ -232,32 +243,18 @@ func (s *CustomerPortalService) GetDashboardData(ctx context.Context, customerID
 		gatePasses = []map[string]interface{}{}
 	}
 
-	// Get recent payments for this customer
+	// Get recent payments from ledger (includes both manual + online payments)
 	var payments []PaymentInfo
-	if s.RentPaymentRepo != nil {
-		rentPayments, err := s.RentPaymentRepo.GetByPhone(ctx, customer.Phone)
-		if err == nil && rentPayments != nil {
-			// Create a map of entry_id to thock_number for lookup
-			entryThockMap := make(map[int]string)
-			for _, truck := range trucks {
-				// Find entry by thock number
-				entry, _ := s.EntryRepo.GetByThockNumber(ctx, truck.ThockNumber)
-				if entry != nil {
-					entryThockMap[entry.ID] = truck.ThockNumber
-				}
-			}
-
-			for _, rp := range rentPayments {
-				thockNumber := ""
-				if rp.EntryID > 0 {
-					thockNumber = entryThockMap[rp.EntryID]
-				}
+	if s.LedgerRepo != nil {
+		ledgerPayments, err := s.LedgerRepo.GetPaymentHistory(ctx, customer.Phone, 20)
+		if err == nil {
+			for _, lp := range ledgerPayments {
 				payments = append(payments, PaymentInfo{
-					ID:          rp.ID,
-					Amount:      rp.AmountPaid,
-					PaymentDate: rp.PaymentDate.Format("2006-01-02"),
-					ThockNumber: thockNumber,
-					CreatedAt:   rp.CreatedAt.Format("2006-01-02T15:04:05Z"),
+					ID:          lp.ID,
+					Amount:      lp.Amount,
+					PaymentDate: lp.CreatedAt.Format("2006-01-02"),
+					ThockNumber: lp.Description, // Description contains thock info
+					CreatedAt:   lp.CreatedAt.Format("2006-01-02T15:04:05Z"),
 				})
 			}
 		}

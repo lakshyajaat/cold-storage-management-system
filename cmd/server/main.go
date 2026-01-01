@@ -464,6 +464,7 @@ func main() {
 			rentPaymentRepo,
 			systemSettingRepo,
 			gatePassPickupRepo,
+			ledgerRepo,
 		)
 
 		// Initialize customer portal handler
@@ -665,7 +666,7 @@ func main() {
 		reportHandler := handlers.NewReportHandler(reportService)
 
 		// Initialize account handler (optimized single-call endpoint for Account Management)
-		accountHandler := handlers.NewAccountHandler(pool, entryRepo, roomEntryRepo, rentPaymentRepo, gatePassRepo, systemSettingRepo)
+		accountHandler := handlers.NewAccountHandler(pool, entryRepo, roomEntryRepo, rentPaymentRepo, gatePassRepo, systemSettingRepo, ledgerRepo)
 
 		// Initialize entry room handler (optimized single-call endpoint for Entry Room page)
 		entryRoomHandler := handlers.NewEntryRoomHandler(pool, entryRepo, roomEntryRepo, customerRepo, guardEntryRepo)

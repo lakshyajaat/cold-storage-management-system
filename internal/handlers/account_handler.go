@@ -32,6 +32,7 @@ type AccountHandler struct {
 	RentPaymentRepo *repositories.RentPaymentRepository
 	GatePassRepo    *repositories.GatePassRepository
 	SettingsRepo    *repositories.SystemSettingRepository
+	LedgerRepo      *repositories.LedgerRepository
 }
 
 // FamilyMemberAccount represents a family member's account within a customer
@@ -108,6 +109,7 @@ func NewAccountHandler(
 	rentPaymentRepo *repositories.RentPaymentRepository,
 	gatePassRepo *repositories.GatePassRepository,
 	settingsRepo *repositories.SystemSettingRepository,
+	ledgerRepo *repositories.LedgerRepository,
 ) *AccountHandler {
 	h := &AccountHandler{
 		DB:              db,
@@ -116,6 +118,7 @@ func NewAccountHandler(
 		RentPaymentRepo: rentPaymentRepo,
 		GatePassRepo:    gatePassRepo,
 		SettingsRepo:    settingsRepo,
+		LedgerRepo:      ledgerRepo,
 	}
 
 	// Register pre-warm callback for account summary
@@ -379,12 +382,26 @@ func (h *AccountHandler) generateAccountSummary(ctx context.Context) (*AccountSu
 		customer.OutgoingRent += rent
 	}
 
-	// Assign payments to customers
+	// Assign payments to customers (keep for payment history display)
 	for _, payment := range payments {
 		customer, exists := customerMap[payment.CustomerPhone]
 		if exists {
 			customer.Payments = append(customer.Payments, payment)
-			customer.TotalPaid += payment.AmountPaid
+		}
+	}
+
+	// Calculate TotalPaid from ledger (includes both manual + online payments)
+	for phone, customer := range customerMap {
+		if h.LedgerRepo != nil {
+			ledgerPaid, err := h.LedgerRepo.GetTotalCredit(ctx, phone)
+			if err == nil {
+				customer.TotalPaid = ledgerPaid
+			}
+		} else {
+			// Fallback: sum from rent payments
+			for _, p := range customer.Payments {
+				customer.TotalPaid += p.AmountPaid
+			}
 		}
 	}
 

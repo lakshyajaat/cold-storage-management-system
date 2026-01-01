@@ -379,3 +379,54 @@ func (r *LedgerRepository) GetTotalsByType(ctx context.Context) (map[models.Ledg
 
 	return totals, nil
 }
+
+// GetTotalCredit returns total payments (credits) for a customer
+func (r *LedgerRepository) GetTotalCredit(ctx context.Context, customerPhone string) (float64, error) {
+	var total float64
+	err := r.DB.QueryRow(ctx,
+		"SELECT COALESCE(SUM(credit), 0) FROM ledger_entries WHERE customer_phone = $1",
+		customerPhone).Scan(&total)
+	return total, err
+}
+
+// PaymentHistoryItem represents a payment in the history
+type PaymentHistoryItem struct {
+	ID          int       `json:"id"`
+	Amount      float64   `json:"amount"`
+	EntryType   string    `json:"entry_type"`
+	Description string    `json:"description"`
+	Notes       string    `json:"notes"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// GetPaymentHistory returns recent payments (credits) for a customer
+func (r *LedgerRepository) GetPaymentHistory(ctx context.Context, customerPhone string, limit int) ([]PaymentHistoryItem, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	query := `
+		SELECT id, credit, entry_type, COALESCE(description, ''), COALESCE(notes, ''), created_at
+		FROM ledger_entries
+		WHERE customer_phone = $1 AND credit > 0
+		ORDER BY created_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.DB.Query(ctx, query, customerPhone, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []PaymentHistoryItem
+	for rows.Next() {
+		var p PaymentHistoryItem
+		if err := rows.Scan(&p.ID, &p.Amount, &p.EntryType, &p.Description, &p.Notes, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		payments = append(payments, p)
+	}
+
+	return payments, nil
+}
