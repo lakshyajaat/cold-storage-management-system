@@ -165,7 +165,8 @@ func runR2Backup() {
 // cleanupOldBackups deletes backups older than 3 days and failed backups (< 1KB)
 func cleanupOldBackups(ctx context.Context, client *s3.Client) {
 	maxAge := 3 * 24 * time.Hour
-	cutoff := timeutil.Now().Add(-maxAge)
+	// Use UTC time since R2/S3 LastModified is always in UTC
+	cutoff := time.Now().UTC().Add(-maxAge)
 	minValidSize := int64(1024) // 1KB minimum for valid backup
 
 	// List all backups
