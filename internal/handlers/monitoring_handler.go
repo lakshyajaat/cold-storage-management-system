@@ -169,50 +169,52 @@ func cleanupOldBackups(ctx context.Context, client *s3.Client) {
 	cutoff := time.Now().UTC().Add(-maxAge)
 	minValidSize := int64(1024) // 1KB minimum for valid backup
 
-	// List all backups
-	result, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(config.R2BucketName),
-		Prefix: aws.String("base/"),
-	})
-	if err != nil {
-		log.Printf("[R2 Cleanup] Failed to list backups: %v", err)
-		return
-	}
-
 	deletedOld := 0
 	deletedFailed := 0
-	for _, obj := range result.Contents {
-		shouldDelete := false
-		reason := ""
+	var continuationToken *string
 
-		// Delete old backups (> 3 days)
-		if obj.LastModified != nil && obj.LastModified.Before(cutoff) {
-			shouldDelete = true
-			reason = "older than 3 days"
+	// Paginate through all backups (R2 returns max 1000 per request)
+	for {
+		result, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(config.R2BucketName),
+			Prefix:            aws.String("base/"),
+			ContinuationToken: continuationToken,
+		})
+		if err != nil {
+			log.Printf("[R2 Cleanup] Failed to list backups: %v", err)
+			return
 		}
 
-		// Delete failed/empty backups (< 1KB)
-		if obj.Size != nil && *obj.Size < minValidSize {
-			shouldDelete = true
-			reason = fmt.Sprintf("failed backup (%d bytes)", *obj.Size)
-		}
-
-		if shouldDelete {
-			_, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(config.R2BucketName),
-				Key:    obj.Key,
-			})
-			if err != nil {
-				log.Printf("[R2 Cleanup] Failed to delete %s: %v", *obj.Key, err)
-			} else {
-				if obj.Size != nil && *obj.Size < minValidSize {
-					deletedFailed++
-				} else {
+		for _, obj := range result.Contents {
+			// Delete old backups (> 3 days)
+			if obj.LastModified != nil && obj.LastModified.Before(cutoff) {
+				_, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{
+					Bucket: aws.String(config.R2BucketName),
+					Key:    obj.Key,
+				})
+				if err == nil {
 					deletedOld++
 				}
-				log.Printf("[R2 Cleanup] Deleted %s: %s", *obj.Key, reason)
+				continue
+			}
+
+			// Delete failed/empty backups (< 1KB)
+			if obj.Size != nil && *obj.Size < minValidSize {
+				_, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{
+					Bucket: aws.String(config.R2BucketName),
+					Key:    obj.Key,
+				})
+				if err == nil {
+					deletedFailed++
+				}
 			}
 		}
+
+		// Check if there are more pages
+		if result.IsTruncated == nil || !*result.IsTruncated {
+			break
+		}
+		continuationToken = result.NextContinuationToken
 	}
 
 	if deletedOld > 0 || deletedFailed > 0 {
