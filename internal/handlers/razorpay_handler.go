@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -283,4 +284,22 @@ func (h *RazorpayHandler) GetTransactionSummary(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(summary)
+}
+
+// ReconcilePayments creates missing ledger entries for successful transactions (admin)
+// POST /api/admin/online-transactions/reconcile
+func (h *RazorpayHandler) ReconcilePayments(w http.ResponseWriter, r *http.Request) {
+	count, err := h.Service.ReconcilePayments(r.Context())
+	if err != nil {
+		log.Printf("[Razorpay] Reconciliation error: %v", err)
+		http.Error(w, "Failed to reconcile payments: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":    true,
+		"reconciled": count,
+		"message":    fmt.Sprintf("Reconciled %d transactions", count),
+	})
 }

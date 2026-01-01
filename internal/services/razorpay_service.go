@@ -522,3 +522,30 @@ func (s *RazorpayService) GetAllTransactions(ctx context.Context, filter *models
 func (s *RazorpayService) GetSummary(ctx context.Context, startDate, endDate *time.Time) (*models.OnlinePaymentSummary, error) {
 	return s.transactionRepo.GetSummary(ctx, startDate, endDate)
 }
+
+// ReconcilePayments creates missing ledger entries for successful transactions
+func (s *RazorpayService) ReconcilePayments(ctx context.Context) (int, error) {
+	// Get all successful transactions without ledger entries
+	transactions, err := s.transactionRepo.GetUnreconciledTransactions(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unreconciled transactions: %w", err)
+	}
+
+	reconciled := 0
+	for _, tx := range transactions {
+		utr := tx.UTRNumber
+		if utr == "" {
+			utr = tx.RazorpayPaymentID
+		}
+
+		err := s.createRentPaymentAndLedgerEntry(ctx, tx, utr)
+		if err != nil {
+			log.Printf("[Razorpay] Failed to reconcile transaction %s: %v", tx.RazorpayOrderID, err)
+			continue
+		}
+		reconciled++
+		log.Printf("[Razorpay] Reconciled transaction %s for customer %s, amount: %.2f", tx.RazorpayOrderID, tx.CustomerPhone, tx.Amount)
+	}
+
+	return reconciled, nil
+}

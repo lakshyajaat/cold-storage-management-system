@@ -393,3 +393,44 @@ func (r *OnlineTransactionRepository) IsPaymentProcessed(ctx context.Context, or
 	}
 	return status == string(models.OnlineTxStatusSuccess), nil
 }
+
+// GetUnreconciledTransactions returns successful transactions without ledger entries
+func (r *OnlineTransactionRepository) GetUnreconciledTransactions(ctx context.Context) ([]*models.OnlineTransaction, error) {
+	query := `
+		SELECT ot.id, ot.customer_id, ot.customer_phone, ot.customer_name,
+			ot.razorpay_order_id, ot.razorpay_payment_id, ot.amount, ot.fee_amount,
+			ot.status, ot.payment_method, ot.payment_scope, ot.thock_number,
+			ot.family_member_name, ot.utr_number, ot.created_at, ot.completed_at
+		FROM online_transactions ot
+		WHERE ot.status = 'success'
+		AND ot.rent_payment_id IS NULL
+		ORDER BY ot.created_at DESC
+	`
+
+	rows, err := r.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []*models.OnlineTransaction
+	for rows.Next() {
+		tx := &models.OnlineTransaction{}
+		var completedAt *time.Time
+		err := rows.Scan(
+			&tx.ID, &tx.CustomerID, &tx.CustomerPhone, &tx.CustomerName,
+			&tx.RazorpayOrderID, &tx.RazorpayPaymentID, &tx.Amount, &tx.FeeAmount,
+			&tx.Status, &tx.PaymentMethod, &tx.PaymentScope, &tx.ThockNumber,
+			&tx.FamilyMemberName, &tx.UTRNumber, &tx.CreatedAt, &completedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if completedAt != nil {
+			tx.CompletedAt = completedAt
+		}
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
+}

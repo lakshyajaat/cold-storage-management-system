@@ -648,6 +648,7 @@ func NewRouter(
 		onlineTxAPI.Use(authMiddleware.Authenticate)
 		onlineTxAPI.HandleFunc("", authMiddleware.RequireAccountantAccess(http.HandlerFunc(razorpayHandler.GetAllTransactions)).ServeHTTP).Methods("GET")
 		onlineTxAPI.HandleFunc("/summary", authMiddleware.RequireAccountantAccess(http.HandlerFunc(razorpayHandler.GetTransactionSummary)).ServeHTTP).Methods("GET")
+		onlineTxAPI.HandleFunc("/reconcile", authMiddleware.RequireRole("admin")(http.HandlerFunc(razorpayHandler.ReconcilePayments)).ServeHTTP).Methods("POST")
 	}
 
 	// Protected API routes - Pending Setting Changes (dual admin approval for sensitive settings)
