@@ -1474,7 +1474,8 @@
                 const date = new Date(payment.display_date).toLocaleDateString('en-IN', {
                     day: '2-digit',
                     month: 'short',
-                    year: 'numeric'
+                    year: 'numeric',
+                    timeZone: 'Asia/Kolkata'
                 });
 
                 const methodBadge = payment.is_online
