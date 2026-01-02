@@ -277,68 +277,105 @@
                 <!-- Right Column: Quantity Calculator & Change Logs -->
                 <div class="col-span-1">
                     <!-- Quantity Calculator -->
-                    <div class="neu-border bg-white p-6 mb-6">
-                        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <div class="neu-border bg-gradient-to-br from-purple-50 to-indigo-50 p-4 mb-6">
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
                             <i class="bi bi-calculator text-purple-600"></i>
                             Quantity Calculator
-                        </h2>
+                            <span class="ml-auto text-2xl font-bold text-purple-700 bg-white px-3 py-1 rounded-lg shadow-sm" id="totalQuantity">0</span>
+                        </h3>
+                        <!-- Hidden input for form submission -->
+                        <input type="hidden" id="quantity" required min="1">
+
+                        <!-- Selected Gatars Display - shows current gatar being filled -->
+                        <div id="selectedGatarsInCalculator" class="mb-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-xl">
+                            <!-- Current Gatar Being Filled -->
+                            <div id="currentGatarFilling" class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg font-bold text-green-700">
+                                        <i class="bi bi-arrow-right-circle-fill mr-1"></i>Filling Gatar:
+                                    </span>
+                                    <span id="currentGatarNumber" class="text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow">--</span>
+                                </div>
+                                <span id="gatarsFillProgress" class="text-sm bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-bold"></span>
+                            </div>
+                            <!-- Gatar Progress Pills -->
+                            <div id="gatarProgressPills" class="flex flex-wrap gap-1 mt-2"></div>
+                        </div>
 
                         <!-- Preset Value Buttons -->
-                        <div class="grid grid-cols-5 gap-2 mb-4">
-                            <button type="button" onclick="addQuantity(16)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
-                                16
-                            </button>
-                            <button type="button" onclick="addQuantity(18)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
-                                18
-                            </button>
-                            <button type="button" onclick="addQuantity(20)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
-                                20
-                            </button>
-                            <button type="button" onclick="addQuantity(24)" class="neu-button bg-blue-100 hover:bg-blue-200 py-3 text-base font-bold w-full">
-                                24
-                            </button>
-                            <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-100 hover:bg-purple-200 py-3 text-base font-bold w-full">
-                                Custom
-                            </button>
+                        <p class="text-xs text-purple-600 mb-2">Click values to add...</p>
+                        <div class="grid grid-cols-8 gap-1.5 mb-3">
+                            <button type="button" onclick="addQuantity(1)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">1</button>
+                            <button type="button" onclick="addQuantity(2)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">2</button>
+                            <button type="button" onclick="addQuantity(3)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">3</button>
+                            <button type="button" onclick="addQuantity(4)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">4</button>
+                            <button type="button" onclick="addQuantity(5)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">5</button>
+                            <button type="button" onclick="addQuantity(6)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">6</button>
+                            <button type="button" onclick="addQuantity(7)" class="neu-button bg-blue-100 hover:bg-blue-200 py-2 text-sm font-bold">7</button>
+                            <button type="button" onclick="addQuantity(8)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">8</button>
+                            <button type="button" onclick="addQuantity(9)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">9</button>
+                            <button type="button" onclick="addQuantity(10)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">10</button>
+                            <button type="button" onclick="addQuantity(11)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">11</button>
+                            <button type="button" onclick="addQuantity(12)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">12</button>
+                            <button type="button" onclick="addQuantity(13)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">13</button>
+                            <button type="button" onclick="addQuantity(14)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">14</button>
+                            <button type="button" onclick="addQuantity(15)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">15</button>
+                            <button type="button" onclick="addQuantity(16)" class="neu-button bg-green-100 hover:bg-green-200 py-2 text-sm font-bold">16</button>
+                            <button type="button" onclick="addQuantity(17)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">17</button>
+                            <button type="button" onclick="addQuantity(18)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">18</button>
+                            <button type="button" onclick="addQuantity(19)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">19</button>
+                            <button type="button" onclick="addQuantity(20)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">20</button>
+                            <button type="button" onclick="addQuantity(21)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">21</button>
+                            <button type="button" onclick="addQuantity(24)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">24</button>
+                            <button type="button" onclick="addQuantity(25)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">25</button>
+                            <button type="button" onclick="addQuantity(26)" class="neu-button bg-yellow-100 hover:bg-yellow-200 py-2 text-sm font-bold">26</button>
+                            <button type="button" onclick="addQuantity(27)" class="neu-button bg-orange-100 hover:bg-orange-200 py-2 text-sm font-bold">27</button>
+                            <button type="button" onclick="addQuantity(30)" class="neu-button bg-orange-100 hover:bg-orange-200 py-2 text-sm font-bold">30</button>
+                            <button type="button" onclick="showCustomInput()" class="neu-button bg-purple-200 hover:bg-purple-300 py-2 text-xs font-bold col-span-2">Custom +</button>
                         </div>
 
                         <!-- Custom Input (Hidden by default) -->
-                        <div id="customInputDiv" class="hidden mb-4">
+                        <div id="customInputDiv" class="hidden mb-3">
                             <div class="flex gap-2">
-                                <input
-                                    type="number"
-                                    id="customQuantityInput"
-                                    min="1"
-                                    class="flex-1 border border-gray-300 rounded-lg p-2 text-base shadow-sm"
-                                    placeholder="Enter custom value"
-                                >
-                                <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-4 text-sm">
-                                    <i class="bi bi-plus-circle"></i> Add
-                                </button>
-                                <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-4 text-sm">
-                                    <i class="bi bi-x-circle"></i> Cancel
-                                </button>
+                                <input type="number" id="customQuantityInput" min="1" class="flex-1 border-2 border-black p-2 text-base rounded" placeholder="Custom value">
+                                <button type="button" onclick="addCustomQuantity()" class="neu-button bg-green-500 text-white px-3 text-sm">Add</button>
+                                <button type="button" onclick="hideCustomInput()" class="neu-button bg-gray-300 px-3 text-sm">✕</button>
                             </div>
                         </div>
 
                         <!-- Selected Values (Chips) -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Selected Values:</label>
-                            <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[50px] p-3 bg-gray-50 border-3 border-gray-300 rounded">
-                                <span class="text-sm text-gray-400 self-center">Click values above to add...</span>
+                        <div id="quantityChips" class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-white border-2 border-gray-300 rounded mb-3">
+                            <span class="text-sm text-gray-400 self-center">Click values above to add...</span>
+                        </div>
+
+                        <!-- Quality Buttons (N/U/D/G) -->
+                        <div class="flex items-center gap-2 mb-3 p-3 bg-white/60 rounded-xl flex-wrap">
+                            <span class="text-sm font-bold text-purple-800">
+                                <i class="bi bi-bookmark-check mr-1"></i>Quality:
+                            </span>
+                            <span id="pendingQtyDisplay" class="text-sm text-purple-600 font-bold hidden bg-purple-100 px-2 py-0.5 rounded">
+                                (<span id="pendingQtyValue">0</span>)
+                            </span>
+                            <div class="flex gap-1.5 ml-2">
+                                <button type="button" onclick="addWithQuality('N')" class="bg-green-500 hover:bg-green-600 text-white py-1.5 px-4 text-sm font-bold rounded-lg shadow-md transition-all">N</button>
+                                <button type="button" onclick="addWithQuality('U')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 px-4 text-sm font-bold rounded-lg shadow-md transition-all">U</button>
+                                <button type="button" onclick="addWithQuality('D')" class="bg-red-500 hover:bg-red-600 text-white py-1.5 px-4 text-sm font-bold rounded-lg shadow-md transition-all">D</button>
+                                <button type="button" onclick="addWithQuality('G')" class="bg-blue-500 hover:bg-blue-600 text-white py-1.5 px-4 text-sm font-bold rounded-lg shadow-md transition-all">G</button>
                             </div>
+                            <!-- Next Gatar Button -->
+                            <button type="button" onclick="nextGatar()" class="ml-2 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-4 text-sm font-bold rounded-lg shadow-md transition-all">
+                                Next Gatar <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <button type="button" onclick="clearAllQuantities()" class="ml-auto bg-gray-400 hover:bg-red-500 text-white py-1.5 px-3 text-sm font-bold rounded-lg shadow-md transition-all">
+                                <i class="bi bi-trash"></i> Clear
+                            </button>
                         </div>
 
-                        <!-- Total Display -->
-                        <div class="flex justify-between items-center bg-green-50 p-4 border-3 border-green-600 rounded mb-4">
-                            <span class="text-base font-bold">Total Quantity:</span>
-                            <span class="text-3xl font-bold text-green-700" id="totalQuantity">0</span>
-                        </div>
+                        <!-- Current Gatar Entries Display -->
+                        <div id="currentGatarEntriesDisplay" class="flex flex-wrap gap-2 min-h-[24px] mb-2 p-2 bg-purple-50 rounded-lg hidden"></div>
 
-                        <!-- Clear All Button -->
-                        <button type="button" onclick="clearAllQuantities()" class="neu-button bg-red-500 text-white w-full py-2 text-base font-bold">
-                            <i class="bi bi-trash"></i> Clear All Values
-                        </button>
+                        <!-- Quality Remarks Display (all entries) -->
+                        <div id="qualityRemarksList" class="flex flex-wrap gap-2 min-h-[24px]"></div>
                     </div>
 
                     <!-- Change History Logs -->
@@ -383,6 +420,12 @@
         let roomEntryData = null;
         let quantityValues = [];
 
+        // Per-gatar tracking
+        let currentGatarIndex = 0;           // Which gatar we're currently filling
+        let currentGatarEntries = [];        // [{qty, quality}, ...] for current gatar
+        let completedGatars = [];            // [{gatarNo, entries: [{qty, quality}], sum}, ...]
+        let qualityRemarks = [];             // Store all quality-tagged entries: [{qty, quality}, ...]
+
         // Get room entry ID from URL
         window.addEventListener('load', function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -399,9 +442,226 @@
         // Quantity Calculator Functions
         function addQuantity(value) {
             if (value && value > 0) {
+                // Check if we have gatars selected
+                if (selectedGatars.length === 0) {
+                    alert('Please select gatars from the grid first');
+                    return;
+                }
                 quantityValues.push(value);
                 updateQuantityDisplay();
+                updatePendingQtyDisplay();
             }
+        }
+
+        // Update pending quantity display
+        function updatePendingQtyDisplay() {
+            const pendingDiv = document.getElementById('pendingQtyDisplay');
+            const pendingValue = document.getElementById('pendingQtyValue');
+            const pendingSum = quantityValues.reduce((sum, v) => sum + v, 0);
+
+            if (pendingSum > 0) {
+                pendingValue.textContent = pendingSum;
+                pendingDiv.classList.remove('hidden');
+            } else {
+                pendingDiv.classList.add('hidden');
+            }
+        }
+
+        // Add quantity with quality tag (N/U/D/G)
+        function addWithQuality(quality) {
+            if (selectedGatars.length === 0) {
+                alert('Please select gatars from the grid first');
+                return;
+            }
+
+            if (quantityValues.length === 0) {
+                alert('Please add quantity values first, then click quality button');
+                return;
+            }
+
+            // Sum all pending values and add to current gatar entries
+            const sum = quantityValues.reduce((acc, v) => acc + v, 0);
+            currentGatarEntries.push({ qty: sum, quality: quality });
+
+            // Also add to qualityRemarks for overall tracking
+            qualityRemarks.push({ qty: sum, quality: quality });
+
+            // Clear quantity values for next entry
+            quantityValues = [];
+            updateQuantityDisplay();
+            updatePendingQtyDisplay();
+            updateGatarsInCalculator();
+            updateQualityRemarksList();
+        }
+
+        // Move to next gatar
+        function nextGatar() {
+            if (selectedGatars.length === 0) {
+                alert('Please select gatars from the grid first');
+                return;
+            }
+
+            if (currentGatarIndex >= selectedGatars.length) {
+                alert('All gatars have been filled!');
+                return;
+            }
+
+            // Save current gatar entries
+            if (currentGatarEntries.length > 0) {
+                const sum = currentGatarEntries.reduce((acc, e) => acc + e.qty, 0);
+                completedGatars.push({
+                    gatarNo: selectedGatars[currentGatarIndex],
+                    entries: [...currentGatarEntries],
+                    sum: sum
+                });
+            }
+
+            // Move to next gatar
+            currentGatarIndex++;
+            currentGatarEntries = [];
+
+            // Update displays
+            updateGatarsInCalculator();
+            updateTotalFromCompletedGatars();
+        }
+
+        // Update total from completed gatars
+        function updateTotalFromCompletedGatars() {
+            let total = completedGatars.reduce((acc, g) => acc + g.sum, 0);
+            // Add current gatar entries
+            total += currentGatarEntries.reduce((acc, e) => acc + e.qty, 0);
+            document.getElementById('totalQuantity').textContent = total;
+            document.getElementById('quantity').value = total;
+            if (document.getElementById('totalQuantityDisplay')) {
+                document.getElementById('totalQuantityDisplay').textContent = total;
+            }
+        }
+
+        // Update gatars display in calculator
+        function updateGatarsInCalculator() {
+            const container = document.getElementById('selectedGatarsInCalculator');
+            const currentFillingDiv = document.getElementById('currentGatarFilling');
+            const pillsContainer = document.getElementById('gatarProgressPills');
+
+            if (selectedGatars.length === 0) {
+                currentFillingDiv.innerHTML = `
+                    <div class="text-center text-gray-500 py-2">
+                        <i class="bi bi-hand-index text-2xl mb-1"></i>
+                        <p class="text-sm font-bold">Select gatars from grid first</p>
+                    </div>
+                `;
+                pillsContainer.innerHTML = '';
+                return;
+            }
+
+            // Restore the filling display
+            currentFillingDiv.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-green-700">
+                        <i class="bi bi-arrow-right-circle-fill mr-1"></i>Filling Gatar:
+                    </span>
+                    <span id="currentGatarNumber" class="text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow">--</span>
+                </div>
+                <span id="gatarsFillProgress" class="text-sm bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-bold"></span>
+            `;
+
+            const currentGatarSpan = document.getElementById('currentGatarNumber');
+            const progressSpan = document.getElementById('gatarsFillProgress');
+
+            const completed = completedGatars.length;
+            const total = selectedGatars.length;
+
+            // Show current gatar being filled
+            if (currentGatarIndex < total) {
+                const currentGatar = selectedGatars[currentGatarIndex];
+                currentGatarSpan.textContent = currentGatar;
+                currentGatarSpan.className = 'text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow animate-pulse';
+            } else {
+                currentGatarSpan.textContent = '✓ Done';
+                currentGatarSpan.className = 'text-xl font-bold text-white bg-blue-600 px-4 py-1 rounded-lg shadow';
+            }
+
+            // Show progress
+            progressSpan.textContent = `${completed}/${total} completed`;
+
+            // Build progress pills
+            let pillsHtml = '';
+            selectedGatars.forEach((gatarNo, idx) => {
+                const completedGatar = completedGatars.find(g => g.gatarNo === gatarNo);
+
+                if (completedGatar) {
+                    const entriesStr = completedGatar.entries.map(e => `${e.qty}-${e.quality}`).join(', ');
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded text-xs font-bold" title="${entriesStr}">
+                            G${gatarNo}: ${completedGatar.sum} (${entriesStr})
+                        </span>
+                    `;
+                } else if (idx === currentGatarIndex) {
+                    const currentSum = currentGatarEntries.reduce((acc, e) => acc + e.qty, 0);
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-200 text-purple-800 border-2 border-purple-500 rounded text-xs font-bold animate-pulse">
+                            → G${gatarNo}${currentSum > 0 ? ': ' + currentSum : ''}
+                        </span>
+                    `;
+                } else {
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
+                            G${gatarNo}
+                        </span>
+                    `;
+                }
+            });
+            pillsContainer.innerHTML = pillsHtml;
+
+            // Show current gatar entries
+            const currentEntriesDiv = document.getElementById('currentGatarEntriesDisplay');
+            if (currentGatarEntries.length > 0 && currentGatarIndex < total) {
+                const currentSum = currentGatarEntries.reduce((acc, e) => acc + e.qty, 0);
+                const entriesStr = currentGatarEntries.map(e => `${e.qty}-${e.quality}`).join(', ');
+                currentEntriesDiv.innerHTML = `
+                    <span class="text-sm font-bold text-purple-700">
+                        G${selectedGatars[currentGatarIndex]}: ${currentSum} (${entriesStr})
+                    </span>
+                `;
+                currentEntriesDiv.classList.remove('hidden');
+            } else {
+                currentEntriesDiv.classList.add('hidden');
+            }
+        }
+
+        // Update quality remarks list
+        function updateQualityRemarksList() {
+            const listDiv = document.getElementById('qualityRemarksList');
+            if (qualityRemarks.length === 0) {
+                listDiv.innerHTML = '';
+                return;
+            }
+
+            listDiv.innerHTML = qualityRemarks.map((r, idx) => `
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-${getQualityColor(r.quality)}-100 text-${getQualityColor(r.quality)}-800 rounded text-xs font-bold">
+                    ${r.qty}-${r.quality}
+                    <button type="button" onclick="removeQualityRemark(${idx})" class="hover:text-red-600">×</button>
+                </span>
+            `).join('');
+        }
+
+        function getQualityColor(quality) {
+            switch(quality) {
+                case 'N': return 'green';
+                case 'U': return 'yellow';
+                case 'D': return 'red';
+                case 'G': return 'blue';
+                default: return 'gray';
+            }
+        }
+
+        function removeQualityRemark(index) {
+            qualityRemarks.splice(index, 1);
+            updateQualityRemarksList();
+            // Recalculate total
+            const total = qualityRemarks.reduce((acc, r) => acc + r.qty, 0);
+            document.getElementById('totalQuantity').textContent = total;
+            document.getElementById('quantity').value = total;
         }
 
         function showCustomInput() {
@@ -433,7 +693,14 @@
 
         function clearAllQuantities() {
             quantityValues = [];
+            currentGatarIndex = 0;
+            currentGatarEntries = [];
+            completedGatars = [];
+            qualityRemarks = [];
             updateQuantityDisplay();
+            updatePendingQtyDisplay();
+            updateGatarsInCalculator();
+            updateQualityRemarksList();
         }
 
         function updateQuantityDisplay() {
@@ -551,9 +818,43 @@
                 // Display room layout with current selection
                 updateGatarHint();
 
-                // Initialize quantity calculator with breakdown or current quantity
-                if (roomEntryData.quantity_breakdown && roomEntryData.quantity_breakdown.trim()) {
-                    // Parse breakdown like "20, 20, 16" into array
+                // Initialize per-gatar tracking with existing gatar data
+                if (roomEntryData.gatars && roomEntryData.gatars.length > 0) {
+                    // Pre-populate from existing room_entry_gatars data
+                    // Parse gatars from API response and populate selectedGatars and completedGatars
+                    const existingGatars = roomEntryData.gatars;
+
+                    // Get unique gatar numbers
+                    const uniqueGatarNos = [...new Set(existingGatars.map(g => g.gatar_no))].sort((a, b) => a - b);
+                    selectedGatars = uniqueGatarNos;
+                    document.getElementById('gateNo').value = selectedGatars.join(', ');
+
+                    // Group entries by gatar number
+                    completedGatars = uniqueGatarNos.map(gatarNo => {
+                        const entries = existingGatars
+                            .filter(g => g.gatar_no === gatarNo)
+                            .map(g => ({ qty: g.quantity, quality: g.quality || 'N' }));
+                        const sum = entries.reduce((acc, e) => acc + e.qty, 0);
+                        return { gatarNo, entries, sum };
+                    });
+
+                    // Also populate qualityRemarks for display
+                    qualityRemarks = existingGatars.map(g => ({
+                        qty: g.quantity,
+                        quality: g.quality || 'N'
+                    }));
+
+                    // Set index to end (all gatars already filled)
+                    currentGatarIndex = uniqueGatarNos.length;
+                    currentGatarEntries = [];
+
+                    // Update displays
+                    updateGatarsInCalculator();
+                    updateQualityRemarksList();
+                    updateTotalFromCompletedGatars();
+                    updateGatarGridSelection();
+                } else if (roomEntryData.quantity_breakdown && roomEntryData.quantity_breakdown.trim()) {
+                    // Fallback: Parse breakdown like "20, 20, 16" into array (legacy format)
                     quantityValues = roomEntryData.quantity_breakdown.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
                     updateQuantityDisplay();
                 } else if (roomEntryData.quantity > 0) {
@@ -646,16 +947,70 @@
                 }
             }
 
-            // Get quantity breakdown
-            const quantityBreakdown = quantityValues.join(', ');
+            // Handle pending quantity values (user didn't click quality button)
+            if (quantityValues.length > 0 && selectedGatars.length > 0) {
+                const pendingSum = quantityValues.reduce((acc, v) => acc + v, 0);
+                // Add pending values with default 'N' quality to current gatar
+                currentGatarEntries.push({ qty: pendingSum, quality: 'N' });
+                qualityRemarks.push({ qty: pendingSum, quality: 'N' });
+                quantityValues = [];
+            }
+
+            // Finalize current gatar if it has entries
+            if (currentGatarEntries.length > 0 && currentGatarIndex < selectedGatars.length) {
+                const sum = currentGatarEntries.reduce((acc, e) => acc + e.qty, 0);
+                completedGatars.push({
+                    gatarNo: selectedGatars[currentGatarIndex],
+                    entries: [...currentGatarEntries],
+                    sum: sum
+                });
+            }
+
+            // Fallback: if no per-gatar entries but we have selected gatars and total quantity
+            // Distribute quantity evenly across gatars (for legacy/simple entry)
+            if (completedGatars.length === 0 && selectedGatars.length > 0) {
+                const totalQtyInput = parseInt(document.getElementById('quantity').value) || 0;
+                if (totalQtyInput > 0) {
+                    // Simple mode: put all quantity on first gatar with 'N' quality
+                    completedGatars.push({
+                        gatarNo: selectedGatars[0],
+                        entries: [{ qty: totalQtyInput, quality: 'N' }],
+                        sum: totalQtyInput
+                    });
+                }
+            }
+
+            // Build gatars array for API - each gatar gets its entries combined
+            const gatarsForApi = completedGatars.map(g => {
+                // Combine entries for this gatar (e.g., [{qty:10, quality:'N'}, {qty:5, quality:'U'}])
+                // For API, we send each entry separately
+                return g.entries.map(e => ({
+                    gatar_no: g.gatarNo,
+                    quantity: e.qty,
+                    quality: e.quality,
+                    remark: ''
+                }));
+            }).flat();
+
+            // Calculate total quantity from completed gatars
+            const totalQty = completedGatars.reduce((acc, g) => acc + g.sum, 0);
+
+            // Get quantity breakdown string for legacy field
+            const quantityBreakdown = completedGatars.map(g => g.sum).join(', ');
+
+            // Build remark string with quality info
+            const remarkWithQuality = completedGatars.map(g =>
+                g.entries.map(e => `${e.qty}-${e.quality}`).join(', ')
+            ).join(', ');
 
             const updateData = {
                 room_no: document.getElementById('roomNo').value.trim(),
                 floor: document.getElementById('floor').value.trim(),
                 gate_no: document.getElementById('gateNo').value.trim(),
-                quantity: parseInt(document.getElementById('quantity').value),
-                quantity_breakdown: quantityBreakdown,
-                remark: remark
+                quantity: totalQty > 0 ? totalQty : parseInt(document.getElementById('quantity').value),
+                quantity_breakdown: quantityBreakdown || quantityValues.join(', '),
+                remark: remarkWithQuality || remark,
+                gatars: gatarsForApi
             };
 
             try {
@@ -889,6 +1244,8 @@
                     </div>
                 `;
             }
+            // Update the calculator display to show current gatar being filled
+            updateGatarsInCalculator();
         }
 
         function formatGatarSelection(gatars) {
@@ -913,8 +1270,18 @@
         function clearGatarSelection() {
             selectedGatars = [];
             document.getElementById('gateNo').value = '';
+            // Reset per-gatar tracking
+            currentGatarIndex = 0;
+            currentGatarEntries = [];
+            completedGatars = [];
+            qualityRemarks = [];
+            quantityValues = [];
+            // Update all displays
             updateGatarGridSelection();
             updateSelectionSummary();
+            updateGatarsInCalculator();
+            updateQualityRemarksList();
+            updateQuantityDisplay();
         }
 
         function selectAllGatars() {
@@ -937,8 +1304,17 @@
                 }
                 selectedGatars.sort((a, b) => a - b);
                 document.getElementById('gateNo').value = selectedGatars.join(', ');
+
+                // Reset per-gatar tracking when selecting all gatars fresh
+                currentGatarIndex = 0;
+                currentGatarEntries = [];
+                completedGatars = [];
+                qualityRemarks = [];
+                quantityValues = [];
+
                 updateGatarGridSelection();
                 updateSelectionSummary();
+                updateQuantityDisplay();
             }
         }
 
