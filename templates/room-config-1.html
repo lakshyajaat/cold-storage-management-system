@@ -290,15 +290,20 @@
                             <!-- Hidden input for form submission -->
                             <input type="hidden" id="quantity" required min="1">
 
-                            <!-- Selected Gatars Display - shows which gatars need quantities -->
-                            <div id="selectedGatarsInCalculator" class="mb-3 p-2 bg-green-50 border border-green-300 rounded-lg hidden">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-sm font-bold text-green-700">
-                                        <i class="bi bi-grid-3x3 mr-1"></i>Gatars to fill:
-                                    </span>
-                                    <span id="gatarsToFillList" class="text-sm font-mono text-green-800"></span>
-                                    <span id="gatarsFillProgress" class="ml-auto text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-bold"></span>
+                            <!-- Selected Gatars Display - shows current gatar being filled -->
+                            <div id="selectedGatarsInCalculator" class="mb-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-xl hidden">
+                                <!-- Current Gatar Being Filled -->
+                                <div id="currentGatarFilling" class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-lg font-bold text-green-700">
+                                            <i class="bi bi-arrow-right-circle-fill mr-1"></i>Filling Gatar:
+                                        </span>
+                                        <span id="currentGatarNumber" class="text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow">--</span>
+                                    </div>
+                                    <span id="gatarsFillProgress" class="text-sm bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-bold"></span>
                                 </div>
+                                <!-- Gatar Progress Pills -->
+                                <div id="gatarProgressPills" class="flex flex-wrap gap-1 mt-2"></div>
                             </div>
 
                             <!-- Preset Value Buttons - Colorful gradient style -->
@@ -708,8 +713,9 @@
         // Function to update the gatars display in the Quantity Calculator section
         function updateGatarsInCalculator() {
             const container = document.getElementById('selectedGatarsInCalculator');
-            const listSpan = document.getElementById('gatarsToFillList');
+            const currentGatarSpan = document.getElementById('currentGatarNumber');
             const progressSpan = document.getElementById('gatarsFillProgress');
+            const pillsContainer = document.getElementById('gatarProgressPills');
 
             if (selectedGatars.length === 0) {
                 container.classList.add('hidden');
@@ -718,24 +724,57 @@
 
             container.classList.remove('hidden');
 
-            // Show gatars list
-            const display = formatGatarSelection(selectedGatars);
-            listSpan.textContent = display;
-
-            // Show progress: X of Y filled
             const filled = quantityValues.length;
             const total = selectedGatars.length;
 
-            if (filled === total && total > 0) {
-                progressSpan.textContent = `✓ ${filled}/${total} filled`;
-                progressSpan.className = 'ml-auto text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold';
-            } else if (filled > total) {
-                progressSpan.textContent = `⚠ ${filled}/${total} (extra!)`;
-                progressSpan.className = 'ml-auto text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold';
+            // Show current gatar being filled (next unfilled one)
+            if (filled < total) {
+                const currentGatar = selectedGatars[filled];
+                currentGatarSpan.textContent = currentGatar;
+                currentGatarSpan.className = 'text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow animate-pulse';
             } else {
-                progressSpan.textContent = `${filled}/${total} filled`;
-                progressSpan.className = 'ml-auto text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-bold';
+                currentGatarSpan.textContent = '✓ Done';
+                currentGatarSpan.className = 'text-xl font-bold text-white bg-blue-600 px-4 py-1 rounded-lg shadow';
             }
+
+            // Show progress
+            progressSpan.textContent = `${filled}/${total} completed`;
+
+            // Build progress pills for each gatar
+            let pillsHtml = '';
+            selectedGatars.forEach((gatarNo, idx) => {
+                if (idx < filled) {
+                    // Filled - show with quantity and quality
+                    const qty = quantityValues[idx] || 0;
+                    const quality = qualityRemarks[idx]?.quality || 'N';
+                    const qualityColors = {
+                        'N': 'bg-green-500',
+                        'U': 'bg-yellow-500',
+                        'D': 'bg-red-500',
+                        'G': 'bg-blue-500'
+                    };
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 ${qualityColors[quality] || 'bg-gray-500'} text-white rounded text-xs font-bold">
+                            G${gatarNo}: ${qty}-${quality}
+                        </span>
+                    `;
+                } else if (idx === filled) {
+                    // Current - being filled
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-200 text-green-800 border-2 border-green-500 rounded text-xs font-bold animate-pulse">
+                            → G${gatarNo}
+                        </span>
+                    `;
+                } else {
+                    // Pending
+                    pillsHtml += `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold">
+                            G${gatarNo}
+                        </span>
+                    `;
+                }
+            });
+            pillsContainer.innerHTML = pillsHtml;
         }
 
         // Function to update selection summary display - shows gatars and distribution preview
