@@ -164,6 +164,7 @@
                             <th class="p-2 text-left">Room</th>
                             <th class="p-2 text-left">Floor</th>
                             <th class="p-2 text-left">Gatar No</th>
+                            <th class="p-2 text-left">Gatar Details</th>
                             <th class="p-2 text-left">Qty</th>
                             <th class="p-2 text-left">Remark</th>
                             <th class="p-2 text-left">Date</th>
@@ -301,7 +302,7 @@
             if (dataToShow.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="11" class="p-4 text-center text-gray-500">No entries found</td>
+                        <td colspan="12" class="p-4 text-center text-gray-500">No entries found</td>
                     </tr>
                 `;
                 document.getElementById('totalCount').textContent = '0';
@@ -325,6 +326,7 @@
                     <td class="p-2">${entry.room}</td>
                     <td class="p-2">${entry.floor}</td>
                     <td class="p-2">${entry.gateNo}</td>
+                    <td class="p-2">${formatGatarDetails(entry)}</td>
                     <td class="p-2">${entry.quantity} ${breakdownDisplay}</td>
                     <td class="p-2">${capitalizeText(entry.remark)}</td>
                     <td class="p-2 text-sm">${entry.date}</td>
@@ -351,6 +353,37 @@
                 return num <= 1500 ? 'text-green-600' : 'text-orange-600';
             }
             return 'text-gray-700'; // Default color
+        }
+
+        // Format gatar details: show each gatar with its quantity-quality
+        function formatGatarDetails(entry) {
+            // If gatars array is available from room_entry_gatars table
+            if (entry.gatars && entry.gatars.length > 0) {
+                return entry.gatars.map(g =>
+                    `<span class="inline-block bg-blue-100 px-1 py-0.5 rounded mr-1 mb-1 text-xs">G${g.gatar_no}: ${g.quantity}-${g.quality || 'N'}</span>`
+                ).join('');
+            }
+
+            // Fallback: parse from existing fields
+            const gatars = (entry.gateNo || '').split(',').map(s => s.trim()).filter(s => s);
+            const breakdown = (entry.quantityBreakdown || '').split(',').map(s => s.trim()).filter(s => s);
+
+            // Extract quality from remark (parts like 5-N, 5-D, 10-U)
+            const remarkParts = (entry.remark || '').split(',').map(s => s.trim());
+            const qualityParts = remarkParts.filter(r => /^\d+-[NUDG]$/i.test(r));
+
+            if (gatars.length === 0) return '-';
+
+            return gatars.map((g, i) => {
+                const qty = breakdown[i] || '';
+                let quality = 'N';
+                if (qualityParts[i]) {
+                    const parts = qualityParts[i].split('-');
+                    if (parts.length === 2) quality = parts[1].toUpperCase();
+                }
+                const displayText = qty ? `G${g}: ${qty}-${quality}` : `G${g}`;
+                return `<span class="inline-block bg-blue-100 px-1 py-0.5 rounded mr-1 mb-1 text-xs">${displayText}</span>`;
+            }).join('');
         }
 
         // Fuzzy search function - allows typos and partial matches
