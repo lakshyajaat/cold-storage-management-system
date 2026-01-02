@@ -291,7 +291,7 @@
                             <input type="hidden" id="quantity" required min="1">
 
                             <!-- Selected Gatars Display - shows current gatar being filled -->
-                            <div id="selectedGatarsInCalculator" class="mb-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-xl hidden">
+                            <div id="selectedGatarsInCalculator" class="mb-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-xl">
                                 <!-- Current Gatar Being Filled -->
                                 <div id="currentGatarFilling" class="flex items-center justify-between mb-2">
                                     <div class="flex items-center gap-2">
@@ -486,6 +486,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             const lang = localStorage.getItem('lang') || 'hi';
             document.getElementById('langSelector').value = lang;
+            // Initialize gatar display in calculator
+            setTimeout(() => updateGatarsInCalculator(), 100);
         });
 
         // Capitalize first letter function
@@ -716,13 +718,37 @@
             const currentGatarSpan = document.getElementById('currentGatarNumber');
             const progressSpan = document.getElementById('gatarsFillProgress');
             const pillsContainer = document.getElementById('gatarProgressPills');
+            const currentFillingDiv = document.getElementById('currentGatarFilling');
+
+            // Always show the container
+            container.classList.remove('hidden');
 
             if (selectedGatars.length === 0) {
-                container.classList.add('hidden');
+                // No gatars selected - show message
+                currentFillingDiv.innerHTML = `
+                    <div class="text-center text-gray-500 py-2">
+                        <i class="bi bi-hand-index text-2xl mb-1"></i>
+                        <p class="text-sm font-bold">Select gatars from grid above first</p>
+                    </div>
+                `;
+                pillsContainer.innerHTML = '';
                 return;
             }
 
-            container.classList.remove('hidden');
+            // Restore the filling display
+            currentFillingDiv.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-green-700">
+                        <i class="bi bi-arrow-right-circle-fill mr-1"></i>Filling Gatar:
+                    </span>
+                    <span id="currentGatarNumber" class="text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow">--</span>
+                </div>
+                <span id="gatarsFillProgress" class="text-sm bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-bold"></span>
+            `;
+
+            // Re-get the elements after innerHTML update
+            const newCurrentGatarSpan = document.getElementById('currentGatarNumber');
+            const newProgressSpan = document.getElementById('gatarsFillProgress');
 
             const filled = quantityValues.length;
             const total = selectedGatars.length;
@@ -730,15 +756,15 @@
             // Show current gatar being filled (next unfilled one)
             if (filled < total) {
                 const currentGatar = selectedGatars[filled];
-                currentGatarSpan.textContent = currentGatar;
-                currentGatarSpan.className = 'text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow animate-pulse';
+                newCurrentGatarSpan.textContent = currentGatar;
+                newCurrentGatarSpan.className = 'text-2xl font-bold text-white bg-green-600 px-4 py-1 rounded-lg shadow animate-pulse';
             } else {
-                currentGatarSpan.textContent = '✓ Done';
-                currentGatarSpan.className = 'text-xl font-bold text-white bg-blue-600 px-4 py-1 rounded-lg shadow';
+                newCurrentGatarSpan.textContent = '✓ Done';
+                newCurrentGatarSpan.className = 'text-xl font-bold text-white bg-blue-600 px-4 py-1 rounded-lg shadow';
             }
 
             // Show progress
-            progressSpan.textContent = `${filled}/${total} completed`;
+            newProgressSpan.textContent = `${filled}/${total} completed`;
 
             // Build progress pills for each gatar
             let pillsHtml = '';
