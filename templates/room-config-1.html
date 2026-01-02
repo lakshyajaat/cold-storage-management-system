@@ -467,6 +467,7 @@
                                     <th class="text-left p-2 font-bold" data-i18n="room">Room</th>
                                     <th class="text-left p-2 font-bold" data-i18n="floor">Floor</th>
                                     <th class="text-left p-2 font-bold" data-i18n="gatar">Gatar</th>
+                                    <th class="text-left p-2 font-bold" data-i18n="remark">Remark</th>
                                     <th class="text-left p-2 font-bold" data-i18n="gatar_details">Gatar Details</th>
                                     <th class="text-left p-2 font-bold" data-i18n="qty">Qty</th>
                                     <th class="text-left p-2 font-bold" data-i18n="date">Date</th>
@@ -474,7 +475,7 @@
                             </thead>
                             <tbody id="roomEntriesTableBody">
                                 <tr>
-                                    <td colspan="7" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
+                                    <td colspan="8" class="text-center p-4 text-gray-500" data-i18n="loading">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1624,7 +1625,7 @@
                 console.error('Error loading room entries:', error);
                 const errorMsg = i18n.t('failed_load_room_entries', 'Failed to load room entries');
                 document.getElementById('roomEntriesTableBody').innerHTML =
-                    `<tr><td colspan="7" class="text-center p-4 text-red-500">${errorMsg}</td></tr>`;
+                    `<tr><td colspan="8" class="text-center p-4 text-red-500">${errorMsg}</td></tr>`;
             }
         }
 
@@ -1664,7 +1665,7 @@
 
             if (roomEntries.length === 0) {
                 const noEntriesMsg = i18n.t('no_room_entries', 'No room entries yet');
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">${noEntriesMsg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-500">${noEntriesMsg}</td></tr>`;
                 return;
             }
 
@@ -1687,6 +1688,7 @@
                         <td class="p-2">${entry.room_no}</td>
                         <td class="p-2">${entry.floor}</td>
                         <td class="p-2">${entry.gate_no || '-'}</td>
+                        <td class="p-2">${entry.remark || '-'}</td>
                         <td class="p-2">${formatGatarDetails(entry)}</td>
                         <td class="p-2">${entry.quantity} ${breakdownDisplay}</td>
                         <td class="p-2 text-sm">${formattedDate}</td>
