@@ -290,6 +290,17 @@
                             <!-- Hidden input for form submission -->
                             <input type="hidden" id="quantity" required min="1">
 
+                            <!-- Selected Gatars Display - shows which gatars need quantities -->
+                            <div id="selectedGatarsInCalculator" class="mb-3 p-2 bg-green-50 border border-green-300 rounded-lg hidden">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-bold text-green-700">
+                                        <i class="bi bi-grid-3x3 mr-1"></i>Gatars to fill:
+                                    </span>
+                                    <span id="gatarsToFillList" class="text-sm font-mono text-green-800"></span>
+                                    <span id="gatarsFillProgress" class="ml-auto text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-bold"></span>
+                                </div>
+                            </div>
+
                             <!-- Preset Value Buttons - Colorful gradient style -->
                             <p class="text-xs text-purple-600 mb-2" data-i18n="click_to_add">Click values above to add...</p>
                             <div class="grid grid-cols-8 gap-1.5 mb-3">
@@ -694,10 +705,46 @@
             });
         }
 
+        // Function to update the gatars display in the Quantity Calculator section
+        function updateGatarsInCalculator() {
+            const container = document.getElementById('selectedGatarsInCalculator');
+            const listSpan = document.getElementById('gatarsToFillList');
+            const progressSpan = document.getElementById('gatarsFillProgress');
+
+            if (selectedGatars.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            // Show gatars list
+            const display = formatGatarSelection(selectedGatars);
+            listSpan.textContent = display;
+
+            // Show progress: X of Y filled
+            const filled = quantityValues.length;
+            const total = selectedGatars.length;
+
+            if (filled === total && total > 0) {
+                progressSpan.textContent = `✓ ${filled}/${total} filled`;
+                progressSpan.className = 'ml-auto text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold';
+            } else if (filled > total) {
+                progressSpan.textContent = `⚠ ${filled}/${total} (extra!)`;
+                progressSpan.className = 'ml-auto text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold';
+            } else {
+                progressSpan.textContent = `${filled}/${total} filled`;
+                progressSpan.className = 'ml-auto text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-bold';
+            }
+        }
+
         // Function to update selection summary display - shows gatars and distribution preview
         function updateSelectionSummary() {
             const summaryDiv = document.getElementById('selectionSummary');
             if (!summaryDiv) return;
+
+            // Also update the calculator display
+            updateGatarsInCalculator();
 
             if (selectedGatars.length === 0) {
                 summaryDiv.innerHTML = `
