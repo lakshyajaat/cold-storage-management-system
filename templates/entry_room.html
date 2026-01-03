@@ -2295,19 +2295,20 @@
             errorEl.classList.remove('hidden');
         }
 
-        // Print labels to label printer
+        // Print labels to label printer (via server-side proxy)
         async function printLabels(thockNumber, customerName, copies) {
             try {
                 console.log('Printing:', thockNumber, customerName, copies);
-                const response = await fetch('http://192.168.15.101:5000/print-2up', {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/print', {
                     method: 'POST',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
                     body: JSON.stringify({
                         line1: String(thockNumber),
                         line2: String(customerName),
-                        font1: '5',
-                        font2: '4',
                         copies: parseInt(copies)
                     })
                 });

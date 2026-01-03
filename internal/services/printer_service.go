@@ -39,8 +39,8 @@ func NewPrinterService() *PrinterService {
 	}
 }
 
-// PrintRoomEntryLabel prints a label with thock number and customer name
-func (s *PrinterService) PrintRoomEntryLabel(thockNumber, customerName string, copies int) error {
+// Print2Up prints 2-up labels (side by side) with thock number and customer name
+func (s *PrinterService) Print2Up(thockNumber, customerName string, copies int) error {
 	if copies < 1 {
 		copies = 1
 	}
@@ -58,7 +58,7 @@ func (s *PrinterService) PrintRoomEntryLabel(thockNumber, customerName string, c
 	}
 
 	resp, err := s.client.Post(
-		s.baseURL+"/print-full",
+		s.baseURL+"/print-2up",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)

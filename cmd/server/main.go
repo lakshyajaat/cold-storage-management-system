@@ -504,6 +504,7 @@ func main() {
 		entryService.SetSettingRepo(systemSettingRepo)      // Wire SettingRepo for skip thock ranges
 		entryService.SetFamilyMemberRepo(familyMemberRepo) // Wire FamilyMemberRepo for family member auto-assign
 		printerService := services.NewPrinterService()
+		printerHandler := handlers.NewPrinterHandler(printerService)
 		roomEntryService := services.NewRoomEntryService(roomEntryRepo, roomEntryGatarRepo, entryRepo, entryEventRepo, printerService)
 		systemSettingService := services.NewSystemSettingService(systemSettingRepo)
 		rentPaymentService := services.NewRentPaymentService(rentPaymentRepo)
@@ -724,7 +725,7 @@ func main() {
 		restoreHandler := handlers.NewRestoreHandler(restoreService)
 
 		// Create employee router
-		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler, razorpayHandler, pendingSettingHandler, totpHandler, restoreHandler)
+		router := h.NewRouter(userHandler, authHandler, customerHandler, entryHandler, roomEntryHandler, entryEventHandler, systemSettingHandler, rentPaymentHandler, invoiceHandler, loginLogHandler, roomEntryEditLogHandler, entryEditLogHandler, entryManagementLogHandler, adminActionLogHandler, gatePassHandler, seasonHandler, guardEntryHandler, tokenColorHandler, pageHandler, healthHandler, authMiddleware, operationModeMiddleware, monitoringHandler, apiLoggingMiddleware, nodeProvisioningHandler, deploymentHandler, reportHandler, accountHandler, entryRoomHandler, roomVisualizationHandler, setupHandler, ledgerHandler, debtHandler, mergeHistoryHandler, customerActivityLogHandler, smsHandler, familyMemberHandler, razorpayHandler, pendingSettingHandler, totpHandler, restoreHandler, printerHandler)
 
 		// Add gallery routes if enabled
 		if cfg.G.Enabled {

@@ -116,7 +116,7 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 		thockNumber := req.ThockNumber
 		customerName := entry.Name
 		go func() {
-			_ = s.PrinterService.PrintRoomEntryLabel(thockNumber, customerName, labelCount)
+			_ = s.PrinterService.Print2Up(thockNumber, customerName, labelCount)
 		}()
 	}
 

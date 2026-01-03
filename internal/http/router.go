@@ -54,6 +54,7 @@ func NewRouter(
 	pendingSettingHandler *handlers.PendingSettingHandler,
 	totpHandler *handlers.TOTPHandler,
 	restoreHandler *handlers.RestoreHandler,
+	printerHandler *handlers.PrinterHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -693,6 +694,13 @@ func NewRouter(
 		entryRoomAPI.Use(authMiddleware.Authenticate)
 		entryRoomAPI.HandleFunc("/summary", entryRoomHandler.GetSummary).Methods("GET")
 		entryRoomAPI.HandleFunc("/since", entryRoomHandler.GetDelta).Methods("GET")
+	}
+
+	// Protected API routes - Label Printer (server-side proxy to printer)
+	if printerHandler != nil {
+		printerAPI := r.PathPrefix("/api/print").Subrouter()
+		printerAPI.Use(authMiddleware.Authenticate)
+		printerAPI.HandleFunc("", printerHandler.Print2Up).Methods("POST")
 	}
 
 	// Protected API routes - Room Visualization (all authenticated users)
