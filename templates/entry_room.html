@@ -2299,7 +2299,7 @@
         async function printLabels(thockNumber, customerName, copies) {
             try {
                 console.log('Printing:', thockNumber, customerName, copies);
-                const response = await fetch('http://192.168.15.101:5000/print-full', {
+                const response = await fetch('http://192.168.15.101:5000/print-2up', {
                     method: 'POST',
                     mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
