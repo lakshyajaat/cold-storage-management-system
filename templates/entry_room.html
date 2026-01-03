@@ -2037,8 +2037,10 @@
                        </button>`
                     : `<span class="text-gray-400 text-xs">${entry.actual_quantity} items</span>`;
 
-                // Print button - always available
-                const printButton = `<button onclick="promptPrintLabels(${entry.id}, '${entry.thock_number}', '${entry.name.replace(/'/g, "\\'")}', '${entry.remark || ''}')" class="bg-purple-500 text-white px-2 py-1 rounded text-sm hover:bg-purple-600 ml-1" title="Print Labels">
+                // Print button - always available (use data attributes to avoid escaping issues)
+                const escapedName = (entry.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const escapedRemark = (entry.remark || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const printButton = `<button onclick="promptPrintLabels(${entry.id}, '${entry.thock_number}', '${escapedName}', '${escapedRemark}')" class="bg-purple-500 text-white px-2 py-1 rounded text-sm hover:bg-purple-600 ml-1" title="Print Labels">
                         <i class="bi bi-printer"></i>
                    </button>`;
 
@@ -2296,27 +2298,33 @@
         // Print labels to label printer
         async function printLabels(thockNumber, customerName, copies) {
             try {
+                console.log('Printing:', thockNumber, customerName, copies);
                 const response = await fetch('http://192.168.15.101:5000/print-full', {
                     method: 'POST',
+                    mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        line1: thockNumber,
-                        line2: customerName,
-                        font1: '5',  // XL for thock number
-                        font2: '4',  // L for customer name
-                        copies: copies
+                        line1: String(thockNumber),
+                        line2: String(customerName),
+                        font1: '5',
+                        font2: '4',
+                        copies: parseInt(copies)
                     })
                 });
+                if (!response.ok) {
+                    console.error('Print HTTP error:', response.status);
+                    return false;
+                }
                 const result = await response.json();
+                console.log('Print result:', result);
                 if (result.success) {
-                    console.log('Printed', copies, 'label(s)');
                     return true;
                 } else {
                     console.error('Print failed:', result.message);
                     return false;
                 }
             } catch (err) {
-                console.error('Print error:', err);
+                console.error('Print error:', err.message || err);
                 return false;
             }
         }
