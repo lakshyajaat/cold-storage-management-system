@@ -40,16 +40,19 @@ func NewPrinterService() *PrinterService {
 }
 
 // Print2Up prints 2-up labels (side by side) with thock number and customer name
+// copies is the number of labels wanted, we divide by 2 since each print gives 2 labels
 func (s *PrinterService) Print2Up(thockNumber, customerName string, copies int) error {
 	if copies < 1 {
 		copies = 1
 	}
+	// 2-up prints 2 labels per copy, so divide by 2 (round up)
+	printCopies := (copies + 1) / 2
 	req := PrintFullRequest{
 		Line1:  thockNumber,
 		Line2:  customerName,
 		Font1:  "5", // XL font for thock number
 		Font2:  "4", // L font for customer name
-		Copies: copies,
+		Copies: printCopies,
 	}
 
 	jsonData, err := json.Marshal(req)
