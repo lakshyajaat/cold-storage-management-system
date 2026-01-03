@@ -14,14 +14,16 @@ type RoomEntryService struct {
 	RoomEntryGatarRepo *repositories.RoomEntryGatarRepository
 	EntryRepo          *repositories.EntryRepository
 	EntryEventRepo     *repositories.EntryEventRepository
+	PrinterService     *PrinterService
 }
 
-func NewRoomEntryService(roomEntryRepo *repositories.RoomEntryRepository, roomEntryGatarRepo *repositories.RoomEntryGatarRepository, entryRepo *repositories.EntryRepository, entryEventRepo *repositories.EntryEventRepository) *RoomEntryService {
+func NewRoomEntryService(roomEntryRepo *repositories.RoomEntryRepository, roomEntryGatarRepo *repositories.RoomEntryGatarRepository, entryRepo *repositories.EntryRepository, entryEventRepo *repositories.EntryEventRepository, printerService *PrinterService) *RoomEntryService {
 	return &RoomEntryService{
 		RoomEntryRepo:      roomEntryRepo,
 		RoomEntryGatarRepo: roomEntryGatarRepo,
 		EntryRepo:          entryRepo,
 		EntryEventRepo:     entryEventRepo,
+		PrinterService:     printerService,
 	}
 }
 
@@ -107,6 +109,16 @@ func (s *RoomEntryService) CreateRoomEntry(ctx context.Context, req *models.Crea
 
 	// Create event (don't fail if this fails)
 	s.EntryEventRepo.Create(ctx, event)
+
+	// Print label with thock number and customer name (if label count > 0)
+	if s.PrinterService != nil && req.LabelCount > 0 {
+		labelCount := req.LabelCount
+		thockNumber := req.ThockNumber
+		customerName := entry.Name
+		go func() {
+			_ = s.PrinterService.PrintRoomEntryLabel(thockNumber, customerName, labelCount)
+		}()
+	}
 
 	return roomEntry, nil
 }

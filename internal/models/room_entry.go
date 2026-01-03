@@ -49,6 +49,7 @@ type CreateRoomEntryRequest struct {
 	Quantity          int          `json:"quantity"`
 	QuantityBreakdown string       `json:"quantity_breakdown"`
 	Gatars            []GatarInput `json:"gatars,omitempty"` // Per-gatar quantity breakdown
+	LabelCount        int          `json:"label_count"`      // Number of labels to print (0 = no print)
 }
 
 type UpdateRoomEntryRequest struct {

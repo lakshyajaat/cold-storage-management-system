@@ -503,7 +503,8 @@ func main() {
 		entryService := services.NewEntryService(entryRepo, customerRepo, entryEventRepo)
 		entryService.SetSettingRepo(systemSettingRepo)      // Wire SettingRepo for skip thock ranges
 		entryService.SetFamilyMemberRepo(familyMemberRepo) // Wire FamilyMemberRepo for family member auto-assign
-		roomEntryService := services.NewRoomEntryService(roomEntryRepo, roomEntryGatarRepo, entryRepo, entryEventRepo)
+		printerService := services.NewPrinterService()
+		roomEntryService := services.NewRoomEntryService(roomEntryRepo, roomEntryGatarRepo, entryRepo, entryEventRepo, printerService)
 		systemSettingService := services.NewSystemSettingService(systemSettingRepo)
 		rentPaymentService := services.NewRentPaymentService(rentPaymentRepo)
 		invoiceService := services.NewInvoiceService(invoiceRepo)
