@@ -2350,26 +2350,42 @@
 
             // Update remark with print count
             try {
+                // First get the current entry data
+                const entryResp = await fetch(`/api/entries/${entryId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!entryResp.ok) throw new Error('Failed to get entry');
+                const entry = await entryResp.json();
+
                 // Parse existing print count from remark
                 let totalPrinted = numCopies;
-                const printMatch = currentRemark.match(/Tags:(\d+)/);
+                const printMatch = (entry.remark || '').match(/Tags:(\d+)/);
                 if (printMatch) {
                     totalPrinted += parseInt(printMatch[1]);
                 }
 
                 // Build new remark
-                let newRemark = currentRemark.replace(/Tags:\d+\s*/, '').trim();
+                let newRemark = (entry.remark || '').replace(/,?\s*Tags:\d+/, '').trim();
                 newRemark = newRemark ? `${newRemark}, Tags:${totalPrinted}` : `Tags:${totalPrinted}`;
 
-                // Update entry remark via API
-                await fetch(`/api/entries/${entryId}`, {
+                // Update entry with all required fields
+                const updateResp = await fetch(`/api/entries/${entryId}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ remark: newRemark })
+                    body: JSON.stringify({
+                        name: entry.name,
+                        phone: entry.phone,
+                        village: entry.village,
+                        so: entry.so,
+                        expected_quantity: entry.expected_quantity,
+                        thock_category: entry.thock_category,
+                        remark: newRemark
+                    })
                 });
+                if (!updateResp.ok) throw new Error('Failed to update');
 
                 alert(`Printed ${numCopies} label(s). Total tags: ${totalPrinted}`);
                 loadEntries(); // Refresh table

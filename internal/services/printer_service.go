@@ -40,28 +40,56 @@ func NewPrinterService() *PrinterService {
 }
 
 // Print2Up prints 2-up labels (side by side) with thock number and customer name
-// copies is the number of labels wanted, we divide by 2 since each print gives 2 labels
+// copies is the exact number of labels wanted
 func (s *PrinterService) Print2Up(thockNumber, customerName string, copies int) error {
 	if copies < 1 {
 		copies = 1
 	}
-	// 2-up prints 2 labels per copy, so divide by 2 (round up)
-	printCopies := (copies + 1) / 2
-	req := PrintFullRequest{
-		Line1:  thockNumber,
-		Line2:  customerName,
-		Font1:  "5", // XL font for thock number
-		Font2:  "4", // L font for customer name
-		Copies: printCopies,
+
+	// 2-up prints 2 labels per sheet
+	// For odd numbers, print (n-1)/2 sheets of 2-up, then 1 single label
+	twoUpCopies := copies / 2
+	singleLabel := copies % 2
+
+	// Print 2-up labels if needed
+	if twoUpCopies > 0 {
+		req := PrintFullRequest{
+			Line1:  thockNumber,
+			Line2:  customerName,
+			Font1:  "5",
+			Font2:  "4",
+			Copies: twoUpCopies,
+		}
+		if err := s.sendPrintRequest("/print-2up", req); err != nil {
+			return err
+		}
 	}
 
+	// Print single label if odd count
+	if singleLabel > 0 {
+		req := PrintFullRequest{
+			Line1:  thockNumber,
+			Line2:  customerName,
+			Font1:  "5",
+			Font2:  "4",
+			Copies: 1,
+		}
+		if err := s.sendPrintRequest("/print-full", req); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *PrinterService) sendPrintRequest(endpoint string, req PrintFullRequest) error {
 	jsonData, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("failed to marshal print request: %w", err)
 	}
 
 	resp, err := s.client.Post(
-		s.baseURL+"/print-2up",
+		s.baseURL+endpoint,
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
@@ -81,3 +109,4 @@ func (s *PrinterService) Print2Up(thockNumber, customerName string, copies int) 
 
 	return nil
 }
+
