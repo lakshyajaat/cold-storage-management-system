@@ -448,6 +448,19 @@
                     <p class="text-2xl font-bold text-blue-700" id="previewThockNumber">-</p>
                 </div>
 
+                <!-- Print Labels Option -->
+                <div class="mb-4 p-3 bg-gray-50 neu-border rounded-lg">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="bi bi-printer"></i>
+                        <span data-i18n="print_labels">Print Labels</span>
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="labelCount" min="0" max="10" value="0"
+                            class="w-20 neu-input text-center" />
+                        <span class="text-sm text-gray-600" data-i18n="labels_to_print">labels to print</span>
+                    </div>
+                </div>
+
                 <div class="flex gap-3">
                     <button type="submit" id="submitEntryBtn" class="neu-button bg-green-500 text-white flex-1">
                         <i class="bi bi-check-circle"></i> <span data-i18n="submit">Submit</span>
@@ -2239,6 +2252,13 @@
                 console.log('Entry created:', result);
                 const thockNumber = result.thock_number || 'AUTO-' + result.id;
                 console.log('Truck number:', thockNumber);
+
+                // Print labels if requested
+                const labelCount = parseInt(document.getElementById('labelCount').value) || 0;
+                if (labelCount > 0) {
+                    printLabels(thockNumber, name, labelCount);
+                }
+
                 showSuccess(thockNumber);
 
                 // Mark guard entry as processed if we were processing one
@@ -2257,6 +2277,31 @@
             const errorEl = document.getElementById('searchError');
             errorEl.querySelector('p').textContent = message;
             errorEl.classList.remove('hidden');
+        }
+
+        // Print labels to label printer
+        async function printLabels(thockNumber, customerName, copies) {
+            try {
+                const response = await fetch('http://192.168.15.101:5000/print-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        line1: thockNumber,
+                        line2: customerName,
+                        font1: '5',  // XL for thock number
+                        font2: '4',  // L for customer name
+                        copies: copies
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    console.log('Printed', copies, 'label(s)');
+                } else {
+                    console.error('Print failed:', result.message);
+                }
+            } catch (err) {
+                console.error('Print error:', err);
+            }
         }
 
         function showSuccess(thockNumber) {
