@@ -2660,6 +2660,11 @@
                             <div class="weight-value">${randomWeight} किग्रा</div>
                         </div>
 
+                        <div class="days-section">
+                            <div class="days-label">दिनांक:</div>
+                            <div class="days-value">55 दिन</div>
+                        </div>
+
                         <div class="terms-section">
                             <div class="terms-title">शर्तें:</div>
                             <div class="terms-text">
@@ -2707,12 +2712,12 @@
                                 align-items: stretch;
                                 gap: 30px;
                                 height: 100vh;
-                                padding: 0 15px;
+                                padding: 0;
                                 margin: 0;
                                 box-sizing: border-box;
                             }
                             .receipt {
-                                width: 46%;
+                                width: calc(50% - 15px);
                                 border: 3px solid #000;
                                 padding: 20px;
                                 background: white;
@@ -2801,40 +2806,59 @@
                                 font-size: 9px;
                             }
                             .quantity-section {
-                                border: 2px solid #000;
+                                border: 3px solid #000;
                                 color: #000;
                                 text-align: center;
-                                padding: 10px;
-                                margin: 10px 0;
+                                padding: 15px;
+                                margin: 12px 0;
                                 background: white;
                             }
                             .quantity-label {
-                                font-size: 10px;
-                                margin-bottom: 4px;
+                                font-size: 12px;
+                                margin-bottom: 6px;
                                 font-weight: bold;
                                 color: #000;
                             }
                             .quantity-value {
-                                font-size: 22px;
+                                font-size: 28px;
                                 font-weight: bold;
                                 color: #000;
                             }
                             .weight-section {
-                                border: 2px solid #000;
-                                padding: 8px;
-                                margin: 10px 0;
+                                border: 3px solid #000;
+                                padding: 12px;
+                                margin: 12px 0;
                                 background: white;
                                 display: flex;
                                 justify-content: space-between;
                                 align-items: center;
                             }
                             .weight-label {
-                                font-size: 10px;
+                                font-size: 12px;
                                 font-weight: bold;
                                 color: #000;
                             }
                             .weight-value {
-                                font-size: 14px;
+                                font-size: 18px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .days-section {
+                                border: 3px solid #000;
+                                padding: 12px;
+                                margin: 12px 0;
+                                background: white;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            }
+                            .days-label {
+                                font-size: 12px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            .days-value {
+                                font-size: 18px;
                                 font-weight: bold;
                                 color: #000;
                             }
