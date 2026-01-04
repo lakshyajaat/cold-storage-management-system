@@ -2687,9 +2687,8 @@
                     </div>
                 `;
 
-                // Create print window with 2 copies side by side
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(`
+                // Send to HP printer via print server (automatic printing)
+                const fullHTML = `
                     <!DOCTYPE html>
                     <html>
                     <head>
@@ -3006,15 +3005,23 @@
                             ${receiptHTML}
                         </div>
 
-                        <button class="print-button" onclick="window.print()">
-                            🖨️ Print 2 Receipts
-                        </button>
                     </body>
                     </html>
-                `);
+                `;
 
-                printWindow.document.close();
-                printWindow.focus();
+                // Send to print server
+                const printResponse = await fetch('http://192.168.15.101:5000/print-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: fullHTML })
+                });
+                const printResult = await printResponse.json();
+
+                if (printResult.success) {
+                    alert('Receipt sent to HP printer!');
+                } else {
+                    alert('Print error: ' + printResult.message);
+                }
 
             } catch (error) {
                 console.error('Error printing receipt:', error);
