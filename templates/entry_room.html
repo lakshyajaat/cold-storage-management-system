@@ -2618,7 +2618,7 @@
 
                 // Determine category from truck number (SEED: 1-1500, SELL: 1501-3000)
                 const truckNum = parseInt(roomEntry.thock_number.split('/')[0]);
-                const category = truckNum <= 1500 ? 'बीज' : 'मोटा';
+                const category = truckNum <= 1500 ? 'हाइब्रिड बीज आदि' : 'हाइब्रिड मोटा आदि';
 
                 // Create receipt HTML (2 copies side by side) - Hindi Format
                 const receiptHTML = `
@@ -2710,12 +2710,12 @@
                             }
                             .container {
                                 display: flex;
-                                gap: 10px;
+                                gap: 30px;
                                 justify-content: center;
                                 align-items: flex-start;
                             }
                             .receipt {
-                                width: 48%;
+                                width: 46%;
                                 border: 2px solid #000;
                                 padding: 10px;
                                 background: white;
@@ -2994,7 +2994,7 @@
                             @media print {
                                 .print-button { display: none; }
                                 body { padding: 0; }
-                                .container { gap: 10px; }
+                                .container { gap: 30px; }
                             }
                         </style>
                         <script src="/static/js/theme.js"></script>
