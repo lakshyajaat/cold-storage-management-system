@@ -2616,6 +2616,8 @@
                 // Generate random weight between 55-57 kg (whole numbers)
                 const randomWeight = Math.floor(Math.random() * (58 - 55) + 55);
 
+                // Get category from room entry
+                const category = roomEntry.thock_category === 'seed' ? 'बीज (Seed)' : 'खाने वाला (Table)';
 
                 // Create receipt HTML (2 copies side by side) - Hindi Format
                 const receiptHTML = `
