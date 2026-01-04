@@ -2616,9 +2616,6 @@
                 // Generate random weight between 55-57 kg (whole numbers)
                 const randomWeight = Math.floor(Math.random() * (58 - 55) + 55);
 
-                // Determine category from truck number (SEED: 1-1500, SELL: 1501-3000)
-                const truckNum = parseInt(roomEntry.thock_number.split('/')[0]);
-                const category = truckNum <= 1500 ? 'हाइब्रिड बीज आदि' : 'हाइब्रिड मोटा आदि';
 
                 // Create receipt HTML (2 copies side by side) - Hindi Format
                 const receiptHTML = `
@@ -2663,15 +2660,10 @@
                             <div class="weight-value">${randomWeight} किग्रा</div>
                         </div>
 
-                        <div class="category-section">
-                            <div class="category-label">श्रेणी:</div>
-                            <div class="category-value">${category}</div>
-                        </div>
-
                         <div class="terms-section">
                             <div class="terms-title">शर्तें:</div>
                             <div class="terms-text">
-                                स्पेशल-1, पुखराज एवं कुफरी मोहन किस्म के आलू के गलने की जिम्मेदारी माल मालिक की होगी। आलू भंडारण की अवधि 15 फरवरी से 15 नवम्बर तक माल की सुरक्षा एवं संरक्षण की जिम्मेदारी शीतगृह स्वामी की होगी। इसके पश्चात बिना किसी सूचना के माल का भंडारण एवं खराब होना, दोनों की पूर्ण जिम्मेदारी माल मालिक की होगी।
+                                स्पेशल-1, हाइब्रिड, पुखराज एवं कुफरी मोहन आदि किस्म के आलू के गलने की जिम्मेदारी माल मालिक की होगी। आलू भंडारण की अवधि 15 फरवरी से 15 नवम्बर तक माल की सुरक्षा एवं संरक्षण की जिम्मेदारी शीतगृह स्वामी की होगी। इसके पश्चात बिना किसी सूचना के माल का भंडारण एवं खराब होना, दोनों की पूर्ण जिम्मेदारी माल मालिक की होगी।
                             </div>
                         </div>
 
